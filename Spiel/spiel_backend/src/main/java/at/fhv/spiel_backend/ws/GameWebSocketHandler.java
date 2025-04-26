@@ -1,6 +1,6 @@
 package at.fhv.spiel_backend.ws;
 
-import at.fhv.spiel_backend.server.IRoomManager;
+import at.fhv.spiel_backend.server.room.IRoomManager;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

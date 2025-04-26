@@ -1,7 +1,7 @@
 package at.fhv.spiel_backend.handler;
 
 import at.fhv.spiel_backend.command.ICommand;
-import at.fhv.spiel_backend.server.GameRoom;
+import at.fhv.spiel_backend.server.game.IGameRoom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,7 +15,7 @@ public class CommandProcessor {
     /**
      * Process a command within the given room.
      */
-    public void process(ICommand cmd, GameRoom room) {
+    public void process(ICommand cmd, IGameRoom room) {
         handlers.stream()
                 .filter(h -> h.supports(cmd))
                 .findFirst()

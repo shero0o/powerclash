@@ -2,7 +2,7 @@ package at.fhv.spiel_backend.handler;
 
 import at.fhv.spiel_backend.command.AttackCommand;
 import at.fhv.spiel_backend.command.ICommand;
-import at.fhv.spiel_backend.server.GameRoom;
+import at.fhv.spiel_backend.server.game.IGameRoom;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -13,7 +13,7 @@ public class AttackCommandHandler implements ICommandHandler {
     }
 
     @Override
-    public void handle(ICommand cmd, GameRoom room) {
+    public void handle(ICommand cmd, IGameRoom room) {
         AttackCommand ac = (AttackCommand) cmd;
         room.getLogic().playerAttack(ac.getPlayerId(), ac.getTargetX(), ac.getTargetY());
     }

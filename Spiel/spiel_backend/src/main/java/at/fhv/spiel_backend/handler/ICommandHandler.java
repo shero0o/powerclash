@@ -1,7 +1,7 @@
 package at.fhv.spiel_backend.handler;
 
 import at.fhv.spiel_backend.command.ICommand;
-import at.fhv.spiel_backend.server.GameRoom;
+import at.fhv.spiel_backend.server.game.IGameRoom;
 
 public interface ICommandHandler {
     /**
@@ -12,5 +12,5 @@ public interface ICommandHandler {
     /**
      * Handle execution of the given command against the room
      */
-    void handle(ICommand cmd, GameRoom room);
+    void handle(ICommand cmd, IGameRoom room);
 }
