@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import './index.css';
 
 // Helper: get or generate a unique playerId, persisted in localStorage
@@ -16,6 +17,9 @@ export default function App() {
     const [error, setError] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [playerId] = useState(getOrCreatePlayerId);
+    const [messages, setMessages] = useState([]);
+    const messageRef = useRef();
+    const socketRef = useRef(null);
 
     const handlePlay = async () => {
         setError(null);
@@ -33,6 +37,36 @@ export default function App() {
             setError(err.message || 'Unable to join room');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!roomId) return;
+
+        socketRef.current = io('http://localhost:8081', {
+            query: { roomId, playerId },
+        });
+
+        socketRef.current.on('connect', () => {
+            console.log('Connected to socket.io server');
+        });
+
+        socketRef.current.on('message', (message) => {
+            setMessages(prev => [...prev, message]);
+        });
+
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
+    }, [roomId, playerId]);
+
+    const handleSendMessage = () => {
+        const text = messageRef.current.value.trim();
+        if (text && socketRef.current) {
+            socketRef.current.emit('message', { playerId, text });
+            messageRef.current.value = '';
         }
     };
 
@@ -64,12 +98,32 @@ export default function App() {
         );
     }
 
-    // Sobald wir eine roomId haben, zeigen wir sie nur an
     return (
         <div className="flex flex-col items-center justify-center h-screen space-y-4">
             <h1 className="text-2xl font-semibold">Your Room ID</h1>
             <p className="text-lg font-mono">{roomId}</p>
             <p className="text-sm text-gray-600">Player ID: {playerId}</p>
+            <div className="flex space-x-2">
+                <input
+                    ref={messageRef}
+                    type="text"
+                    placeholder="Type a message"
+                    className="border rounded p-2"
+                />
+                <button
+                    onClick={handleSendMessage}
+                    className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                    Send
+                </button>
+            </div>
+            <div className="border rounded w-full max-w-md h-64 overflow-y-auto p-2">
+                {messages.map((msg, idx) => (
+                    <div key={idx} className="mb-2">
+                        <span className="font-semibold">{msg.sender || 'Server'}:</span> {msg.text}
+                    </div>
+                ))}
+            </div>
             <button
                 onClick={() => setRoomId(null)}
                 className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"

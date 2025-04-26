@@ -14,4 +14,6 @@ public class SpielBackendApplication {
         SpringApplication.run(SpielBackendApplication.class, args);
     }
 
+
+
 }
