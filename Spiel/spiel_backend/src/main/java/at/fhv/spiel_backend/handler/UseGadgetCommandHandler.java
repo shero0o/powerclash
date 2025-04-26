@@ -14,7 +14,6 @@ public class UseGadgetCommandHandler implements ICommandHandler {
 
     @Override
     public void handle(ICommand cmd, IGameRoom room) {
-        UseGadgetCommand ug = (UseGadgetCommand) cmd;
-        room.getLogic().useGadget(ug.getPlayerId());
+
     }
 }

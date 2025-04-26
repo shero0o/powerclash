@@ -14,8 +14,7 @@ public class AttackCommandHandler implements ICommandHandler {
 
     @Override
     public void handle(ICommand cmd, IGameRoom room) {
-        AttackCommand ac = (AttackCommand) cmd;
-        room.getLogic().playerAttack(ac.getPlayerId(), ac.getTargetX(), ac.getTargetY());
+
     }
 }
 

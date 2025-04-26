@@ -14,7 +14,6 @@ public class MoveCommandHandler implements ICommandHandler {
 
     @Override
     public void handle(ICommand cmd, IGameRoom room) {
-        MoveCommand mc = (MoveCommand) cmd;
-        room.getLogic().movePlayer(mc.getPlayerId(), mc.getX(), mc.getY());
+
     }
 }

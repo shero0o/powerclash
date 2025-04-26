@@ -13,6 +13,5 @@ public class MoveCommand implements ICommand {
 
     @Override
     public void execute(IGameRoom room) {
-        room.getLogic().movePlayer(playerId, x, y);
     }
 }

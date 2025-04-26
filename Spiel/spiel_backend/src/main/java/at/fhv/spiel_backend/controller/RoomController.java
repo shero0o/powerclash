@@ -1,20 +1,27 @@
 package at.fhv.spiel_backend.controller;
 
 
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import at.fhv.spiel_backend.server.room.IRoomManager;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/rooms")
+@CrossOrigin(origins = "http://localhost:5173")
 public class RoomController {
+    private final IRoomManager roomManager;
 
-    public RoomController(){
+    public RoomController(IRoomManager roomManager){
+        this.roomManager = roomManager;
     }
 
     @PostMapping("/join")
-    public joinRoom(){}
+    public ResponseEntity<JoinResponseDTO> joinRoom(@RequestBody JoinRequestDTO joinRequestDTO){
+        String playerId = joinRequestDTO.getPlayerId();
+        String roomId = roomManager.assignToRoom(playerId);// TODO hier kriege eine Room id
+        JoinResponseDTO joinResponseDTO = new JoinResponseDTO(roomId);
+        return ResponseEntity.ok(joinResponseDTO);
+    }
 
 
-    public leaveRoom(){}
 }

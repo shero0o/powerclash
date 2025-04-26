@@ -1,14 +1,18 @@
 package at.fhv.spiel_backend.server.room;
 
+import at.fhv.spiel_backend.server.game.IGameRoom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.WebSocketSession;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@RequiredArgsConstructor
 public class RoomManagerImpl implements IRoomManager {
-    private final Map<String, IGameRoom> rooms = new ConcurrentHashMap<>();
+    private final List<IGameRoom> rooms = new ArrayList<IGameRoom>();
     private final IRoomFactory roomFactory;
 
     public RoomManagerImpl(IRoomFactory roomFactory) {
@@ -16,25 +20,21 @@ public class RoomManagerImpl implements IRoomManager {
     }
 
     @Override
-    public IGameRoom createRoom() {
-        IGameRoom room = roomFactory.createRoom();
-        rooms.put(room.getId(), room);
-        return room;
-    }
-
-    @Override
-    public IGameRoom getRoom(String roomId) {
-        return rooms.get(roomId);
-    }
-
-
-    @Override
-    public void assignToRoom(WebSocketSession session, String roomId) {
-        IGameRoom room = rooms.get(roomId);
-        if (room == null) {
-            throw new IllegalArgumentException("Raum existiert nicht: " + roomId);
+    public String assignToRoom(String playerId){
+        for(IGameRoom room : rooms){
+            if(!room.isFull()){
+                room.addPlayer(playerId);
+                return room.getId();
+            }
         }
-        room.addPlayer(session.getId());
+        IGameRoom gameRoom = roomFactory.createRoom();
+        rooms.add(gameRoom);
+        return gameRoom.getId();
+
     }
+
+
+
+
 }
 

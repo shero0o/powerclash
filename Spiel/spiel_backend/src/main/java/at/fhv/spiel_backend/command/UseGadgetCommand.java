@@ -12,6 +12,6 @@ public class UseGadgetCommand implements ICommand {
 
     @Override
     public void execute(IGameRoom room) {
-        room.getLogic().useGadget(playerId);
+
     }
 }

@@ -1,17 +1,10 @@
 package at.fhv.spiel_backend.server.room;
+import at.fhv.spiel_backend.server.game.IGameRoom;
+import org.springframework.web.socket.WebSocketSession;
 
 public interface IRoomManager {
 
-    IGameRoom createRoom();
-
-    /**
-     * Holt einen existierenden Raum per ID (oder null)
-     */
-    IGameRoom getRoom(String roomId);
-
-    void assignToRoom(WebSocketSession session);
-
-
+    String assignToRoom(String playerId);
 
 //    void assignToRoom(WebSocketSession session);
 //    void movePlayer(WebSocketSession session, String playerId, float x, float y);

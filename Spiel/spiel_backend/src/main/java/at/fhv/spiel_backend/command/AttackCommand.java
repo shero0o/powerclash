@@ -12,9 +12,8 @@ public class AttackCommand implements ICommand {
     private final float targetY;
 
     @Override
-    public void execute(IGameRoom room) {
-        room.getLogic().playerAttack(playerId, targetX, targetY);
-    }
+    public void execute(IGameRoom room) {};
+
 }
 
 
