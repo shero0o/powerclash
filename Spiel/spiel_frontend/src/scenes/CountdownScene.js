@@ -11,7 +11,10 @@ export default class CountdownScene extends Phaser.Scene {
             callback: () => {
                 count--;
                 txt.setText(count > 0 ? `${count}` : 'Go!');
-                if (count < 0) this.scene.start('GameScene', this.initData);
+                if (count === 0) {
+                    console.log("Countdown completed, transitioning to GameScene...");
+                    this.scene.start('GameScene', this.initData);
+                }
             }
         });
     }
