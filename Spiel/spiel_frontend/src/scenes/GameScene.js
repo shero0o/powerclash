@@ -15,6 +15,56 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        // Karte erzeugen und Layer bauen
+        const map = this.make.tilemap({ key: 'map' });
+        console.log('Map Layers:', map.layers.map(l => l.name));
+        //const tsStruct = map.addTilesetImage('TX Struct', 'tiles_struct');
+        const tsGrass = map.addTilesetImage('TX Tileset Grass', 'TX Tileset Grass');
+        const tsWall  = map.addTilesetImage('TX Tileset Wall',  'TX Tileset Wall');
+        const tsProps = map.addTilesetImage('TX Props', 'TX Props');
+
+        // wenn Probs das gleiche Tileset nutzt
+        map.createLayer('Ground Tiles', [ tsGrass ], 0, 0);
+        map.createLayer('Probs Tiles',  [ tsProps ], 0, 0);
+        map.createLayer('Wall Tiles',   [ tsWall, tsProps  ], 0, 0);
+
+        //map.createLayer('Struct Tiles', [ tsStruct  ], 0, 0);
+
+        // Kollision aktivieren, falls ihr in Tiled „collides=true“ gesetzt habt
+        // layer.setCollisionByProperty({ collides: true });
+
+        // Optional: Kamerabereich auf Karten-Größe beschränken
+        // const width = map.widthInPixels;
+        // const height = map.heightInPixels;
+        // this.cameras.main.setBounds(0, 0, width, height);
+        // this.physics.world.setBounds(0, 0, width, height);
+
+        // Spawnposition (aus Objekt-Layer „Objects“, Objekt-Typ „Spawn“)
+        //     const spawn = map.findObject(
+        //         'Objects',
+        //         obj => obj.type === 'Spawn'
+        //     );
+        //     this.player = this.physics.add.sprite(spawn.x, spawn.y, 'tiles', 0);
+        //
+        //     // Collider zwischen Player und Layer
+        //     this.physics.add.collider(this.player, layer);
+        //
+        //     // Kamera folgt dem Player
+        //     this.cameras.main.startFollow(this.player);
+
+        const worldWidth  = map.widthInPixels;
+        const worldHeight = map.heightInPixels;
+        this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+        this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+
+        const cam = this.cameras.main;
+        const zoomX = cam.width  / worldWidth;
+        const zoomY = cam.height / worldHeight;
+        const zoom  = Math.min(zoomX, zoomY);
+
+        cam.setZoom(zoom);
+        cam.centerOn(worldWidth/2, worldHeight/2);
+
         console.log('[GameScene] create() loaded, roomId =', this.roomId);
 
         // Keyboard input registration for debugging
