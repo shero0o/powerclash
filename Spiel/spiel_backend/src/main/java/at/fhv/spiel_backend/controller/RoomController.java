@@ -18,7 +18,7 @@ public class RoomController {
     @PostMapping("/join")
     public ResponseEntity<JoinResponseDTO> joinRoom(@RequestBody JoinRequestDTO joinRequestDTO){
         String playerId = joinRequestDTO.getPlayerId();
-        String roomId = roomManager.assignToRoom(playerId);// TODO hier kriege eine Room id
+        String roomId = roomManager.assignToRoom(playerId);
         JoinResponseDTO joinResponseDTO = new JoinResponseDTO(roomId);
         return ResponseEntity.ok(joinResponseDTO);
     }

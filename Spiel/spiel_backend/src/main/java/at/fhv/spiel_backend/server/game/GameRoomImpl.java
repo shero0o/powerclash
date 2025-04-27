@@ -3,52 +3,37 @@ package at.fhv.spiel_backend.server.game;
 import at.fhv.spiel_backend.handler.CommandProcessor;
 import at.fhv.spiel_backend.logic.GameLogic;
 import at.fhv.spiel_backend.server.EventPublisher;
-import at.fhv.spiel_backend.server.map.GameMap;
 import at.fhv.spiel_backend.server.map.IMapFactory;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
-/**
- * Konkrete Implementierung des GameRoom.
- * Autowiring erfolgt über den einzigen Konstruktor.
- */
 @Component
 public class GameRoomImpl implements IGameRoom {
-
-    private final String id;
-    private final Map<String, Object> players;
+    private final String id = UUID.randomUUID().toString();
+    private final Map<String, Object> players = new ConcurrentHashMap<>();
     private final IMapFactory mapFactory;
     private final CommandProcessor commandProcessor;
     private final GameLogic gameLogic;
     private final EventPublisher eventPublisher;
-    private final GameMap map;
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-    /** Maximale Spielerzahl pro Raum */
-    private static final int MAX_PLAYERS = 4;
+    private static final int MAX_PLAYERS = 1;
 
-    /**
-     * Konstruktor für Spring-Bean-Injektion.
-     */
-    @Autowired
     public GameRoomImpl(
             IMapFactory mapFactory,
             CommandProcessor commandProcessor,
             GameLogic gameLogic,
             EventPublisher eventPublisher
     ) {
-        this.id = UUID.randomUUID().toString();
-        this.players = new ConcurrentHashMap<>();
         this.mapFactory = mapFactory;
         this.commandProcessor = commandProcessor;
         this.gameLogic = gameLogic;
         this.eventPublisher = eventPublisher;
-        this.map = this.mapFactory.create("default");
     }
 
     @Override
@@ -64,10 +49,12 @@ public class GameRoomImpl implements IGameRoom {
         players.put(playerId, new Object());
     }
 
+    @Override
     public void removePlayer(String playerId) {
-
+        players.remove(playerId);
     }
 
+    @Override
     public int getPlayerCount() {
         return players.size();
     }
@@ -77,17 +64,19 @@ public class GameRoomImpl implements IGameRoom {
         return players.size() >= MAX_PLAYERS;
     }
 
+    @Override
     public void start() {
+        executor.scheduleAtFixedRate(() -> {
+            StateUpdateMessage update = buildStateUpdate();
+            eventPublisher.publish(id, update);
+        }, 0, 16, TimeUnit.MILLISECONDS);
     }
 
-
+    @Override
     public StateUpdateMessage buildStateUpdate() {
         return gameLogic.buildStateUpdate();
     }
 
-    /**
-     * Liefert eine unveränderliche Sicht auf die Spieler.
-     */
     public Map<String, Object> getPlayers() {
         return Collections.unmodifiableMap(players);
     }
