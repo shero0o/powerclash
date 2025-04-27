@@ -1,6 +1,6 @@
 // src/scenes/SplashScene.js
 import Phaser from 'phaser';
-import playButtonImage from '../../public/assets/play_button.png';
+import playButtonImage from '/assets/play_button.png';
 
 export default class SplashScene extends Phaser.Scene {
     constructor() {

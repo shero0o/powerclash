@@ -34,10 +34,10 @@ export default class GameScene extends Phaser.Scene {
         // layer.setCollisionByProperty({ collides: true });
 
         // Optional: Kamerabereich auf Karten-Größe beschränken
-        // const width = map.widthInPixels;
-        // const height = map.heightInPixels;
-        // this.cameras.main.setBounds(0, 0, width, height);
-        // this.physics.world.setBounds(0, 0, width, height);
+         const width = map.widthInPixels;
+         const height = map.heightInPixels;
+         this.cameras.main.setBounds(0, 0, width, height);
+         this.physics.world.setBounds(0, 0, width, height);
 
         // Spawnposition (aus Objekt-Layer „Objects“, Objekt-Typ „Spawn“)
         //     const spawn = map.findObject(
@@ -46,11 +46,11 @@ export default class GameScene extends Phaser.Scene {
         //     );
         //     this.player = this.physics.add.sprite(spawn.x, spawn.y, 'tiles', 0);
         //
-        //     // Collider zwischen Player und Layer
+             // Collider zwischen Player und Layer
         //     this.physics.add.collider(this.player, layer);
-        //
-        //     // Kamera folgt dem Player
-        //     this.cameras.main.startFollow(this.player);
+
+             // Kamera folgt dem Player
+          //   this.cameras.main.startFollow(this.player);
 
         const worldWidth  = map.widthInPixels;
         const worldHeight = map.heightInPixels;
