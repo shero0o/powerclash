@@ -4,11 +4,10 @@ export default class PreloadScene extends Phaser.Scene {
     constructor() { super({ key: 'PreloadScene' }); }
 
     preload() {
-        // Beispiel: lade Bild und Audio
-        //this.load.image('player', '/assets/player.png');
-        //this.load.image('projectile', '/assets/proj.png');
-        //this.load.audio('bgm', '/assets/bgm.mp3');
-        // Ladebalken, falls gewünscht…
+        this.load.tilemapTiledJSON('map', '/assets/MapLvL_1.json');
+        this.load.image('TX Tileset Grass', '/assets/Tileset_Grass.png');
+        this.load.image('TX Tileset Wall', '/assets/Tileset_Wall.png');
+        this.load.image('TX Props',  '/assets/Tileset_Props.png');
     }
 
     create() {

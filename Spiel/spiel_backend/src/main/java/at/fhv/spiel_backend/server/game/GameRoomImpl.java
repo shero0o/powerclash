@@ -24,7 +24,7 @@ public class GameRoomImpl implements IGameRoom {
     private final EventPublisher eventPublisher;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-    private static final int MAX_PLAYERS = 2;
+    private static final int MAX_PLAYERS = 1;
 
     public GameRoomImpl(
             IMapFactory mapFactory,
