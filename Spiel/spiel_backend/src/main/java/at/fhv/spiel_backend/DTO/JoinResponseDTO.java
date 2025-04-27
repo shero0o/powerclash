@@ -1,4 +1,4 @@
-package at.fhv.spiel_backend.controller;
+package at.fhv.spiel_backend.DTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

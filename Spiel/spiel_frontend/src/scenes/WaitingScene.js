@@ -15,12 +15,19 @@ export default class WaitingScene extends Phaser.Scene {
             .setOrigin(0.5);
 
         console.log('[WaitingScene] Listening for startGame');
+
+        // 1) Listener registrieren
         this.socket.on('startGame', () => {
-            console.log('[WaitingScene] Received startGame!');
             this.scene.start('PreloadScene', {
                 roomId: this.registry.get('roomId'),
                 playerId: localStorage.getItem('playerId')
             });
         });
+
+        // 2) Sobald WaitingScene aktiv ist -> Bestätigung an Server
+        const roomId = this.registry.get('roomId');
+        const playerId = localStorage.getItem('playerId');
+        console.log('[WaitingScene] Sending waitingReady to server');
+        this.socket.emit('waitingReady', { roomId, playerId });
     }
 }

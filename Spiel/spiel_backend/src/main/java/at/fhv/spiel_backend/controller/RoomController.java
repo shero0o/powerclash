@@ -1,6 +1,8 @@
 package at.fhv.spiel_backend.controller;
 
 
+import at.fhv.spiel_backend.DTO.JoinRequestDTO;
+import at.fhv.spiel_backend.DTO.JoinResponseDTO;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

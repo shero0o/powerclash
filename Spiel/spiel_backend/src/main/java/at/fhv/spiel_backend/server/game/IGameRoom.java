@@ -48,4 +48,7 @@ public interface IGameRoom {
      * @return read-only view of the players map (playerId -> session or data)
      */
     Map<String, Object> getPlayers();
+    void markReady(String playerId);
+    int  getReadyCount();
+
 }

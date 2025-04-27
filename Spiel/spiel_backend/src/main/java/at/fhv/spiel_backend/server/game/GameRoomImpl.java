@@ -16,6 +16,8 @@ import java.util.concurrent.*;
 public class GameRoomImpl implements IGameRoom {
     private final String id = UUID.randomUUID().toString();
     private final Map<String, Object> players = new ConcurrentHashMap<>();
+    private final Map<String, Object> readyPlayers = new ConcurrentHashMap<>();
+
     private final IMapFactory mapFactory;
     private final CommandProcessor commandProcessor;
     private final GameLogic gameLogic;
@@ -47,11 +49,13 @@ public class GameRoomImpl implements IGameRoom {
             throw new IllegalStateException("Room " + id + " is full");
         }
         players.put(playerId, new Object());
+        gameLogic.addPlayer(playerId);
     }
 
     @Override
     public void removePlayer(String playerId) {
         players.remove(playerId);
+        gameLogic.removePlayer(playerId);
     }
 
     @Override
@@ -64,13 +68,22 @@ public class GameRoomImpl implements IGameRoom {
         return players.size() >= MAX_PLAYERS;
     }
 
+
     @Override
     public void start() {
+        final long tickMs = 16;
+        final float tickSec = tickMs / 1000f;
+
         executor.scheduleAtFixedRate(() -> {
+            // 1) Logik vorwärts treiben
+            gameLogic.update(tickSec);
+
+            // 2) neuen State holen und senden
             StateUpdateMessage update = buildStateUpdate();
             eventPublisher.publish(id, update);
-        }, 0, 16, TimeUnit.MILLISECONDS);
+        }, 0, tickMs, TimeUnit.MILLISECONDS);
     }
+
 
     @Override
     public StateUpdateMessage buildStateUpdate() {
@@ -80,4 +93,15 @@ public class GameRoomImpl implements IGameRoom {
     public Map<String, Object> getPlayers() {
         return Collections.unmodifiableMap(players);
     }
+    @Override
+    public void markReady(String playerId) {
+        readyPlayers.put(playerId, new Object());
+    }
+
+    @Override
+    public int getReadyCount() {
+        return readyPlayers.size();
+    }
+
+
 }

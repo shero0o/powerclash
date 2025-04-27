@@ -1,4 +1,4 @@
-package at.fhv.spiel_backend.controller;
+package at.fhv.spiel_backend.DTO;
 
 
 import lombok.AllArgsConstructor;
@@ -10,6 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class JoinRequestDTO {
-    String playerId;
+public class WaitingReadyDTO {
+    private String roomId;
+    private String playerId;
 }
