@@ -102,6 +102,9 @@ public class GameRoomImpl implements IGameRoom {
     public int getReadyCount() {
         return readyPlayers.size();
     }
-
+    @Override
+    public GameLogic getGameLogic(){
+        return this.gameLogic;
+    }
 
 }

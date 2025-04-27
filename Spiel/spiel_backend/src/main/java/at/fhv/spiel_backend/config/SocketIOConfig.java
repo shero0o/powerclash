@@ -1,8 +1,6 @@
 package at.fhv.spiel_backend.config;
 
-import at.fhv.spiel_backend.DTO.JoinRequestDTO;
-import at.fhv.spiel_backend.DTO.JoinResponseDTO;
-import at.fhv.spiel_backend.DTO.WaitingReadyDTO;
+import at.fhv.spiel_backend.DTO.*;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
 import com.corundumstudio.socketio.SocketIOServer;
@@ -58,6 +56,34 @@ public class SocketIOConfig {
                         room.start();
                         room.buildStateUpdate();
                     }
+                }
+        );
+
+        // 2) move-Event
+        server.addEventListener("move", MoveRequestDTO.class,
+                (client, data, ack) -> {
+                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+                    log.info("PlayerId: {}, PlayerX: {}, PlayerY: {}", data.getPlayerId(), data.getX(), data.getY());
+                    // direkt in die Logik
+                    room.getGameLogic().movePlayer(
+                            data.getPlayerId(),
+                            data.getX(),
+                            data.getY()
+                    );
+                    // optional: ack.sendAckData("moved");
+                }
+        );
+
+        // 3) attack-Event
+        server.addEventListener("attack", AttackRequestDTO.class,
+                (client, data, ack) -> {
+                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+//                    room.getGameLogic().playerAttack(
+//                            data.getPlayerId(),
+//                            data.getX(),
+//                            data.getY()
+//                    );
+                    // optional: ack.sendAckData("attacked");
                 }
         );
 

@@ -1,5 +1,6 @@
 package at.fhv.spiel_backend.server.game;
 
+import at.fhv.spiel_backend.logic.GameLogic;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
 import java.util.Map;
@@ -50,5 +51,6 @@ public interface IGameRoom {
     Map<String, Object> getPlayers();
     void markReady(String playerId);
     int  getReadyCount();
+    GameLogic getGameLogic();
 
 }
