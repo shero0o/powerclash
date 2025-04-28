@@ -8,6 +8,5 @@ import java.util.List;
 public class StateUpdateMessage {
     private final String type = "STATE_UPDATE";
     private List<PlayerState> players;
-    private List<ProjectileState> projectiles;
     private List<Event> events;
 }

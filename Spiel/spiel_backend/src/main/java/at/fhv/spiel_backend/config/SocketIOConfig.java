@@ -31,11 +31,10 @@ public class SocketIOConfig {
 
         server.addEventListener("joinRoom", JoinRequestDTO.class,
                 (client, data, ack) -> {
-                    // Spieler zu Raum zuweisen
                     String roomId = roomManager.assignToRoom(data.getPlayerId());
-                    log.info("Assigned player {} to room {}", data.getPlayerId(), roomId);
                     client.joinRoom(roomId);
                     ack.sendAckData(new JoinResponseDTO(roomId));
+                    log.info("Assigned player {} to room {}", data.getPlayerId(), roomId);
                 });
 
         server.addEventListener("waitingReady", WaitingReadyDTO.class,
@@ -44,13 +43,9 @@ public class SocketIOConfig {
                     String playerId = data.getPlayerId();
                     IGameRoom room  = roomManager.getRoom(roomId);
 
-                    // Spieler als ready markieren
                     room.markReady(playerId);
-
-                    // ack zurückgeben (optional)
                     ack.sendAckData("ok");
 
-                    // NUR wenn wirklich alle Spieler ready sind:
                     if (room.getReadyCount() == room.getPlayerCount() && room.isFull()) {
                         server.getRoomOperations(roomId).sendEvent("startGame");
                         room.start();
@@ -59,31 +54,16 @@ public class SocketIOConfig {
                 }
         );
 
-        // 2) move-Event
         server.addEventListener("move", MoveRequestDTO.class,
                 (client, data, ack) -> {
                     IGameRoom room = roomManager.getRoom(data.getRoomId());
                     log.info("PlayerId: {}, PlayerX: {}, PlayerY: {}", data.getPlayerId(), data.getX(), data.getY());
-                    // direkt in die Logik
+
                     room.getGameLogic().movePlayer(
                             data.getPlayerId(),
                             data.getX(),
                             data.getY()
                     );
-                    // optional: ack.sendAckData("moved");
-                }
-        );
-
-        // 3) attack-Event
-        server.addEventListener("attack", AttackRequestDTO.class,
-                (client, data, ack) -> {
-                    IGameRoom room = roomManager.getRoom(data.getRoomId());
-//                    room.getGameLogic().playerAttack(
-//                            data.getPlayerId(),
-//                            data.getX(),
-//                            data.getY()
-//                    );
-                    // optional: ack.sendAckData("attacked");
                 }
         );
 

@@ -1,6 +1,5 @@
 package at.fhv.spiel_backend.server.game;
 
-import at.fhv.spiel_backend.handler.CommandProcessor;
 import at.fhv.spiel_backend.logic.GameLogic;
 import at.fhv.spiel_backend.server.EventPublisher;
 import at.fhv.spiel_backend.server.map.IMapFactory;
@@ -19,7 +18,6 @@ public class GameRoomImpl implements IGameRoom {
     private final Map<String, Object> readyPlayers = new ConcurrentHashMap<>();
 
     private final IMapFactory mapFactory;
-    private final CommandProcessor commandProcessor;
     private final GameLogic gameLogic;
     private final EventPublisher eventPublisher;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -28,12 +26,10 @@ public class GameRoomImpl implements IGameRoom {
 
     public GameRoomImpl(
             IMapFactory mapFactory,
-            CommandProcessor commandProcessor,
             GameLogic gameLogic,
             EventPublisher eventPublisher
     ) {
         this.mapFactory = mapFactory;
-        this.commandProcessor = commandProcessor;
         this.gameLogic = gameLogic;
         this.eventPublisher = eventPublisher;
     }
@@ -45,19 +41,19 @@ public class GameRoomImpl implements IGameRoom {
 
     @Override
     public void addPlayer(String playerId) {
+        if (players.size() >= MAX_PLAYERS) {
+            throw new IllegalStateException("Room " + id + " is full");
+        }
         if (playerId == null) {
             System.out.println("[ERROR] Attempted to add player with null ID!");
             return;
-        }
-        if (players.size() >= MAX_PLAYERS) {
-            throw new IllegalStateException("Room " + id + " is full");
         }
         if (players.containsKey(playerId)) {
             System.out.println("[WARN] Player already exists in room: " + playerId);
             return;
         }
 
-        // Insert a proper player representation
+        // TODO: Insert a proper player representation
         players.put(playerId, new Object());
         gameLogic.addPlayer(playerId);
 
@@ -88,19 +84,15 @@ public class GameRoomImpl implements IGameRoom {
 
     @Override
     public void start() {
-        final long tickMs = 16;
-        final float tickSec = tickMs / 1000f;
-
         executor.scheduleAtFixedRate(() -> {
             try {
-                gameLogic.update(tickSec);
                 StateUpdateMessage update = buildStateUpdate();
                 eventPublisher.publish(id, update);
             } catch (Exception e) {
                 System.err.println("[ERROR] Exception in scheduled update: " + e.getMessage());
                 e.printStackTrace();
             }
-        }, 0, tickMs, TimeUnit.MILLISECONDS);
+        }, 0, 16, TimeUnit.MILLISECONDS);
     }
 
     @Override
