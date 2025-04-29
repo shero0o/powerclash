@@ -50,9 +50,6 @@ public class RoomManagerImpl implements IRoomManager {
         for (IGameRoom room : rooms) {
             if (!room.isFull()) {
                 room.addPlayer(playerId);
-                if (room.isFull()) {
-                    room.start();
-                }
                 return room.getId();
             }
         }

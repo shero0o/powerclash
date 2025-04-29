@@ -3,16 +3,13 @@ package at.fhv.spiel_backend.logic;
 import at.fhv.spiel_backend.model.*;
 import at.fhv.spiel_backend.ws.PlayerState;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
-import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-@Component
 public class DefaultGameLogic implements GameLogic {
     private final Map<String, Player> players = new ConcurrentHashMap<>();
 

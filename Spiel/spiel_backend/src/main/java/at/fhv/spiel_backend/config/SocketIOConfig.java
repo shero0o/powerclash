@@ -3,6 +3,7 @@ package at.fhv.spiel_backend.config;
 import at.fhv.spiel_backend.DTO.*;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
+import at.fhv.spiel_backend.ws.StateUpdateMessage;
 import com.corundumstudio.socketio.SocketIOServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,18 +55,19 @@ public class SocketIOConfig {
                 }
         );
 
-        server.addEventListener("move", MoveRequestDTO.class,
-                (client, data, ack) -> {
-                    IGameRoom room = roomManager.getRoom(data.getRoomId());
-                    log.info("PlayerId: {}, PlayerX: {}, PlayerY: {}", data.getPlayerId(), data.getX(), data.getY());
+        server.addEventListener("move", MoveRequestDTO.class, (client, data, ack) -> {
+            IGameRoom room = roomManager.getRoom(data.getRoomId());
+            log.info("PlayerId: {}, PlayerX: {}, PlayerY: {}", data.getPlayerId(), data.getX(), data.getY());
 
-                    room.getGameLogic().movePlayer(
-                            data.getPlayerId(),
-                            data.getX(),
-                            data.getY()
-                    );
-                }
-        );
+            room.getGameLogic().movePlayer(
+                    data.getPlayerId(),
+                    data.getX(),
+                    data.getY()
+            );
+
+            StateUpdateMessage update = room.buildStateUpdate();
+            server.getRoomOperations(data.getRoomId()).sendEvent("stateUpdate", update);
+        });
 
         server.start();
         return server;

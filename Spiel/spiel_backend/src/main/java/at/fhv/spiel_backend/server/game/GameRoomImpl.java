@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
 
-@Component
 public class GameRoomImpl implements IGameRoom {
     private final String id = UUID.randomUUID().toString();
     private final Map<String, Object> players = new ConcurrentHashMap<>();
@@ -22,7 +21,7 @@ public class GameRoomImpl implements IGameRoom {
     private final EventPublisher eventPublisher;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-    private static final int MAX_PLAYERS = 1;
+    private static final int MAX_PLAYERS = 2;
 
     public GameRoomImpl(
             IMapFactory mapFactory,
@@ -106,6 +105,10 @@ public class GameRoomImpl implements IGameRoom {
 
     @Override
     public void markReady(String playerId) {
+        if (readyPlayers.size() >= MAX_PLAYERS) {
+            System.out.println("[WARN] Cannot mark more players as ready. Maximum reached!");
+            return;
+        }
         if (playerId == null) {
             System.out.println("[ERROR] markReady called with null playerId!");
             return;
