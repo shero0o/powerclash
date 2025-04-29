@@ -11,4 +11,5 @@ public class PlayerState {
     private Position position;
     private int currentHealth;
     private boolean visible;
+    private int ammo;
 }

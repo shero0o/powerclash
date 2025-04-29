@@ -45,6 +45,8 @@ export default class GameScene extends Phaser.Scene {
         // 4) Kamera sofort auf die Kartenzentrum setzen
         cam.centerOn(width / 2, height / 2);
 
+        this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
+        this.ammoBarFill = this.add.graphics().setScrollFactor(0);
 
         // Netzwerk-Update
         this.socket.on('stateUpdate', state => {
@@ -70,12 +72,13 @@ export default class GameScene extends Phaser.Scene {
 
         //projectile
         this.input.on('pointerdown', (pointer) => {
-            const me = this.playerSprites[this.playerId];
-            if (!me) return;
+            const sprite  = this.playerSprites[this.playerId];
+            const meState = this.latestState?.players.find(p => p.playerId === this.playerId);
+            if (!sprite || !meState || meState.ammo <= 0) return;
 
             const direction = new Phaser.Math.Vector2(
-                pointer.worldX - me.x,
-                pointer.worldY - me.y
+                pointer.worldX - sprite.x,
+                pointer.worldY - sprite.y
             ).normalize();
 
             // 1) Local: Projektil sofort anzeigen
@@ -101,10 +104,10 @@ export default class GameScene extends Phaser.Scene {
         if (!this.latestState) return;
 
         // A) Bewegung senden
-        const me = this.latestState.players.find(p => p.playerId === this.playerId);
-        if (me) {
-            let x = me.pos?.x ?? me.position?.x ?? me.x ?? 0;
-            let y = me.pos?.y ?? me.position?.y ?? me.y ?? 0;
+        const meState = this.latestState.players.find(p => p.playerId === this.playerId);
+        if (meState) {
+            let x = meState.pos?.x ?? meState.position?.x ?? meState.x ?? 0;
+            let y = meState.pos?.y ?? meState.position?.y ?? meState.y ?? 0;
             const step = 10;
             if (this.keys.left.isDown)  x -= step;
             if (this.keys.right.isDown) x += step;
@@ -116,14 +119,14 @@ export default class GameScene extends Phaser.Scene {
         // B) Render & Kamera-Follow
         const ptr = this.input.activePointer;
         this.latestState.players.forEach(p => {
-            const x = p.pos?.x ?? p.position?.x;
-            const y = p.pos?.y ?? p.position?.y;
-            if (x == null || y == null) return;
+            const px = p.pos?.x ?? p.position?.x;
+            const py = p.pos?.y ?? p.position?.y;
+            if (px == null || py == null) return;
 
             let spr = this.playerSprites[p.playerId];
             if (!spr) {
                 // Physics-Sprite, damit Collider & Follow funktionieren
-                spr = this.physics.add.sprite(x, y, 'player')
+                spr = this.physics.add.sprite(px, py, 'player')
                     .setOrigin(0.5, 0.5);
                 this.playerSprites[p.playerId] = spr;
 
@@ -138,9 +141,9 @@ export default class GameScene extends Phaser.Scene {
             }
 
             // Position und Drehung updaten
-            spr.setPosition(x, y);
+            spr.setPosition(px, py);
             if (p.playerId === this.playerId) {
-                const angle = Phaser.Math.Angle.Between(x, y, ptr.worldX, ptr.worldY);
+                const angle = Phaser.Math.Angle.Between(px, py, ptr.worldX, ptr.worldY);
                 spr.setRotation(angle);
             }
         });
@@ -178,6 +181,23 @@ export default class GameScene extends Phaser.Scene {
                 delete this.projectileSprites[id];
             }
         });
+
+        // —– D) Ammo-Bar zeichnen —–
+        const ammo= meState?.ammo ?? 0;
+        const maxAmmo  = meState?.maxAmmo ?? 0;
+        const barX     = 10;
+        const barY     = 10;
+        const barW     = 100;
+        const barH     = 10;
+
+        this.ammoBarBg.clear();
+        this.ammoBarBg.fillStyle(0x000000, 0.5);
+        this.ammoBarBg.fillRect(barX, barY, barW, barH);
+
+        this.ammoBarFill.clear();
+        this.ammoBarFill.fillStyle(0xffffff, 1);
+        const fillW = Math.floor((barW - 4) * (ammo / maxAmmo));
+        this.ammoBarFill.fillRect(barX + 2, barY + 2, fillW, barH - 4);
 
     }
 }
