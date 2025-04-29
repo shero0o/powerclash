@@ -1,6 +1,7 @@
 package at.fhv.spiel_backend.config;
 
 import at.fhv.spiel_backend.DTO.*;
+import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
@@ -55,19 +56,32 @@ public class SocketIOConfig {
                 }
         );
 
+        // inside socketIOServer(…)
         server.addEventListener("move", MoveRequestDTO.class, (client, data, ack) -> {
-            IGameRoom room = roomManager.getRoom(data.getRoomId());
-            log.info("PlayerId: {}, PlayerX: {}, PlayerY: {}", data.getPlayerId(), data.getX(), data.getY());
+            IGameRoom generic = roomManager.getRoom(data.getRoomId());
+            if (!(generic instanceof GameRoomImpl)) {
+                ack.sendAckData("error: invalid room");
+                return;
+            }
+            GameRoomImpl room = (GameRoomImpl) generic;
 
-            room.getGameLogic().movePlayer(
-                    data.getPlayerId(),
-                    data.getX(),
-                    data.getY()
+            log.info("Recording input – player {}, dirX={}, dirY={}, angle={}",
+                    data.getPlayerId(), data.getDirX(), data.getDirY(), data.getAngle()
             );
 
-            StateUpdateMessage update = room.buildStateUpdate();
-            server.getRoomOperations(data.getRoomId()).sendEvent("stateUpdate", update);
+            // THIS is the key: stash it for the next tick
+            room.setPlayerInput(
+                    data.getPlayerId(),
+                    data.getDirX(),
+                    data.getDirY(),
+                    data.getAngle()
+            );
+
+            // ack quickly – the scheduled tick will broadcast
+            ack.sendAckData("ok");
         });
+
+
 
         server.start();
         return server;

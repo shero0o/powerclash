@@ -25,4 +25,3 @@ public class EventPublisher {
         server.getRoomOperations(roomId).sendEvent("stateUpdate", event);
     }
 }
-

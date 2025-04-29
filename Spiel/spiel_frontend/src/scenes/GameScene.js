@@ -1,3 +1,4 @@
+// src/scenes/GameScene.js
 import Phaser from 'phaser';
 
 export default class GameScene extends Phaser.Scene {
@@ -6,13 +7,21 @@ export default class GameScene extends Phaser.Scene {
     }
 
     init(data) {
-        this.roomId           = data.roomId;
-        this.playerId         = data.playerId;
-        this.latestState      = null;
-        this.playerSprites    = {};
-        this.projectileSprites = {};
-        this.keys             = null;
-        this.initialZoom      = 1;
+        this.roomId        = data.roomId;
+        this.playerId      = data.playerId;
+        this.latestState   = null;
+        this.playerSprites = {};
+
+        // === set your fixed spawn points here ===
+        this.spawnPoints = [
+            { x: 100, y: 100 },
+            { x: 700, y: 100 },
+            { x: 100, y: 500 },
+            { x: 700, y: 500 }
+        ];
+
+        this.keys        = null;
+        this.initialZoom = 1;
     }
 
     preload() {
@@ -22,88 +31,80 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // 1) Tilemap & Layers
-        const map = this.make.tilemap({ key: 'map1' });
-        const tileset = map.addTilesetImage('tilesheet_complete_2X', 'tileset1');
-        this.groundLayer = map.createLayer('ground', tileset, 0, 0);
-        this.grassLayer  = map.createLayer('grass',  tileset, 0, 0);
-        this.grassLayer.setCollisionByExclusion([-1]);
+        // --- map & layers ---
+        const map   = this.make.tilemap({ key: 'map1' });
+        const tiles = map.addTilesetImage('tilesheet_complete_2X', 'tileset1');
+        this.groundLayer = map.createLayer('ground', tiles, 0, 0);
+        this.grassLayer  = map.createLayer('grass',  tiles, 0, 0);
 
-        // 2) World- und Kamera-Bounds
-        const width  = map.widthInPixels;
-        const height = map.heightInPixels;
-        this.physics.world.setBounds(0, 0, width, height);
-
+        // world & camera bounds
+        const W = map.widthInPixels, H = map.heightInPixels;
+        this.physics.world.setBounds(0, 0, W, H);
         const cam = this.cameras.main;
-        cam.setBounds(0, 0, width, height);
+        cam.setBounds(0, 0, W, H);
+        cam.setZoom(Math.min(cam.width / W, cam.height / H));
+        cam.centerOn(W/2, H/2);
 
-        // 3) Zoom so einstellen, dass die gesamte Map in dein 1280×720‐Fenster passt
-        const fitZoom = Math.min(cam.width / width, cam.height / height);
-        cam.setZoom(fitZoom);
-
-        // 4) Kamera sofort auf die Kartenzentrum setzen
-        cam.centerOn(width / 2, height / 2);
-
-        // Netzwerk-Update
-        this.socket.on('stateUpdate', state => {
-            this.latestState = state;
-        });
-
-        // WASD
+        // --- input & socket ---
         this.keys = this.input.keyboard.addKeys({
             up: 'W', down: 'S', left: 'A', right: 'D'
         });
+        this.socket.on('stateUpdate', state => {
+            this.latestState = state;
+        });
     }
+
+    // src/scenes/GameScene.js (inside your GameScene class)
 
     update() {
         if (!this.latestState) return;
 
-        // A) Bewegung senden
-        const me = this.latestState.players.find(p => p.playerId === this.playerId);
-        if (me) {
-            let x = me.pos?.x ?? me.position?.x ?? me.x ?? 0;
-            let y = me.pos?.y ?? me.position?.y ?? me.y ?? 0;
-            const step = 10;
-            if (this.keys.left.isDown)  x -= step;
-            if (this.keys.right.isDown) x += step;
-            if (this.keys.up.isDown)    y -= step;
-            if (this.keys.down.isDown)  y += step;
-            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, x, y });
-        }
+        const ptr   = this.input.activePointer;
+        const cam   = this.cameras.main;
 
-        // B) Render & Kamera-Follow
-        const ptr = this.input.activePointer;
         this.latestState.players.forEach(p => {
-            const x = p.pos?.x ?? p.position?.x;
-            const y = p.pos?.y ?? p.position?.y;
-            if (x == null || y == null) return;
-
+            // 1) get or create the sprite
             let spr = this.playerSprites[p.playerId];
             if (!spr) {
-                // Physics-Sprite, damit Collider & Follow funktionieren
-                spr = this.physics.add.sprite(x, y, 'player')
-                    .setOrigin(0.5, 0.5);
+                spr = this.physics.add.sprite(p.position.x, p.position.y, 'player')
+                    .setOrigin(0.5);
                 this.playerSprites[p.playerId] = spr;
-
                 if (p.playerId === this.playerId) {
-                    // Kamera folgt exakt (kein Delay) und zentriert dich immer
-                    this.cameras.main.startFollow(spr, false, 1, 1);
-                    // setzt den weiterhin initialen (herausgezoomten) Zoom
-                    this.cameras.main.setZoom(this.initialZoom);
-                    // Kollision gegen Grass-Layer
+                    cam.startFollow(spr, false, 1, 1);
+                    cam.setZoom(this.initialZoom);
                     this.physics.add.collider(spr, this.grassLayer);
                 }
             }
 
-            // Position und Drehung updaten
-            spr.setPosition(x, y);
+            // 2) **Always** snap to the server's authoritative pos+angle:
+            spr.setPosition(p.position.x, p.position.y);
+            spr.setRotation(p.position.angle);
+
+            // 3) If this is *you*, compute your next input & tell the server:
             if (p.playerId === this.playerId) {
-                const angle = Phaser.Math.Angle.Between(x, y, ptr.worldX, ptr.worldY);
-                spr.setRotation(angle);
+                // aim at pointer
+                const worldPt = cam.getWorldPoint(ptr.x, ptr.y);
+                const angle   = Phaser.Math.Angle.Between(
+                    p.position.x, p.position.y,
+                    worldPt.x,    worldPt.y
+                );
+                // compute WASD direction
+                const dirX = (this.keys.left.isDown  ? -1 : 0)
+                    + (this.keys.right.isDown ?  1 : 0);
+                const dirY = (this.keys.up.isDown    ? -1 : 0)
+                    + (this.keys.down.isDown  ?  1 : 0);
+
+                this.socket.emit('move', {
+                    roomId:   this.roomId,
+                    playerId: this.playerId,
+                    dirX,
+                    dirY,
+                    angle
+                });
             }
         });
 
-        // C) Aufräumen
+        // 4) cleanup any departed players
         Object.keys(this.playerSprites).forEach(id => {
             if (!this.latestState.players.find(p => p.playerId === id)) {
                 this.playerSprites[id].destroy();
@@ -111,4 +112,5 @@ export default class GameScene extends Phaser.Scene {
             }
         });
     }
+
 }

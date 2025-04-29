@@ -1,28 +1,16 @@
 package at.fhv.spiel_backend.logic;
 
+import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
 public interface GameLogic {
-
-    /**
-     * Build a snapshot of the current game state for clients
-     */
     StateUpdateMessage buildStateUpdate();
-
-    /**
-     * Move the specified player to (x,y)
-     */
-    void movePlayer(String playerId, float x, float y);
-
-    /**
-     * Register a new player in the simulation
-     */
+    void movePlayer(String playerId, float x, float y, float angle);
     void addPlayer(String playerId);
+    void removePlayer(String playerId);
 
     /**
-     * Remove a player from the simulation
+     * Expose the internal Player object so the room loop can apply speed.
      */
-    void removePlayer(String playerId);
+    Player getPlayer(String playerId);
 }
-
-
