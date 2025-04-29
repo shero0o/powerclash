@@ -1,6 +1,10 @@
 package at.fhv.spiel_backend.logic;
 
+import at.fhv.spiel_backend.model.Position;
+import at.fhv.spiel_backend.model.Projectile;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
+
+import java.util.List;
 
 public interface GameLogic {
 
@@ -23,6 +27,13 @@ public interface GameLogic {
      * Remove a player from the simulation
      */
     void removePlayer(String playerId);
+
+    void spawnProjectile(String playerId, Position position, Position direction);
+
+    void updateProjectiles();
+
+    Position getPlayerPosition(String playerId);
+    List<Projectile> getProjectiles();
 }
 
 

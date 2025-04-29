@@ -1,6 +1,7 @@
 package at.fhv.spiel_backend.config;
 
 import at.fhv.spiel_backend.DTO.*;
+import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
@@ -67,6 +68,12 @@ public class SocketIOConfig {
 
             StateUpdateMessage update = room.buildStateUpdate();
             server.getRoomOperations(data.getRoomId()).sendEvent("stateUpdate", update);
+        });
+
+        server.addEventListener("shootProjectile", ShootProjectileDTO.class, (client, data, ack) -> {
+            IGameRoom room = roomManager.getRoom(data.getRoomId());
+            room.getGameLogic().spawnProjectile(data.getPlayerId(), room.getGameLogic().getPlayerPosition(data.getPlayerId()),
+                    new Position(data.getDirection().getX(), data.getDirection().getY()));
         });
 
         server.start();

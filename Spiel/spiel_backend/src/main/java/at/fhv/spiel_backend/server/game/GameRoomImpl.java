@@ -85,6 +85,7 @@ public class GameRoomImpl implements IGameRoom {
     public void start() {
         executor.scheduleAtFixedRate(() -> {
             try {
+                gameLogic.updateProjectiles();
                 StateUpdateMessage update = buildStateUpdate();
                 eventPublisher.publish(id, update);
             } catch (Exception e) {

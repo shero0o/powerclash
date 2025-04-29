@@ -8,7 +8,6 @@ import PreloadScene from '../scenes/PreloadScene';
 import CountdownScene from '../scenes/CountdownScene';
 import GameScene from '../scenes/GameScene';
 
-
 export default function PhaserGame() {
     const containerRef = useRef(null);
 

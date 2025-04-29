@@ -19,6 +19,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('player',   '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.tilemapTiledJSON('map1',   '/assets/map.json');
         this.load.image('tileset1', '/assets/Tilesheet/tilesheet_complete_2X.png');
+        this.load.image('projectile', '/assets/PNG/projectile/projectile.png');
     }
 
     create() {
@@ -44,15 +45,56 @@ export default class GameScene extends Phaser.Scene {
         // 4) Kamera sofort auf die Kartenzentrum setzen
         cam.centerOn(width / 2, height / 2);
 
+
         // Netzwerk-Update
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
+            console.log('[stateUpdate] projectiles:', state.projectiles);
         });
 
         // WASD
         this.keys = this.input.keyboard.addKeys({
             up: 'W', down: 'S', left: 'A', right: 'D'
         });
+
+
+
+        // --- Lokale Projektile für sofortiges Feedback ---
+        // this.projectilesGroup = this.physics.add.group();
+        // this.physics.world.on('worldbounds', body => {
+        //     // beendet Projektile, die die Welt verlassen
+        //     if (body.gameObject.texture.key === 'projectile') {
+        //         body.gameObject.destroy();
+        //     }
+        // });
+
+        //projectile
+        this.input.on('pointerdown', (pointer) => {
+            const me = this.playerSprites[this.playerId];
+            if (!me) return;
+
+            const direction = new Phaser.Math.Vector2(
+                pointer.worldX - me.x,
+                pointer.worldY - me.y
+            ).normalize();
+
+            // 1) Local: Projektil sofort anzeigen
+            // const proj = this.projectilesGroup.create(me.x, me.y, 'projectile');
+            // proj.setVelocity(direction.x * 500, direction.y * 500);
+            //
+            //
+            // proj.setCollideWorldBounds(true);
+            // proj.body.onWorldBounds = true;
+
+
+            this.socket.emit('shootProjectile', {
+                roomId: this.roomId,
+                playerId: this.playerId,
+                direction: { x: direction.x, y: direction.y }
+            });
+        });
+
+
     }
 
     update() {
@@ -110,5 +152,32 @@ export default class GameScene extends Phaser.Scene {
                 delete this.playerSprites[id];
             }
         });
+
+
+        // --- C) Projektile rendern und aufräumen ---
+        // 1) alle aktuellen Projektile zeichnen/aktualisieren
+        const aliveIds = new Set();
+        this.latestState.projectiles?.forEach(p => {
+            aliveIds.add(p.id);
+            let spr = this.projectileSprites[p.id];
+            if (!spr) {
+                console.log('➕ creating projectile sprite', p.id);
+                spr = this.physics.add.sprite(p.position.x, p.position.y, 'projectile').setOrigin(0.5, 0.5);
+                this.projectileSprites[p.id] = spr;
+            }
+            else {
+                spr.setPosition(p.position.x, p.position.y);
+            }
+        });
+
+        // Projektile aufräumen
+        Object.keys(this.projectileSprites).forEach(id => {
+            if (!aliveIds.has(id)) {
+                console.log('➖ destroying projectile sprite', id);
+                this.projectileSprites[id].destroy();
+                delete this.projectileSprites[id];
+            }
+        });
+
     }
 }

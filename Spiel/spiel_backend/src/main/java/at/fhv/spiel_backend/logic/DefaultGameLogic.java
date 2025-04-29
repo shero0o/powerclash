@@ -4,14 +4,13 @@ import at.fhv.spiel_backend.model.*;
 import at.fhv.spiel_backend.ws.PlayerState;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class DefaultGameLogic implements GameLogic {
     private final Map<String, Player> players = new ConcurrentHashMap<>();
+    private final Map<String, Projectile> projectiles = new ConcurrentHashMap<>();
 
     @Override
     public StateUpdateMessage buildStateUpdate() {
@@ -25,6 +24,7 @@ public class DefaultGameLogic implements GameLogic {
         StateUpdateMessage msg = new StateUpdateMessage();
         msg.setPlayers(ps);
         msg.setEvents(Collections.emptyList());
+        msg.setProjectiles(getProjectiles());
         return msg;
     }
 
@@ -47,5 +47,41 @@ public class DefaultGameLogic implements GameLogic {
     public void removePlayer(String playerId) {
         players.remove(playerId);
     }
+
+
+
+    @Override
+    public void spawnProjectile(String playerId, Position position, Position direction) {
+        String projectileId = UUID.randomUUID().toString();
+        Projectile projectile = new Projectile(projectileId, playerId, position, direction, 400f, 10, System.currentTimeMillis());
+        projectiles.put(projectileId, projectile);
+
+    }
+
+    @Override
+    public void updateProjectiles() {
+        long now = System.currentTimeMillis();
+        projectiles.values().removeIf(p -> now - p.getCreationTime() > 1000);
+
+        float deltaTime = 0.016f; // ca. 60 updates/sec
+        projectiles.values().forEach(projectile ->
+        {   projectile.getPosition().setX(projectile.getPosition().getX() + projectile.getDirection().getX() * projectile.getSpeed() * deltaTime);
+            projectile.getPosition().setY(projectile.getPosition().getY() + projectile.getDirection().getY() * projectile.getSpeed() * deltaTime);
+        });
+
+    }
+
+    @Override
+    public List<Projectile> getProjectiles() {
+        return new ArrayList<>(projectiles.values());
+    }
+
+    @Override
+    public Position getPlayerPosition(String playerId) {
+        return players.get(playerId).getPosition();
+    }
+
+
+
 }
 
