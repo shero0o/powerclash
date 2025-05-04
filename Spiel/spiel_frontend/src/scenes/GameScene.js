@@ -11,7 +11,7 @@ export default class GameScene extends Phaser.Scene {
         this.playerId      = data.playerId;
         this.latestState   = null;
         this.playerSprites = {};
-        this.bulletSprites = {};    // ← für die Bullets
+        this.bulletSprites = {};
         this.keys          = null;
         this.initialZoom   = 1;
         this.maxHealth     = 100;
@@ -27,19 +27,39 @@ export default class GameScene extends Phaser.Scene {
             up: 'W', down: 'S', left: 'A', right: 'D'
         });
 
-        // 2) Klick → attack-Event senden
+        // 2) Exit-Button, initially hidden
+        this.exitButton = this.add
+            .text(16, 16, 'Exit', { fontSize: '18px', fill: '#ff0000' })
+            .setScrollFactor(0)
+            .setInteractive()
+            .setVisible(false);
+
+        this.exitButton.on('pointerdown', () => {
+            // optional: inform server you left
+            if (this.socket && this.socket.connected) {
+                this.socket.emit('leaveRoom', {
+                    roomId:   this.roomId,
+                    playerId: this.playerId
+                });
+                this.socket.disconnect();
+            }
+            this.scene.start('SplashScene');
+        });
+
+        // 3) Click → attack-Event senden (only if alive)
         this.input.on('pointerdown', pointer => {
             const me = this.latestState?.players.find(p => p.playerId === this.playerId);
-            if (!me) return;
+            if (!me || me.currentHealth <= 0) return;
 
-            const dirX = (this.keys.left.isDown  ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-            const dirY = (this.keys.up.isDown    ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
+            const dirX = (this.keys.left.isDown  ? -1 : 0)
+                + (this.keys.right.isDown ?  1 : 0);
+            const dirY = (this.keys.up.isDown    ? -1 : 0)
+                + (this.keys.down.isDown  ?  1 : 0);
 
-            const cam   = this.cameras.main;
-            const world = cam.getWorldPoint(pointer.x, pointer.y);
+            const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
             const angle = Phaser.Math.Angle.Between(
                 me.position.x, me.position.y,
-                world.x,      world.y
+                world.x,       world.y
             );
 
             this.socket.emit('attack', {
@@ -51,7 +71,7 @@ export default class GameScene extends Phaser.Scene {
             });
         });
 
-        // 3) Server-Updates empfangen
+        // 4) Server-Updates empfangen
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
         });
@@ -62,6 +82,14 @@ export default class GameScene extends Phaser.Scene {
 
         const ptr = this.input.activePointer;
         const cam = this.cameras.main;
+
+        // find our own state this frame
+        const me = this.latestState.players.find(p => p.playerId === this.playerId);
+
+        // if dead, show exit button
+        if (me && me.currentHealth <= 0) {
+            this.exitButton.setVisible(true);
+        }
 
         // --- Spieler zeichnen & bewegen ---
         this.latestState.players.forEach(p => {
@@ -100,8 +128,8 @@ export default class GameScene extends Phaser.Scene {
                 barW * pct, barH
             );
 
-            // WASD-Bewegung senden
-            if (p.playerId === this.playerId) {
+            // WASD-Bewegung senden (only if me and alive)
+            if (p.playerId === this.playerId && p.currentHealth > 0) {
                 const worldPt = cam.getWorldPoint(ptr.x, ptr.y);
                 const angle   = Phaser.Math.Angle.Between(
                     p.position.x, p.position.y,
@@ -131,14 +159,15 @@ export default class GameScene extends Phaser.Scene {
 
                 let circ = this.bulletSprites[b.bulletId];
                 if (!circ) {
-                    circ = this.add.circle(b.x, b.y, 4, 0xFFFF00); // gelber Punkt
+                    circ = this.add.circle(b.x, b.y, 4, 0xFFFF00)
+                        .setDepth(1);
                     this.bulletSprites[b.bulletId] = circ;
                 }
                 circ.setPosition(b.x, b.y);
             }
         });
 
-        // Entferne Bullets, die nicht mehr in events vorkommen
+        // Remove bullets no longer present
         Object.keys(this.bulletSprites).forEach(id => {
             if (!seenBullets.has(id)) {
                 this.bulletSprites[id].destroy();

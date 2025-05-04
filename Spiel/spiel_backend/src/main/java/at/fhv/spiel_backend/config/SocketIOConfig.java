@@ -1,6 +1,8 @@
 package at.fhv.spiel_backend.config;
 
 import at.fhv.spiel_backend.DTO.*;
+import at.fhv.spiel_backend.logic.DefaultGameLogic;
+import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
@@ -58,56 +60,41 @@ public class SocketIOConfig {
 
         // inside socketIOServer(…)
         server.addEventListener("move", MoveRequestDTO.class, (client, data, ack) -> {
-            IGameRoom generic = roomManager.getRoom(data.getRoomId());
-            if (!(generic instanceof GameRoomImpl)) {
-                ack.sendAckData("error: invalid room");
+            GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+
+            // ➊ refuse movement if player is dead
+            Player shooter = ((DefaultGameLogic)room.getGameLogic()).getPlayer(data.getPlayerId());
+            if (shooter.getCurrentHealth() <= 0) {
+                ack.sendAckData("dead");
                 return;
             }
-            GameRoomImpl room = (GameRoomImpl) generic;
 
-            log.info("Recording input – player {}, dirX={}, dirY={}, angle={}",
-                    data.getPlayerId(), data.getDirX(), data.getDirY(), data.getAngle()
-            );
-
-            // THIS is the key: stash it for the next tick
+            // otherwise proceed as before
             room.setPlayerInput(
                     data.getPlayerId(),
                     data.getDirX(),
                     data.getDirY(),
                     data.getAngle()
             );
-
-            // ack quickly – the scheduled tick will broadcast
             ack.sendAckData("ok");
         });
 
         server.addEventListener("attack", AttackRequestDTO.class, (client, data, ack) -> {
-            // 1) look up the room
-            IGameRoom generic = roomManager.getRoom(data.getRoomId());
-            if (!(generic instanceof GameRoomImpl)) {
-                ack.sendAckData("error: invalid room");
+            GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+
+            // ➋ refuse attack if player is dead
+            Player shooter = ((DefaultGameLogic)room.getGameLogic()).getPlayer(data.getPlayerId());
+            if (shooter.getCurrentHealth() <= 0) {
+                ack.sendAckData("dead");
                 return;
             }
-            GameRoomImpl room = (GameRoomImpl) generic;
 
-            // 2) log for debugging
-            log.info("Player {} attacks in room {} with dirX={}, dirY={}, angle={}",
-                    data.getPlayerId(),
-                    data.getRoomId(),
-                    data.getDirX(),
-                    data.getDirY(),
-                    data.getAngle()
-            );
-
-            // 3) apply damage + broadcast
             room.handleAttack(
                     data.getPlayerId(),
                     data.getDirX(),
                     data.getDirY(),
                     data.getAngle()
             );
-
-            // 4) ack immediately
             ack.sendAckData("ok");
         });
 
