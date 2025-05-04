@@ -103,6 +103,16 @@ public class GameRoomImpl implements IGameRoom {
     public void setPlayerInput(String playerId, float dirX, float dirY, float angle) {
         inputs.put(playerId, new PlayerInput(dirX, dirY, angle));
     }
+    private void broadcastState() {
+        StateUpdateMessage update = buildStateUpdate();
+        eventPublisher.publish(id, update);
+    }
+    public void handleAttack(String playerId, float dirX, float dirY, float angle) {
+        // call into your game‐logic layer:
+        gameLogic.attack(playerId, dirX, dirY, angle);
+        // optionally broadcast a state update right away:
+        broadcastState();
+    }
 
     /**
      * Starts the authorative game loop (~60Hz). Applies
@@ -114,7 +124,7 @@ public class GameRoomImpl implements IGameRoom {
         // Run the game loop at ~60Hz
         executor.scheduleAtFixedRate(() -> {
                     try {
-                        // 1) Apply all stored inputs
+                        // 1) Apply all stored player inputs
                         inputs.forEach((pid, in) -> {
                             Player p = ((DefaultGameLogic) gameLogic).getPlayer(pid);
                             if (p == null) return;
@@ -137,7 +147,10 @@ public class GameRoomImpl implements IGameRoom {
                             );
                         });
 
-                        // 2) Broadcast the updated state once per tick
+                        // 2) Advance & collide bullets so they move and hit targets
+                        ((DefaultGameLogic) gameLogic).updateBullets(TICK_DT);
+
+                        // 3) Broadcast the updated state (players + bullets) once per tick
                         StateUpdateMessage update = buildStateUpdate();
                         eventPublisher.publish(id, update);
 
@@ -150,6 +163,8 @@ public class GameRoomImpl implements IGameRoom {
                 /* period in ms */   (long)(TICK_DT * 1000),
                 TimeUnit.MILLISECONDS);
     }
+
+
 
 
     // internal holder for last input

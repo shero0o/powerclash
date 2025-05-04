@@ -13,4 +13,6 @@ public interface GameLogic {
      * Expose the internal Player object so the room loop can apply speed.
      */
     Player getPlayer(String playerId);
+    void attack(String playerId, float dirX, float dirY, float angle);
+
 }

@@ -81,6 +81,35 @@ public class SocketIOConfig {
             ack.sendAckData("ok");
         });
 
+        server.addEventListener("attack", AttackRequestDTO.class, (client, data, ack) -> {
+            // 1) look up the room
+            IGameRoom generic = roomManager.getRoom(data.getRoomId());
+            if (!(generic instanceof GameRoomImpl)) {
+                ack.sendAckData("error: invalid room");
+                return;
+            }
+            GameRoomImpl room = (GameRoomImpl) generic;
+
+            // 2) log for debugging
+            log.info("Player {} attacks in room {} with dirX={}, dirY={}, angle={}",
+                    data.getPlayerId(),
+                    data.getRoomId(),
+                    data.getDirX(),
+                    data.getDirY(),
+                    data.getAngle()
+            );
+
+            // 3) apply damage + broadcast
+            room.handleAttack(
+                    data.getPlayerId(),
+                    data.getDirX(),
+                    data.getDirY(),
+                    data.getAngle()
+            );
+
+            // 4) ack immediately
+            ack.sendAckData("ok");
+        });
 
 
         server.start();
