@@ -12,7 +12,7 @@ export default class GameScene extends Phaser.Scene {
         this.latestState   = null;
         this.playerSprites = {};
 
-        // === set your fixed spawn points here ===
+        // fixed spawn points (if you ever need them)
         this.spawnPoints = [
             { x: 100, y: 100 },
             { x: 700, y: 100 },
@@ -22,18 +22,21 @@ export default class GameScene extends Phaser.Scene {
 
         this.keys        = null;
         this.initialZoom = 1;
+
+        // your game's maximum health
+        this.maxHealth = 100;
     }
 
     preload() {
         this.load.image('player',   '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.tilemapTiledJSON('map1',   '/assets/map.json');
-        this.load.image('tileset1', '/assets/Tilesheet/tilesheet_complete_2X.png');
+        this.load.image('tileset1', '/assets/Tilesheet/spritesheet_tiles.png');
     }
 
     create() {
         // --- map & layers ---
         const map   = this.make.tilemap({ key: 'map1' });
-        const tiles = map.addTilesetImage('tilesheet_complete_2X', 'tileset1');
+        const tiles = map.addTilesetImage('tilesheet_tiles', 'tileset1');
         this.groundLayer = map.createLayer('ground', tiles, 0, 0);
         this.grassLayer  = map.createLayer('grass',  tiles, 0, 0);
 
@@ -49,26 +52,27 @@ export default class GameScene extends Phaser.Scene {
         this.keys = this.input.keyboard.addKeys({
             up: 'W', down: 'S', left: 'A', right: 'D'
         });
+
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
         });
     }
 
-    // src/scenes/GameScene.js (inside your GameScene class)
-
     update() {
         if (!this.latestState) return;
 
-        const ptr   = this.input.activePointer;
-        const cam   = this.cameras.main;
+        const ptr = this.input.activePointer;
+        const cam = this.cameras.main;
 
         this.latestState.players.forEach(p => {
-            // 1) get or create the sprite
+            // 1) get or create sprite + healthBar
             let spr = this.playerSprites[p.playerId];
             if (!spr) {
                 spr = this.physics.add.sprite(p.position.x, p.position.y, 'player')
                     .setOrigin(0.5);
+                spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
+
                 if (p.playerId === this.playerId) {
                     cam.startFollow(spr, false, 1, 1);
                     cam.setZoom(this.initialZoom);
@@ -76,19 +80,48 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
 
-            // 2) **Always** snap to the server's authoritative pos+angle:
+            // 2) snap to server position + angle
             spr.setPosition(p.position.x, p.position.y);
             spr.setRotation(p.position.angle);
 
-            // 3) If this is *you*, compute your next input & tell the server:
+            // 3) update visibility
+            spr.setVisible(p.visible);
+            spr.healthBar.setVisible(p.visible);
+
+            // 4) redraw health bar (green, 5px higher)
+            const barWidth  = 40;
+            const barHeight = 6;
+            const healthPct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
+
+            spr.healthBar.clear();
+
+            // border/background
+            spr.healthBar.fillStyle(0x000000);
+            spr.healthBar.fillRect(
+                p.position.x - barWidth/2 - 1,
+                // moved 5px higher: original offset -4 → now -9
+                p.position.y - spr.height/2 - barHeight - 9,
+                barWidth + 2,
+                barHeight + 2
+            );
+
+            // green health fill
+            spr.healthBar.fillStyle(0x00ff00);
+            spr.healthBar.fillRect(
+                p.position.x - barWidth/2,
+                // moved 5px higher: original offset -3 → now -8
+                p.position.y - spr.height/2 - barHeight - 8,
+                barWidth * healthPct,
+                barHeight
+            );
+
+            // 5) your input & move logic
             if (p.playerId === this.playerId) {
-                // aim at pointer
                 const worldPt = cam.getWorldPoint(ptr.x, ptr.y);
                 const angle   = Phaser.Math.Angle.Between(
                     p.position.x, p.position.y,
                     worldPt.x,    worldPt.y
                 );
-                // compute WASD direction
                 const dirX = (this.keys.left.isDown  ? -1 : 0)
                     + (this.keys.right.isDown ?  1 : 0);
                 const dirY = (this.keys.up.isDown    ? -1 : 0)
@@ -104,13 +137,13 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // 4) cleanup any departed players
+        // 6) cleanup departed players & their bars
         Object.keys(this.playerSprites).forEach(id => {
             if (!this.latestState.players.find(p => p.playerId === id)) {
+                this.playerSprites[id].healthBar.destroy();
                 this.playerSprites[id].destroy();
                 delete this.playerSprites[id];
             }
         });
     }
-
 }
