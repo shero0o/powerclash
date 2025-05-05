@@ -73,8 +73,19 @@ public class SocketIOConfig {
         server.addEventListener("shootProjectile", ShootProjectileDTO.class, (client, data, ack) -> {
             IGameRoom room = roomManager.getRoom(data.getRoomId());
             room.getGameLogic().spawnProjectile(data.getPlayerId(), room.getGameLogic().getPlayerPosition(data.getPlayerId()),
-                    new Position(data.getDirection().getX(), data.getDirection().getY()));
+                    new Position(data.getDirection().getX(), data.getDirection().getY()), data.getProjectileType());
         });
+
+
+        server.addEventListener(
+                "changeWeapon",
+                ChangeWeaponDTO.class,
+                (client, data, ack) -> {
+                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+                    room.getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getProjectileType());
+                    ack.sendAckData("ok");
+                }
+        );
 
         server.start();
         return server;

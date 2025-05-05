@@ -2,6 +2,7 @@ package at.fhv.spiel_backend.logic;
 
 import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.model.Projectile;
+import at.fhv.spiel_backend.model.ProjectileType;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
 import java.util.List;
@@ -28,12 +29,14 @@ public interface GameLogic {
      */
     void removePlayer(String playerId);
 
-    void spawnProjectile(String playerId, Position position, Position direction);
+    void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type);
 
     void updateProjectiles();
 
     Position getPlayerPosition(String playerId);
     List<Projectile> getProjectiles();
+
+    void setPlayerWeapon(String playerId, ProjectileType projectileType);
 }
 
 

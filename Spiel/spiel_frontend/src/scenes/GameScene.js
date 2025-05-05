@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
+        this.selectedWeapon = 'RIFLE_BULLET';
     }
 
     init(data) {
@@ -20,9 +21,41 @@ export default class GameScene extends Phaser.Scene {
         this.load.tilemapTiledJSON('map1',   '/assets/map.json');
         this.load.image('tileset1', '/assets/Tilesheet/tilesheet_complete_2X.png');
         this.load.image('projectile', '/assets/PNG/projectile/projectile.png');
+        this.load.image('sniper',  '/assets/PNG/projectile/sniper.png');
+        this.load.image('shotgun_pellet',  '/assets/PNG/projectile/shotgun.png');
+        this.load.image('rifle_bullet',  '/assets/PNG/projectile/rifle.png');
     }
 
     create() {
+        this.input.keyboard.on('keydown', evt => {
+            let newWep = this.selectedWeapon;
+            switch(evt.code) {
+                case 'Digit1':
+                    newWep = 'SNIPER';
+                    break;
+                case 'Digit2':
+                    newWep = 'SHOTGUN_PELLET';
+                    break;
+                case 'Digit3':
+                    newWep = 'RIFLE_BULLET';
+                    break;
+                case 'Digit4':
+                    newWep = 'MINE';
+                    break;
+                    default: return;
+            }
+            this.selectedWeapon = newWep;
+            console.log('Selected weapon:', newWep);
+            // **Informiere den Server**
+            this.socket.emit('changeWeapon', {
+                roomId:         this.roomId,
+                playerId:       this.playerId,
+                projectileType: newWep
+            });
+            console.log('Selected weapon:', this.selectedWeapon);
+        });
+
+
         // 1) Tilemap & Layers
         const map = this.make.tilemap({ key: 'map1' });
         const tileset = map.addTilesetImage('tilesheet_complete_2X', 'tileset1');
@@ -51,7 +84,6 @@ export default class GameScene extends Phaser.Scene {
         // Netzwerk-Update
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
-            console.log('[stateUpdate] projectiles:', state.projectiles);
         });
 
         // WASD
@@ -93,10 +125,10 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('shootProjectile', {
                 roomId: this.roomId,
                 playerId: this.playerId,
-                direction: { x: direction.x, y: direction.y }
+                direction: { x: direction.x, y: direction.y },
+                projectileType: this.selectedWeapon
             });
         });
-
 
     }
 
@@ -161,11 +193,19 @@ export default class GameScene extends Phaser.Scene {
         // 1) alle aktuellen Projektile zeichnen/aktualisieren
         const aliveIds = new Set();
         this.latestState.projectiles?.forEach(p => {
+            let key = 'projectile';
+            switch(p.projectileType) {
+                case 'SNIPER':          key = 'sniper';  break;
+                case 'SHOTGUN_PELLET':  key = 'shotgun_pellet';  break;
+                case 'RIFLE_BULLET':    key = 'rifle_bullet';  break;
+            }
+
             aliveIds.add(p.id);
             let spr = this.projectileSprites[p.id];
             if (!spr) {
                 console.log('➕ creating projectile sprite', p.id);
-                spr = this.physics.add.sprite(p.position.x, p.position.y, 'projectile').setOrigin(0.5, 0.5);
+                //spr = this.physics.add.sprite(p.position.x, p.position.y, 'projectile').setOrigin(0.5, 0.5);
+                spr = this.physics.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5, 0.5);
                 this.projectileSprites[p.id] = spr;
             }
             else {
@@ -184,7 +224,7 @@ export default class GameScene extends Phaser.Scene {
 
         // —– D) Ammo-Bar zeichnen —–
         const ammo= meState?.ammo ?? 0;
-        const maxAmmo  = meState?.maxAmmo ?? 0;
+        const maxAmmo  = 3;
         const barX     = 10;
         const barY     = 10;
         const barW     = 100;
