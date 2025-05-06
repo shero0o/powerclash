@@ -4,6 +4,8 @@ export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.selectedWeapon = 'RIFLE_BULLET';
+        this.isFiring       = false;
+        this.fireEvent      = null;
     }
 
     init(data) {
@@ -91,46 +93,87 @@ export default class GameScene extends Phaser.Scene {
             up: 'W', down: 'S', left: 'A', right: 'D'
         });
 
+        this.input.on('pointerdown', pointer => this.startFiring(pointer));
+        this.input.on('pointerup',   ()      => this.stopFiring());
+        this.input.on('pointerout',  ()      => this.stopFiring());
 
-
-        // --- Lokale Projektile für sofortiges Feedback ---
-        // this.projectilesGroup = this.physics.add.group();
-        // this.physics.world.on('worldbounds', body => {
-        //     // beendet Projektile, die die Welt verlassen
-        //     if (body.gameObject.texture.key === 'projectile') {
-        //         body.gameObject.destroy();
-        //     }
-        // });
 
         //projectile
-        this.input.on('pointerdown', (pointer) => {
-            const sprite  = this.playerSprites[this.playerId];
-            const meState = this.latestState?.players.find(p => p.playerId === this.playerId);
-            if (!sprite || !meState || meState.ammo <= 0) return;
-
-            const direction = new Phaser.Math.Vector2(
-                pointer.worldX - sprite.x,
-                pointer.worldY - sprite.y
-            ).normalize();
-
-            // 1) Local: Projektil sofort anzeigen
-            // const proj = this.projectilesGroup.create(me.x, me.y, 'projectile');
-            // proj.setVelocity(direction.x * 500, direction.y * 500);
-            //
-            //
-            // proj.setCollideWorldBounds(true);
-            // proj.body.onWorldBounds = true;
-
-
-            this.socket.emit('shootProjectile', {
-                roomId: this.roomId,
-                playerId: this.playerId,
-                direction: { x: direction.x, y: direction.y },
-                projectileType: this.selectedWeapon
-            });
-        });
+        // this.input.on('pointerdown', (pointer) => {
+        //     const sprite  = this.playerSprites[this.playerId];
+        //     const meState = this.latestState?.players.find(p => p.playerId === this.playerId);
+        //     if (!sprite || !meState || meState.ammo <= 0) return;
+        //
+        //     const direction = new Phaser.Math.Vector2(
+        //         pointer.worldX - sprite.x,
+        //         pointer.worldY - sprite.y
+        //     ).normalize();
+        //
+        //     this.socket.emit('shootProjectile', {
+        //         roomId: this.roomId,
+        //         playerId: this.playerId,
+        //         direction: { x: direction.x, y: direction.y },
+        //         projectileType: this.selectedWeapon
+        //     });
+        // });
 
     }
+
+    startFiring(pointer) {
+        const meSprite = this.playerSprites[this.playerId];
+        const meState  = this.latestState?.players.find(p => p.playerId === this.playerId);
+        if (!meSprite || !meState || meState.ammo <= 0) return;
+
+        if (this.selectedWeapon === 'RIFLE_BULLET') {
+            if (this.isFiring) return;
+            this.isFiring = true;
+
+            this.fireEvent = this.time.addEvent({
+                delay: 100,        // 10 shots/sec
+                loop:  true,
+                callback: () => {
+                    const ammoLeft = this.latestState.players
+                        .find(p => p.playerId === this.playerId).ammo;
+                    if (ammoLeft <= 0) {
+                        this.stopFiring();
+                        return;
+                    }
+                    const dir = new Phaser.Math.Vector2(
+                        pointer.worldX - meSprite.x,
+                        pointer.worldY - meSprite.y
+                    ).normalize();
+                    this.socket.emit('shootProjectile', {
+                        roomId:         this.roomId,
+                        playerId:       this.playerId,
+                        direction:      { x: dir.x, y: dir.y },
+                        projectileType: 'RIFLE_BULLET'
+                    });
+                }
+            });
+
+        } else {
+            // Alle anderen Waffen nur einmal pro Klick
+            const dir = new Phaser.Math.Vector2(
+                pointer.worldX - meSprite.x,
+                pointer.worldY - meSprite.y
+            ).normalize();
+            this.socket.emit('shootProjectile', {
+                roomId:         this.roomId,
+                playerId:       this.playerId,
+                direction:      { x: dir.x, y: dir.y },
+                projectileType: this.selectedWeapon
+            });
+        }
+    }
+
+    stopFiring() {
+        if (this.fireEvent) {
+            this.fireEvent.remove();
+            this.fireEvent = null;
+        }
+        this.isFiring = false;
+    }
+
 
     update() {
         if (!this.latestState) return;
@@ -198,6 +241,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'SNIPER':          key = 'sniper';  break;
                 case 'SHOTGUN_PELLET':  key = 'shotgun_pellet';  break;
                 case 'RIFLE_BULLET':    key = 'rifle_bullet';  break;
+                case "MINe":            key = "projectile"; break;
             }
 
             aliveIds.add(p.id);

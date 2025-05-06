@@ -71,55 +71,70 @@ public class DefaultGameLogic implements GameLogic {
     public void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type) {
         if (playerWeapon.get(playerId) != type) return;
 
-        float speed, dmg, range;
-        long now = System.currentTimeMillis();
-        Position dir = direction;
-        switch(type) {
-            case SNIPER:
-                speed = 800f; dmg = 75; range = 2000f;
-                break;
-            case SHOTGUN_PELLET:
-                speed = 600f; dmg = 20; range = 200f;
-                // direction leicht random ±15°
-                //direction = PhaserUtils.randomizeDirection(direction, 15);
-                double baseAngle = Math.atan2(direction.getY(), direction.getX());
-                double offset    = ThreadLocalRandom.current().nextDouble(-15, 15) * Math.PI / 180.0;
-                double theta     = baseAngle + offset;
-                dir = new Position((float)Math.cos(theta), (float)Math.sin(theta));
-                break;
-            case RIFLE_BULLET:
-                speed = 500f; dmg = 15; range = 1000f;
-                break;
-            case MINE:
-                speed = 0f;   dmg = 100; range = 0f;
-                break;
-            default:
-                return;
-        }
-
-        String projectileId = UUID.randomUUID().toString();
-        Projectile projectile = new Projectile(projectileId, playerId, position, dir, speed, (int)dmg , now, type, range, 0f);
-
-        if (type == ProjectileType.MINE) {
-            projectile.setArmTime(now + 2000);
-        }
-
-        projectiles.put(projectileId, projectile);
-
-        // 1) ggf. nachfüllen
-        long last = lastRefill.getOrDefault(playerId, 0L);
-        if (now - last >= AMMO_REFILL_MS) {
-            ammoMap.put(playerId, MAX_AMMO);
-            lastRefill.put(playerId, now);
-        }
-        // 2) prüfen
+        // Ammo-Verbrauch einmalig
         int ammoLeft = ammoMap.getOrDefault(playerId, MAX_AMMO);
-        if (ammoLeft <= 0) {
-            return; // kein Schuss möglich
-        }
-        // 3) abziehen und tatsächlich spawnen
+        if (ammoLeft <= 0) return;
         ammoMap.put(playerId, ammoLeft - 1);
 
+        long now = System.currentTimeMillis();
+        double baseAngle = Math.atan2(direction.getY(), direction.getX());
+
+        switch(type) {
+            case SHOTGUN_PELLET -> {
+                // Anzahl der Pellets und max. Spread in Grad
+                final int PELLET_COUNT = 5;
+                final float SPREAD_DEG = 25f;
+                final double stepDeg      = SPREAD_DEG / (PELLET_COUNT - 1);
+                for (int i = 0; i < PELLET_COUNT; i++) {
+                    // zufälliger Winkel-Offset in [-SPREAD_DEG, +SPREAD_DEG]
+                    double offsetDeg = -SPREAD_DEG/2 + i * stepDeg;
+                    double theta = baseAngle + Math.toRadians(offsetDeg);;
+                    Position dirI = new Position((float)Math.cos(theta), (float)Math.sin(theta));
+
+
+                    spawnSingle(projectId(playerId), playerId, position, dirI,
+                            /*speed*/500f, /*damage*/20, now,
+                            ProjectileType.SHOTGUN_PELLET, /*range*/100f);
+                }
+            }
+            case SNIPER -> {
+                spawnSingle(projectId(playerId), playerId, position, direction,
+                        800f, 75, now, ProjectileType.SNIPER, 2000f);
+            }
+            case RIFLE_BULLET -> {
+                spawnSingle(projectId(playerId), playerId, position, direction,
+                        500f, 15, now, ProjectileType.RIFLE_BULLET, 1000f);
+            }
+            case MINE -> {
+                Projectile p = spawnSingle(projectId(playerId), playerId, position, direction,
+                        0f, 100, now, ProjectileType.MINE, 0f);
+                p.setArmTime(now + 2000);
+            }
+            default -> { /* no-op */ }
+        }
+    }
+
+    // Hilfsmethode, damit Du nicht ständig new Projectile(...) tippen musst:
+    private Projectile spawnSingle(String id, String playerId, Position startPos, Position startDir,
+                                   float speed, int dmg, long creationTime,
+                                   ProjectileType type, float maxRange) {
+
+        Position posCopy = new Position(
+                startPos.getX(),
+                startPos.getY()
+        );
+        Position dirCopy = new Position(
+                startDir.getX(),
+                startDir.getY()
+        );
+
+        Projectile p = new Projectile(id, playerId, posCopy, dirCopy, speed, dmg, creationTime, type, maxRange, 0f);
+        projectiles.put(id, p);
+        return p;
+    }
+
+    private String projectId(String playerId) {
+        return playerId + "-" + UUID.randomUUID();
     }
 
     @Override
