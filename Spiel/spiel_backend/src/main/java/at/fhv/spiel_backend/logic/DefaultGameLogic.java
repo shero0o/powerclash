@@ -6,28 +6,40 @@ import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class DefaultGameLogic implements GameLogic {
     private final Map<String, Player> players = new ConcurrentHashMap<>();
     private final Map<String, Projectile> projectiles = new ConcurrentHashMap<>();
 
-    private static final int MAX_AMMO = 3;
+    private static final int DEFAULT_MAX_AMMO = 3;
+    private static final int RIFLE_MAX_AMMO = 15;
     private static final long AMMO_REFILL_MS = 2000;
     private final Map<String, Integer> ammoMap = new ConcurrentHashMap<>();
     private final Map<String, Long> lastRefill = new ConcurrentHashMap<>();
+    private final Map<String, Integer> rifleAmmoMap  = new ConcurrentHashMap<>();
+    private final Map<String, Long>    lastRifleRefill = new ConcurrentHashMap<>();
+    private final Set<String> rifleReloading = ConcurrentHashMap.newKeySet();
+
     private final Map<String, ProjectileType> playerWeapon = new ConcurrentHashMap<>();
 
     @Override
     public StateUpdateMessage buildStateUpdate() {
         List<PlayerState> ps = players.values().stream()
-                .map(p -> new PlayerState(
-                        p.getId(),
-                        p.getPosition(),
-                        p.getCurrentHealth(),
-                        p.isVisible(),
-                        ammoMap.getOrDefault(p.getId(), MAX_AMMO), playerWeapon.getOrDefault(p.getId(), ProjectileType.RIFLE_BULLET)))
+                .map(p -> {
+                    String pid = p.getId();
+                    // welches Ammo anzeigen?
+                    ProjectileType wep = playerWeapon.getOrDefault(pid, ProjectileType.RIFLE_BULLET);
+                    int ammo = (wep == ProjectileType.RIFLE_BULLET)
+                            ? rifleAmmoMap.getOrDefault(pid, RIFLE_MAX_AMMO)
+                            : ammoMap.getOrDefault(pid, DEFAULT_MAX_AMMO);
+                    return new PlayerState(
+                            p.getId(),
+                            p.getPosition(),
+                            p.getCurrentHealth(),
+                            p.isVisible(),
+                            ammo, wep);
+                })
                 .collect(Collectors.toList());
         StateUpdateMessage msg = new StateUpdateMessage();
         msg.setPlayers(ps);
@@ -51,8 +63,10 @@ public class DefaultGameLogic implements GameLogic {
         players.put(playerId, new Player(playerId, br.getLevel(), br.getMaxHealth(), br.getPosition()));
 
         playerWeapon.put(playerId, ProjectileType.RIFLE_BULLET);
-        ammoMap.put(playerId, MAX_AMMO);
+        ammoMap.put(playerId, DEFAULT_MAX_AMMO);
         lastRefill.put(playerId, System.currentTimeMillis());
+        rifleAmmoMap.put(playerId, RIFLE_MAX_AMMO);
+        lastRifleRefill.put(playerId, System.currentTimeMillis());
     }
 
     @Override
@@ -70,13 +84,26 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type) {
         if (playerWeapon.get(playerId) != type) return;
+        long now = System.currentTimeMillis();
 
         // Ammo-Verbrauch einmalig
-        int ammoLeft = ammoMap.getOrDefault(playerId, MAX_AMMO);
-        if (ammoLeft <= 0) return;
-        ammoMap.put(playerId, ammoLeft - 1);
+        if (type == ProjectileType.RIFLE_BULLET) {
+            int ammoLeft = rifleAmmoMap.getOrDefault(playerId, RIFLE_MAX_AMMO);
+            if (ammoLeft <= 0) return;
+            ammoLeft -= 1;
+            rifleAmmoMap.put(playerId, ammoLeft);
+            if (ammoLeft == 0) {
+                rifleReloading.add(playerId);
+                lastRifleRefill.put(playerId, now);
+            }
 
-        long now = System.currentTimeMillis();
+        }
+        else {
+            int ammoLeft = ammoMap.getOrDefault(playerId, DEFAULT_MAX_AMMO);
+            if (ammoLeft <= 0) return;
+            ammoMap.put(playerId, ammoLeft - 1);
+        }
+
         double baseAngle = Math.atan2(direction.getY(), direction.getX());
 
         switch(type) {
@@ -94,7 +121,7 @@ public class DefaultGameLogic implements GameLogic {
 
                     spawnSingle(projectId(playerId), playerId, position, dirI,
                             /*speed*/500f, /*damage*/20, now,
-                            ProjectileType.SHOTGUN_PELLET, /*range*/100f);
+                            ProjectileType.SHOTGUN_PELLET, /*range*/400f);
                 }
             }
             case SNIPER -> {
@@ -107,8 +134,9 @@ public class DefaultGameLogic implements GameLogic {
             }
             case MINE -> {
                 Projectile p = spawnSingle(projectId(playerId), playerId, position, direction,
-                        0f, 100, now, ProjectileType.MINE, 0f);
+                        100f, 100, now, ProjectileType.MINE, 100f);
                 p.setArmTime(now + 2000);
+                p.setArmed(true);
             }
             default -> { /* no-op */ }
         }
@@ -163,9 +191,19 @@ public class DefaultGameLogic implements GameLogic {
         for (String playerId : ammoMap.keySet()) {
             int ammoLeft = ammoMap.get(playerId);
             long last    = lastRefill.getOrDefault(playerId, 0L);
-            if (ammoLeft < MAX_AMMO && now - last >= AMMO_REFILL_MS) {
-                ammoMap.put(playerId, MAX_AMMO);
+            if (ammoLeft < DEFAULT_MAX_AMMO && now - last >= AMMO_REFILL_MS) {
+                ammoMap.put(playerId, DEFAULT_MAX_AMMO);
                 lastRefill.put(playerId, now);
+            }
+        }
+        for (String pid : rifleAmmoMap.keySet()) {
+            if (!rifleReloading.contains(pid)) continue;
+            int left = rifleAmmoMap.get(pid);
+            long last= lastRifleRefill.getOrDefault(pid, 0L);
+            if (left < RIFLE_MAX_AMMO && now - last >= AMMO_REFILL_MS) {
+                rifleAmmoMap.put(pid, RIFLE_MAX_AMMO);
+                rifleReloading.remove(pid);
+                lastRifleRefill.put(pid, now);
             }
         }
 

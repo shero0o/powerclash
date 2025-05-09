@@ -267,8 +267,9 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // —– D) Ammo-Bar zeichnen —–
+        const weapon = meState.currentWeapon;
         const ammo= meState?.ammo ?? 0;
-        const maxAmmo  = 3;
+        const maxAmmo  = weapon === 'RIFLE_BULLET' ? 15 : 3;
         const barX     = 10;
         const barY     = 10;
         const barW     = 100;
