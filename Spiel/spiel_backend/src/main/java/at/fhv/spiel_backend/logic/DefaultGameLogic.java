@@ -32,7 +32,7 @@ public class DefaultGameLogic implements GameLogic {
                     ProjectileType wep = playerWeapon.getOrDefault(pid, ProjectileType.RIFLE_BULLET);
                     int ammo = (wep == ProjectileType.RIFLE_BULLET)
                             ? rifleAmmoMap.getOrDefault(pid, RIFLE_MAX_AMMO)
-                            : ammoMap.getOrDefault(pid, DEFAULT_MAX_AMMO);
+                            : ammoMap.getOrDefault(pid, getMaxAmmoForType(wep));
                     return new PlayerState(
                             p.getId(),
                             p.getPosition(),
@@ -63,7 +63,7 @@ public class DefaultGameLogic implements GameLogic {
         players.put(playerId, new Player(playerId, br.getLevel(), br.getMaxHealth(), br.getPosition()));
 
         playerWeapon.put(playerId, ProjectileType.RIFLE_BULLET);
-        ammoMap.put(playerId, DEFAULT_MAX_AMMO);
+        ammoMap.put(playerId, getMaxAmmoForType(ProjectileType.RIFLE_BULLET));
         lastRefill.put(playerId, System.currentTimeMillis());
         rifleAmmoMap.put(playerId, RIFLE_MAX_AMMO);
         lastRifleRefill.put(playerId, System.currentTimeMillis());
@@ -79,6 +79,9 @@ public class DefaultGameLogic implements GameLogic {
 
     public void setPlayerWeapon(String playerId, ProjectileType type) {
         playerWeapon.put(playerId, type);
+        int max = getMaxAmmoForType(type);
+        ammoMap.put(playerId, max);
+        lastRefill.put(playerId, System.currentTimeMillis());
     }
 
     @Override
@@ -99,7 +102,8 @@ public class DefaultGameLogic implements GameLogic {
 
         }
         else {
-            int ammoLeft = ammoMap.getOrDefault(playerId, DEFAULT_MAX_AMMO);
+            int maxAmmo = getMaxAmmoForType(type);
+            int ammoLeft = ammoMap.getOrDefault(playerId, maxAmmo);
             if (ammoLeft <= 0) return;
             ammoMap.put(playerId, ammoLeft - 1);
         }
@@ -209,8 +213,9 @@ public class DefaultGameLogic implements GameLogic {
         for (String playerId : ammoMap.keySet()) {
             int ammoLeft = ammoMap.get(playerId);
             long last    = lastRefill.getOrDefault(playerId, 0L);
-            if (ammoLeft < DEFAULT_MAX_AMMO && now - last >= AMMO_REFILL_MS) {
-                ammoMap.put(playerId, DEFAULT_MAX_AMMO);
+            int maxAmmo = getMaxAmmoForType(playerWeapon.getOrDefault(playerId, ProjectileType.RIFLE_BULLET));
+            if (ammoLeft < maxAmmo && now - last >= AMMO_REFILL_MS) {
+                ammoMap.put(playerId, maxAmmo);
                 lastRefill.put(playerId, now);
             }
         }
@@ -238,7 +243,15 @@ public class DefaultGameLogic implements GameLogic {
     }
 
 
-
+    private int getMaxAmmoForType(ProjectileType type) {
+        return switch(type) {
+            case SNIPER           -> 1;
+            case SHOTGUN_PELLET   -> 3;   // oder 5, je nach Deiner Entscheidung
+            case MINE             -> 1;
+            case RIFLE_BULLET     -> RIFLE_MAX_AMMO;
+            default               -> DEFAULT_MAX_AMMO;
+        };
+    }
 
 
 

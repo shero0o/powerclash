@@ -22,7 +22,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('player',   '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.tilemapTiledJSON('map1',   '/assets/map.json');
         this.load.image('tileset1', '/assets/Tilesheet/tilesheet_complete_2X.png');
-        this.load.image('bomb', '/assets/PNG/explosion/bomb.png');
+        this.load.image('mine', '/assets/PNG/explosion/bomb.png');
         this.load.image('sniper',  '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet',  '/assets/PNG/projectile/shotgun.png');
         this.load.image('rifle_bullet',  '/assets/PNG/projectile/rifle.png');
@@ -282,12 +282,12 @@ export default class GameScene extends Phaser.Scene {
         // 1) alle aktuellen Projektile zeichnen/aktualisieren
         const aliveIds = new Set();
         this.latestState.projectiles?.forEach(p => {
-            let key = 'projectile';
+            let key = 'mine';
             switch(p.projectileType) {
                 case 'SNIPER':          key = 'sniper';  break;
                 case 'SHOTGUN_PELLET':  key = 'shotgun_pellet';  break;
                 case 'RIFLE_BULLET':    key = 'rifle_bullet';  break;
-                case "MINE":            key = "bomb"; break;
+                case "MINE":            key = "mine"; break;
             }
 
             aliveIds.add(p.id);
@@ -318,7 +318,7 @@ export default class GameScene extends Phaser.Scene {
         // —– D) Ammo-Bar zeichnen —–
         const weapon = meState.currentWeapon;
         const ammo= meState?.ammo ?? 0;
-        const maxAmmo  = weapon === 'RIFLE_BULLET' ? 15 : 3;
+        const maxAmmo  = weapon === 'RIFLE_BULLET' ? 15 : weapon === "MINE" ? 1 : weapon === "SNIPER" ? 1 : 3;
         const barX     = 10;
         const barY     = 10;
         const barW     = 100;
