@@ -134,9 +134,9 @@ public class DefaultGameLogic implements GameLogic {
             }
             case MINE -> {
                 Projectile p = spawnSingle(projectId(playerId), playerId, position, direction,
-                        100f, 100, now, ProjectileType.MINE, 100f);
-                p.setArmTime(now + 2000);
-                p.setArmed(true);
+                        300f, 100, now, ProjectileType.MINE, 300f);
+                p.setArmTime(0L);
+                p.setArmed(false);
             }
             default -> { /* no-op */ }
         }
@@ -169,7 +169,7 @@ public class DefaultGameLogic implements GameLogic {
     public void updateProjectiles() {
         long now = System.currentTimeMillis();
 
-        projectiles.values().removeIf(p -> now - p.getCreationTime() > 1000);
+        projectiles.values().removeIf(p -> p.getProjectileType() != ProjectileType.MINE && now - p.getCreationTime() > 1000);
 
         float deltaTime = 0.016f; // ca. 60 updates/sec
         projectiles.values().forEach(projectile ->
@@ -178,14 +178,32 @@ public class DefaultGameLogic implements GameLogic {
             projectile.getPosition().setY(projectile.getPosition().getY() + projectile.getDirection().getY() * projectile.getSpeed() * deltaTime);
             projectile.setTravelled(projectile.getTravelled() + (float) Math.hypot(projectile.getDirection().getX() * projectile.getSpeed() * deltaTime, projectile.getDirection().getY() * projectile.getSpeed() * deltaTime));
         }
-        else if (!projectile.isArmed() && now >= projectile.getArmTime()) {
-            projectile.setArmed(true);
+        else{
+            if (projectile.getTravelled() < projectile.getMaxRange()) {
+                float dx = projectile.getDirection().getX() * projectile.getSpeed() * deltaTime;
+                float dy = projectile.getDirection().getY() * projectile.getSpeed() * deltaTime;
+                projectile.getPosition().setX(projectile.getPosition().getX() + dx);
+                projectile.getPosition().setY(projectile.getPosition().getY() + dy);
+                projectile.setTravelled(projectile.getTravelled() + (float) Math.hypot(dx, dy));
+            }
+            else {
+                 if (projectile.getArmTime() == 0L) {
+                    // erste Frame nach Wurfende: starte Timer
+                     projectile.setArmTime(now + 2000);
+                 } else if (!projectile.isArmed() && now >= projectile.getArmTime()) {
+                     projectile.setArmed(true);
+                 }}
         }
         });
 
         // 2) Range- und Lebenszeit-Check
         projectiles.values().removeIf(p ->
                 (p.getProjectileType() != ProjectileType.MINE && p.getTravelled() >= p.getMaxRange())
+        );
+
+        projectiles.values().removeIf(p ->
+                p.getProjectileType() == ProjectileType.MINE
+                        && p.isArmed()
         );
 
         for (String playerId : ammoMap.keySet()) {
@@ -218,6 +236,7 @@ public class DefaultGameLogic implements GameLogic {
     public Position getPlayerPosition(String playerId) {
         return players.get(playerId).getPosition();
     }
+
 
 
 

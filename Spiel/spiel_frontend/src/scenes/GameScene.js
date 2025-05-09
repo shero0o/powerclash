@@ -22,10 +22,14 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('player',   '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.tilemapTiledJSON('map1',   '/assets/map.json');
         this.load.image('tileset1', '/assets/Tilesheet/tilesheet_complete_2X.png');
-        this.load.image('projectile', '/assets/PNG/projectile/projectile.png');
+        this.load.image('bomb', '/assets/PNG/explosion/bomb.png');
         this.load.image('sniper',  '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet',  '/assets/PNG/projectile/shotgun.png');
         this.load.image('rifle_bullet',  '/assets/PNG/projectile/rifle.png');
+
+        for (let i = 0; i < 25; i++){
+            this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`)
+        }
     }
 
     create() {
@@ -97,6 +101,17 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
 
+        this.anims.create({
+            key: 'explode',
+            frames: Array.from({ length: 25 }, (_, i) => ({ key: `explosion${i}` })),
+            frameRate: 25,    // z.B. 25 fps = 1 Bild/ms
+            repeat: 0,
+            hideOnComplete: true
+        });
+
+        this.explosionGroup = this.add.group();
+        this.prevProjectileIds = new Set();
+        this.previousMinePositions = {};
 
         //projectile
         // this.input.on('pointerdown', (pointer) => {
@@ -178,6 +193,37 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (!this.latestState) return;
 
+
+        // 0) Erkenne, welche Mine-IDs neu verschwunden sind
+        const currIds = new Set(this.latestState.projectiles
+            .filter(p => p.projectileType === 'MINE')
+            .map(p => p.id)
+        );
+
+        // Für jede Mine, die letztes Frame da war und jetzt nicht mehr:
+        this.prevProjectileIds.forEach(id => {
+            if (!currIds.has(id)) {
+                // Letzte Position speichern in previousPositions Map
+                const lastPos = this.previousMinePositions[id];
+                if (lastPos) {
+                    const expl = this.explosionGroup.create(
+                        lastPos.x, lastPos.y, 'explosion0'
+                    ).setOrigin(0.5);
+                    expl.play('explode');
+                    expl.on('animationcomplete', () => expl.destroy());
+                }
+            }
+        });
+        this.previousMinePositions = {};
+        this.latestState.projectiles.forEach(p => {
+            if (p.projectileType === 'MINE') {
+                this.previousMinePositions[p.id] = { x: p.position.x, y: p.position.y };
+            }
+        });
+        this.prevProjectileIds = currIds;
+
+
+
         // A) Bewegung senden
         const meState = this.latestState.players.find(p => p.playerId === this.playerId);
         if (meState) {
@@ -241,7 +287,7 @@ export default class GameScene extends Phaser.Scene {
                 case 'SNIPER':          key = 'sniper';  break;
                 case 'SHOTGUN_PELLET':  key = 'shotgun_pellet';  break;
                 case 'RIFLE_BULLET':    key = 'rifle_bullet';  break;
-                case "MINe":            key = "projectile"; break;
+                case "MINE":            key = "bomb"; break;
             }
 
             aliveIds.add(p.id);
@@ -250,6 +296,9 @@ export default class GameScene extends Phaser.Scene {
                 console.log('➕ creating projectile sprite', p.id);
                 //spr = this.physics.add.sprite(p.position.x, p.position.y, 'projectile').setOrigin(0.5, 0.5);
                 spr = this.physics.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5, 0.5);
+                if (p.projectileType === 'MINE') {
+                    spr.setScale(0.3);    // skaliert die Bombe auf 30% der Originalgröße
+                }
                 this.projectileSprites[p.id] = spr;
             }
             else {

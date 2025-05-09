@@ -37,6 +37,7 @@ public interface GameLogic {
     List<Projectile> getProjectiles();
 
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
+
 }
 
 
