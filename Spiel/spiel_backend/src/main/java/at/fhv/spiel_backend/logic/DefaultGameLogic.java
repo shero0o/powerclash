@@ -1,3 +1,4 @@
+// DefaultGameLogic.java
 package at.fhv.spiel_backend.logic;
 
 import at.fhv.spiel_backend.model.Brawler;
@@ -9,6 +10,7 @@ import at.fhv.spiel_backend.ws.BulletState;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 import at.fhv.spiel_backend.ws.Event;
 import at.fhv.spiel_backend.ws.ActionType;
+import at.fhv.spiel_backend.server.map.GameMap;
 
 import java.util.Iterator;
 import java.util.List;
@@ -19,58 +21,22 @@ import java.util.stream.Collectors;
 public class DefaultGameLogic implements GameLogic {
     private final Map<String, Player> players = new ConcurrentHashMap<>();
     private final Map<String, Bullet> bullets = new ConcurrentHashMap<>();
+    private GameMap gameMap;
 
     @Override
-    public StateUpdateMessage buildStateUpdate() {
-        // 1) snapshot all player states
-        List<PlayerState> playerStates = players.values().stream()
-                .map(p -> new PlayerState(
-                        p.getId(),
-                        p.getPosition(),
-                        p.getCurrentHealth(),
-                        p.isVisible()))
-                .collect(Collectors.toList());
-
-        // 2) snapshot all bullets as events
-        List<Event> bulletEvents = bullets.values().stream()
-                .map(b -> new Event(
-                        ActionType.ATTACK.name(),
-                        new BulletState(b.getId(), b.getX(), b.getY(), b.getAngle())
-                ))
-                .collect(Collectors.toList());
-
-        // 3) assemble message
-        StateUpdateMessage msg = new StateUpdateMessage();
-        msg.setPlayers(playerStates);
-        msg.setEvents(bulletEvents);
-        return msg;
-    }
-
-    @Override
-    public void movePlayer(String playerId, float x, float y, float angle) {
-        Player p = players.get(playerId);
-        if (p != null) {
-            p.setPosition(new Position(x, y, angle));
-        }
+    public void setGameMap(GameMap gameMap) {
+        this.gameMap = gameMap;
     }
 
     @Override
     public void addPlayer(String playerId) {
-        Brawler br = new Brawler(playerId, 1, 100, new Position(500, 500, 0));
+        Brawler br = new Brawler(playerId, 1, 100, new Position(1200, 1200, 0));
         players.put(playerId, new Player(
-                playerId, br.getLevel(), br.getMaxHealth(), br.getPosition()));
-    }
-
-    @Override
-    public void attack(String playerId, float dirX, float dirY, float angle) {
-        // 1) look up the shooter
-        Player shooter = players.get(playerId);
-        if (shooter == null) return;
-
-        // 2) spawn a bullet carrying the shooter’s ID so we don’t hit ourselves
-        Position pos = shooter.getPosition();
-        Bullet bullet = new Bullet(playerId, pos.getX(), pos.getY(), angle);
-        bullets.put(bullet.getId(), bullet);
+                playerId,
+                br.getLevel(),
+                br.getMaxHealth(),
+                br.getPosition()
+        ));
     }
 
     @Override
@@ -83,34 +49,78 @@ public class DefaultGameLogic implements GameLogic {
         return players.get(playerId);
     }
 
-    /**
-     * Advance all bullets by dt seconds.  Call this once per tick.
-     */
-    // still inside DefaultGameLogic.java
+    @Override
+    public void movePlayer(String playerId, float x, float y, float angle) {
+        Player p = players.get(playerId);
+        if (p == null || gameMap == null) return;
+        int tileX = (int)(x / gameMap.getTileWidth());
+        int tileY = (int)(y / gameMap.getTileHeight());
+        if (!gameMap.isWallAt(tileX, tileY)) {
+            p.setPosition(new Position(x, y, angle));
+        }
+    }
+
+    @Override
+    public void attack(String playerId, float dirX, float dirY, float angle) {
+        Player shooter = players.get(playerId);
+        if (shooter == null) return;
+        Position pos = shooter.getPosition();
+        Bullet b = new Bullet(playerId, pos.getX(), pos.getY(), angle);
+        bullets.put(b.getId(), b);
+    }
+
+    @Override
+    public StateUpdateMessage buildStateUpdate() {
+        List<PlayerState> ps = players.values().stream()
+                .map(p -> new PlayerState(
+                        p.getId(),
+                        p.getPosition(),
+                        p.getCurrentHealth(),
+                        p.isVisible()))
+                .collect(Collectors.toList());
+
+        List<Event> ev = bullets.values().stream()
+                .map(b -> new Event(
+                        ActionType.ATTACK.name(),
+                        new BulletState(b.getId(), b.getX(), b.getY(), b.getAngle())))
+                .collect(Collectors.toList());
+
+        StateUpdateMessage msg = new StateUpdateMessage();
+        msg.setPlayers(ps);
+        msg.setEvents(ev);
+        return msg;
+    }
+
     public void updateBullets(float dt) {
-        // iterate over a copy to allow removal
-        for (Iterator<Bullet> it = bullets.values().iterator(); it.hasNext(); ) {
+        Iterator<Bullet> it = bullets.values().iterator();
+        while (it.hasNext()) {
             Bullet b = it.next();
             b.update(dt);
 
-            // check against EVERY player except the shooter
+            int bx = (int)(b.getX() / gameMap.getTileWidth());
+            int by = (int)(b.getY() / gameMap.getTileHeight());
+
+            if (gameMap.isWallAt(bx, by)) {
+                it.remove();
+                continue;
+            }
+
             for (Player target : players.values()) {
-                if (target.getId().equals(b.getShooterId())) continue;
+                if (target.getId().equals(b.getShooterId()) || !target.isVisible()) continue;
+
                 float dx = target.getPosition().getX() - b.getX();
                 float dy = target.getPosition().getY() - b.getY();
-                // simple radius check (tweak as needed)
-                if (Math.hypot(dx, dy) < 16) {
-                    // hit! deduct 10 HP from the target
-                    int newHp = Math.max(0, target.getCurrentHealth() - 10);
-                    target.setCurrentHealth(newHp);
-                    if (newHp == 0) target.setVisible(false);
+                float collisionRadius = 32f;
 
-                    // remove this bullet
+                if (Math.hypot(dx, dy) <= collisionRadius) {
+                    target.setCurrentHealth(Math.max(0, target.getCurrentHealth() - 10));
+                    if (target.getCurrentHealth() <= 0) {
+                        target.setVisible(false);
+                    }
                     it.remove();
                     break;
                 }
             }
         }
     }
-
 }

@@ -1,77 +1,65 @@
 // src/scenes/GameScene.js
+// (based on turn8file1, with health-bar + collision fixes included)
 import Phaser from 'phaser';
 
 export default class GameScene extends Phaser.Scene {
-    constructor() {
-        super({ key: 'GameScene' });
-    }
+    constructor() { super({ key: 'GameScene' }); }
 
     init(data) {
-        this.roomId        = data.roomId;
-        this.playerId      = data.playerId;
-        this.latestState   = null;
+        this.roomId      = data.roomId;
+        this.playerId    = data.playerId;
+        this.latestState = null;
         this.playerSprites = {};
         this.bulletSprites = {};
-        this.keys          = null;
-        this.initialZoom   = 1;
-        this.maxHealth     = 100;
+        this.initialZoom = 0.7;
+        this.maxHealth   = 100;
     }
 
     preload() {
         this.load.image('player', '/assets/PNG/Hitman_1/hitman1_gun.png');
+        this.load.tilemapTiledJSON('map', '/assets/mapAli.tmj');
+        this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
     }
 
     create() {
-        // 1) Keyboard-Input
+        this.cameras.main.setBackgroundColor('#222222');
+        const map = this.make.tilemap({ key: 'map' });
+        const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
+        map.createLayer('Boden', tileset, 0,0);
+        map.createLayer('Wand',  tileset, 0,0);
+
         this.keys = this.input.keyboard.addKeys({
-            up: 'W', down: 'S', left: 'A', right: 'D'
+            up:'W', down:'S', left:'A', right:'D'
         });
 
-        // 2) Exit-Button, initially hidden
         this.exitButton = this.add
-            .text(16, 16, 'Exit', { fontSize: '18px', fill: '#ff0000' })
+            .text(16,16,'Exit',{ fontSize:'18px', fill:'#ff0000' })
             .setScrollFactor(0)
             .setInteractive()
-            .setVisible(false);
-
-        this.exitButton.on('pointerdown', () => {
-            // optional: inform server you left
-            if (this.socket && this.socket.connected) {
+            .setVisible(false)
+            .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', {
                     roomId:   this.roomId,
                     playerId: this.playerId
                 });
                 this.socket.disconnect();
-            }
-            this.scene.start('SplashScene');
-        });
+                this.scene.start('SplashScene');
+            });
 
-        // 3) Click → attack-Event senden (only if alive)
         this.input.on('pointerdown', pointer => {
-            const me = this.latestState?.players.find(p => p.playerId === this.playerId);
-            if (!me || me.currentHealth <= 0) return;
-
-            const dirX = (this.keys.left.isDown  ? -1 : 0)
-                + (this.keys.right.isDown ?  1 : 0);
-            const dirY = (this.keys.up.isDown    ? -1 : 0)
-                + (this.keys.down.isDown  ?  1 : 0);
-
-            const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const me = this.latestState?.players.find(p => p.playerId===this.playerId);
+            if (!me || me.currentHealth<=0) return;
+            const world = this.cameras.main.getWorldPoint(pointer.x,pointer.y);
             const angle = Phaser.Math.Angle.Between(
-                me.position.x, me.position.y,
-                world.x,       world.y
+                me.position.x, me.position.y, world.x, world.y
             );
-
             this.socket.emit('attack', {
                 roomId:   this.roomId,
                 playerId: this.playerId,
-                dirX,
-                dirY,
                 angle
             });
         });
 
-        // 4) Server-Updates empfangen
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
         });
@@ -80,107 +68,90 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (!this.latestState) return;
 
-        const ptr = this.input.activePointer;
+        // remove dead players & their bars
+        Object.entries(this.playerSprites).forEach(([id,spr]) => {
+            const p = this.latestState.players.find(x => x.playerId===id);
+            if (p && p.currentHealth <= 0) {
+                spr.healthBar.destroy();
+                spr.destroy();
+                delete this.playerSprites[id];
+            }
+        });
+
         const cam = this.cameras.main;
+        const me = this.latestState.players.find(p=>p.playerId===this.playerId);
+        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
 
-        // find our own state this frame
-        const me = this.latestState.players.find(p => p.playerId === this.playerId);
-
-        // if dead, show exit button
-        if (me && me.currentHealth <= 0) {
-            this.exitButton.setVisible(true);
-        }
-
-        // --- Spieler zeichnen & bewegen ---
+        // draw players
         this.latestState.players.forEach(p => {
+            if (p.currentHealth <= 0) return;
             let spr = this.playerSprites[p.playerId];
             if (!spr) {
-                spr = this.physics.add.sprite(p.position.x, p.position.y, 'player')
-                    .setOrigin(0.5);
+                spr = this.physics.add.sprite(p.position.x,p.position.y,'player');
+                spr.setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
-
-                if (p.playerId === this.playerId) {
+                if (p.playerId===this.playerId) {
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
                 }
             }
 
-            spr.setPosition(p.position.x, p.position.y);
+            spr.setPosition(p.position.x,p.position.y);
             spr.setRotation(p.position.angle);
             spr.setVisible(p.visible);
-            spr.healthBar.setVisible(p.visible);
 
-            // Health‐Bar
-            const barW = 40, barH = 6;
-            const pct  = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
-            spr.healthBar.clear();
-            spr.healthBar.fillStyle(0x000000);
-            spr.healthBar.fillRect(
-                p.position.x - barW/2 - 1,
-                p.position.y - spr.height/2 - barH - 9,
-                barW + 2, barH + 2
-            );
-            spr.healthBar.fillStyle(0x00ff00);
-            spr.healthBar.fillRect(
-                p.position.x - barW/2,
-                p.position.y - spr.height/2 - barH - 8,
-                barW * pct, barH
-            );
-
-            // WASD-Bewegung senden (only if me and alive)
-            if (p.playerId === this.playerId && p.currentHealth > 0) {
-                const worldPt = cam.getWorldPoint(ptr.x, ptr.y);
-                const angle   = Phaser.Math.Angle.Between(
-                    p.position.x, p.position.y,
-                    worldPt.x,    worldPt.y
+            // draw HP bar
+            const barW=40, barH=6;
+            const pct = Phaser.Math.Clamp(p.currentHealth/this.maxHealth,0,1);
+            spr.healthBar
+                .clear()
+                .fillStyle(0x000000)
+                .fillRect(
+                    p.position.x-barW/2-1,
+                    p.position.y-spr.height/2-barH-9,
+                    barW+2,barH+2
+                )
+                .fillStyle(0x00ff00)
+                .fillRect(
+                    p.position.x-barW/2,
+                    p.position.y-spr.height/2-barH-8,
+                    barW*pct,barH
                 );
-                const dirX = (this.keys.left.isDown  ? -1 : 0)
-                    + (this.keys.right.isDown ?  1 : 0);
-                const dirY = (this.keys.up.isDown    ? -1 : 0)
-                    + (this.keys.down.isDown  ?  1 : 0);
 
+            // local player movement
+            if (p.playerId===this.playerId) {
+                const ptr = this.input.activePointer;
+                const worldPt = cam.getWorldPoint(ptr.x,ptr.y);
+                const angle = Phaser.Math.Angle.Between(
+                    p.position.x,p.position.y,worldPt.x,worldPt.y
+                );
+                const dirX = (this.keys.left.isDown?-1:0)+(this.keys.right.isDown?1:0);
+                const dirY = (this.keys.up.isDown?-1:0)+(this.keys.down.isDown?1:0);
                 this.socket.emit('move', {
                     roomId:   this.roomId,
                     playerId: this.playerId,
-                    dirX,
-                    dirY,
-                    angle
+                    dirX, dirY, angle
                 });
             }
         });
 
-        // --- Bullets aus events zeichnen ---
-        const seenBullets = new Set();
-        (this.latestState.events || []).forEach(evt => {
-            if (evt.type === 'ATTACK') {
-                const b = evt.data; // { bulletId, x, y, angle }
-                seenBullets.add(b.bulletId);
-
+        // bullets
+        const seen = new Set();
+        (this.latestState.events||[]).forEach(evt => {
+            if (evt.type==='ATTACK') {
+                const b = evt.data;
+                seen.add(b.bulletId);
                 let circ = this.bulletSprites[b.bulletId];
-                if (!circ) {
-                    circ = this.add.circle(b.x, b.y, 4, 0xFFFF00)
-                        .setDepth(1);
-                    this.bulletSprites[b.bulletId] = circ;
-                }
-                circ.setPosition(b.x, b.y);
+                if (!circ) circ = this.add.circle(b.x,b.y,4).setDepth(1);
+                circ.setPosition(b.x,b.y);
+                this.bulletSprites[b.bulletId] = circ;
             }
         });
-
-        // Remove bullets no longer present
         Object.keys(this.bulletSprites).forEach(id => {
-            if (!seenBullets.has(id)) {
+            if (!seen.has(id)) {
                 this.bulletSprites[id].destroy();
                 delete this.bulletSprites[id];
-            }
-        });
-
-        // --- Cleanup für Spieler, die gegangen sind ---
-        Object.keys(this.playerSprites).forEach(id => {
-            if (!this.latestState.players.find(p => p.playerId === id)) {
-                this.playerSprites[id].healthBar.destroy();
-                this.playerSprites[id].destroy();
-                delete this.playerSprites[id];
             }
         });
     }

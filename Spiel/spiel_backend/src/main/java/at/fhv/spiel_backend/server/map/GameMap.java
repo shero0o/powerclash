@@ -1,17 +1,54 @@
+// GameMap.java
 package at.fhv.spiel_backend.server.map;
 
-import java.util.List;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.InputStream;
 
 public class GameMap {
     private final String id;
-    private final int[][] walls;
+    private final int width;
+    private final int height;
+    private final int tileWidth;
+    private final int tileHeight;
+    private final boolean[][] walls;
 
     public GameMap(String id) {
         this.id = id;
-        this.walls = new int[0][0]; // Platzhalter
+        try (InputStream is = getClass().getResourceAsStream("/" + "mapAli" + ".tmj")) {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(is);
+
+            // read dimensions dynamically
+            this.width      = root.get("width").asInt();
+            this.height     = root.get("height").asInt();
+            this.tileWidth  = root.get("tilewidth").asInt();
+            this.tileHeight = root.get("tileheight").asInt();
+            this.walls      = new boolean[height][width];
+
+            for (JsonNode layer : root.get("layers")) {
+                if ("Wand".equalsIgnoreCase(layer.get("name").asText())) {
+                    JsonNode data = layer.get("data");
+                    for (int i = 0; i < data.size(); i++) {
+                        int gid = data.get(i).asInt();
+                        int x   = i % width;
+                        int y   = i / width;
+                        walls[y][x] = gid > 0;
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error loading map '" + id + "'", e);
+        }
     }
 
-    public String getId() {
-        return id;
+    public String getId()         { return id; }
+    public int     getTileWidth() { return tileWidth; }
+    public int     getTileHeight(){ return tileHeight; }
+
+    public boolean isWallAt(int x, int y) {
+        if (x < 0 || x >= width || y < 0 || y >= height) return true;
+        return walls[y][x];
     }
 }
