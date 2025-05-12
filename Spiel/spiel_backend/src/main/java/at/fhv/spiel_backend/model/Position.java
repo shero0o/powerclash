@@ -13,6 +13,12 @@ public class Position implements Entity {
     private float y;
     private float angle;
 
+    public Position(float x, float y) {
+        this.x = x;
+        this.y = y;
+        this.angle = 0f;
+    }
+
     @Override
     public String getId() {
         return "position-" + x + "," + y;

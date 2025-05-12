@@ -25,10 +25,6 @@ public interface GameLogic {
      */
     StateUpdateMessage buildStateUpdate();
 
-    /**
-     * Move the specified player to (x, y)
-     */
-    void movePlayer(String playerId, float x, float y);
 
     /**
      * Move the specified player to (x, y) with rotation angle
@@ -38,7 +34,7 @@ public interface GameLogic {
     /**
      * Register a new player in the simulation (default Brawler)
      */
-    void addPlayer(String playerId);
+
 
     /**
      * Register a new player with specific Brawler

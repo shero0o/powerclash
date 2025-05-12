@@ -23,9 +23,9 @@ import java.util.concurrent.*;
  */
 public class GameRoomImpl implements IGameRoom {
     private final String id = UUID.randomUUID().toString();
-    private final Map<String, Object> players     = new ConcurrentHashMap<>();
-    private final Map<String, Object> readyPlayers= new ConcurrentHashMap<>();
-    private final Map<String, PlayerInput> inputs = new ConcurrentHashMap<>();
+    private final Map<String, Object> players      = new ConcurrentHashMap<>();
+    private final Map<String, Object> readyPlayers = new ConcurrentHashMap<>();
+    private final Map<String, PlayerInput> inputs  = new ConcurrentHashMap<>();
 
     private final IMapFactory mapFactory;
     private final GameLogic gameLogic;
@@ -36,6 +36,9 @@ public class GameRoomImpl implements IGameRoom {
     private static final int MAX_PLAYERS = 2;
     private static final float MAX_SPEED   = 300f;      // pixels/sec for movement
     private static final float TICK_DT     = 0.016f;   // ~60 ticks/sec
+
+    // Guard so we only start the loop once
+    private boolean started = false;
 
     public GameRoomImpl(IMapFactory mapFactory,
                         GameLogic gameLogic,
@@ -53,17 +56,6 @@ public class GameRoomImpl implements IGameRoom {
         return id;
     }
 
-    /**
-     * Adds a player with default Brawler setup
-     */
-    @Override
-    public void addPlayer(String playerId) {
-        addPlayer(playerId, null);
-    }
-
-    /**
-     * Adds a player, optionally specifying Brawler
-     */
     @Override
     public void addPlayer(String playerId, String brawlerId) {
         if (players.size() >= MAX_PLAYERS) {
@@ -73,10 +65,9 @@ public class GameRoomImpl implements IGameRoom {
             System.err.println("[ERROR] addPlayer called with null ID");
             return;
         }
-        // Only add once
         players.computeIfAbsent(playerId, pid -> {
             if (brawlerId == null) {
-                gameLogic.addPlayer(pid);
+                gameLogic.addPlayer(pid, brawlerId);
             } else {
                 gameLogic.addPlayer(pid, brawlerId);
             }
@@ -109,16 +100,9 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     @Override
-    public void markReady(String playerId) {
-        if (playerId == null) {
-            System.err.println("[ERROR] markReady called with null ID");
-            return;
-        }
-        if (readyPlayers.size() < MAX_PLAYERS) {
-            readyPlayers.putIfAbsent(playerId, new Object());
-            System.out.println("[INFO] Player ready: " + playerId);
-        } else {
-            System.out.println("[WARN] Ready list full");
+    public void markReady(String playerId, String brawlerId) {
+        if (!readyPlayers.containsKey(playerId)) {
+            readyPlayers.put(playerId, new Object());
         }
     }
 
@@ -143,14 +127,14 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     /**
-     * Stores the latest movement & rotation input for a player
+     * Buffer latest movement input for next tick
      */
     public void setPlayerInput(String playerId, float dirX, float dirY, float angle) {
         inputs.put(playerId, new PlayerInput(dirX, dirY, angle));
     }
 
     /**
-     * Handles firing/spawn of a projectile
+     * Spawn projectile immediately
      */
     public void handleFire(String playerId,
                            Position position,
@@ -160,13 +144,15 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     /**
-     * Starts the game loop: applies inputs, updates logic, broadcasts state
+     * Start the main game loop; safe to call multiple times but will only schedule once
      */
     @Override
-    public void start() {
+    public synchronized void start() {
+        if (started) return;
+        started = true;
         executor.scheduleAtFixedRate(() -> {
             try {
-                // 1) Process movement inputs
+                // Process movement inputs
                 for (var entry : inputs.entrySet()) {
                     String pid = entry.getKey();
                     PlayerInput in = entry.getValue();
@@ -175,23 +161,22 @@ public class GameRoomImpl implements IGameRoom {
 
                     Position pos = p.getPosition();
                     float len = (float) Math.hypot(in.dirX, in.dirY);
-                    float nx  = len > 0 ? in.dirX / len : 0;
-                    float ny  = len > 0 ? in.dirY / len : 0;
+                    float nx = len > 0 ? in.dirX / len : 0;
+                    float ny = len > 0 ? in.dirY / len : 0;
                     float newX = pos.getX() + nx * MAX_SPEED * TICK_DT;
                     float newY = pos.getY() + ny * MAX_SPEED * TICK_DT;
 
                     int tx = (int)(newX / gameMap.getTileWidth());
                     int ty = (int)(newY / gameMap.getTileHeight());
                     if (!gameMap.isWallAt(tx, ty)) {
-                        // Delegate to logic for angle-aware move
                         gameLogic.movePlayer(pid, newX, newY, in.angle);
                     }
                 }
 
-                // 2) Update projectiles & collisions
+                // Update projectiles (movement, collisions, cleanup)
                 gameLogic.updateProjectiles();
 
-                // 3) Broadcast state to all clients
+                // Broadcast updated state
                 StateUpdateMessage update = buildStateUpdate();
                 eventPublisher.publish(id, update);
 
@@ -202,7 +187,7 @@ public class GameRoomImpl implements IGameRoom {
         }, 0, (long)(TICK_DT * 1000), TimeUnit.MILLISECONDS);
     }
 
-    // --- Helper DTO for inputs ---
+    // DTO for input buffering
     private static class PlayerInput {
         final float dirX, dirY, angle;
         PlayerInput(float dx, float dy, float a) {

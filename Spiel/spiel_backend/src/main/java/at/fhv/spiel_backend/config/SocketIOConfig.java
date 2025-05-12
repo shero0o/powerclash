@@ -1,7 +1,11 @@
-// at.fhv.spiel_backend.config.SocketIOConfig.java
 package at.fhv.spiel_backend.config;
 
-import at.fhv.spiel_backend.DTO.*;
+import at.fhv.spiel_backend.DTO.ChangeWeaponDTO;
+import at.fhv.spiel_backend.DTO.JoinRequestDTO;
+import at.fhv.spiel_backend.DTO.JoinResponseDTO;
+import at.fhv.spiel_backend.DTO.MoveRequestDTO;
+import at.fhv.spiel_backend.DTO.ShootProjectileDTO;
+import at.fhv.spiel_backend.DTO.WaitingReadyDTO;
 import at.fhv.spiel_backend.logic.DefaultGameLogic;
 import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.model.Position;
@@ -37,9 +41,9 @@ public class SocketIOConfig {
             IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
             server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
+            room.start();
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
-
 
         // Ready-Phase
         server.addEventListener("waitingReady", WaitingReadyDTO.class,
@@ -48,40 +52,26 @@ public class SocketIOConfig {
                     IGameRoom room     = roomManager.getRoom(incoming);
                     boolean isNewRoom  = false;
 
-                    // — if no such room, auto-create & join a fresh one —
                     if (room == null) {
                         String newId = roomManager.assignToRoom(
-                                data.getPlayerId(),
-                                data.getBrawlerId(),
-                                data.getLevelId()
+                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId()
                         );
                         room = roomManager.getRoom(newId);
                         client.joinRoom(newId);
-
-                        // ACK back the new room ID so the front-end can update
                         ack.sendAckData(new JoinResponseDTO(newId));
                         log.info("Auto-created room {} for player {}", newId, data.getPlayerId());
-
                         isNewRoom = true;
                     } else {
-                        // ACK the normal “ready” OK
                         ack.sendAckData("ok");
                     }
 
-                    // — now mark ready in whichever room we have —
                     room.markReady(data.getPlayerId(), data.getBrawlerId());
-
-                    // — if everybody’s marked, start the game —
                     if (room.getReadyCount() == room.getPlayerCount()) {
                         server.getRoomOperations(room.getId()).sendEvent("startGame");
                         room.start();
                     }
                 }
         );
-
-
-
-
 
         // Bewegungspayload verarbeiten
         server.addEventListener("move", MoveRequestDTO.class,
@@ -101,34 +91,24 @@ public class SocketIOConfig {
                 }
         );
 
-        // Angriffspayload verarbeiten
-        server.addEventListener("attack", AttackRequestDTO.class,
+        // Projektil-Schuss verarbeiten (frontend nutzt 'shootProjectile')
+        server.addEventListener("shootProjectile", ShootProjectileDTO.class,
                 (client, data, ack) -> {
-                    GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
-                    if (room == null) {
-                        log.warn("Received ATTACK for unknown room {}", data.getRoomId());
-                        ack.sendAckData("error: room_not_found");
-                        return;
+                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+                    if (room != null) {
+                        room.getGameLogic().spawnProjectile(
+                                data.getPlayerId(),
+                                room.getGameLogic().getPlayerPosition(data.getPlayerId()),
+                                new Position(data.getDirection().getX(), data.getDirection().getY()),
+                                data.getProjectileType()
+                        );
                     }
-                    if (((DefaultGameLogic)room.getGameLogic()).getPlayer(data.getPlayerId()).getCurrentHealth() <= 0) {
-                        ack.sendAckData("dead");
-                        return;
-                    }
-                    room.handleAttack(data.getPlayerId(), data.getDirX(), data.getDirY(), data.getAngle());
-                    ack.sendAckData("ok");
+                    // Optionally ack here if DTO supports it
                 }
         );
 
-        server.addEventListener("shootProjectile", ShootProjectileDTO.class, (client, data, ack) -> {
-            IGameRoom room = roomManager.getRoom(data.getRoomId());
-            room.getGameLogic().spawnProjectile(data.getPlayerId(), room.getGameLogic().getPlayerPosition(data.getPlayerId()),
-                    new Position(data.getDirection().getX(), data.getDirection().getY()), data.getProjectileType());
-        });
-
-
-        server.addEventListener(
-                "changeWeapon",
-                ChangeWeaponDTO.class,
+        // Weapon-Change-event
+        server.addEventListener("changeWeapon", ChangeWeaponDTO.class,
                 (client, data, ack) -> {
                     IGameRoom room = roomManager.getRoom(data.getRoomId());
                     room.getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getProjectileType());

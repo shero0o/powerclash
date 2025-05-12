@@ -3,76 +3,81 @@ import Phaser from 'phaser';
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
-        // Weapon & firing state
-        this.selectedWeapon     = 'RIFLE_BULLET';
-        this.isFiring           = false;
-        this.fireEvent          = null;
-        // UI & state
-        this.initialZoom        = 0.7;
-        this.maxHealth          = 100;
+        this.selectedWeapon    = 'RIFLE_BULLET';
+        this.isFiring          = false;
+        this.fireEvent         = null;
     }
 
     init(data) {
-        this.roomId             = data.roomId;
-        this.playerId           = data.playerId;
-        this.mapKey             = data.levelId || 'map';
-        this.latestState        = null;
-        this.playerSprites      = {};
-        this.projectileSprites  = {};
-        this.keys               = null;
+        this.roomId            = data.roomId;
+        this.playerId          = data.playerId;
+        this.mapKey            = data.levelId;
+        this.latestState       = null;
+        this.playerSprites     = {};
+        this.projectileSprites = {};
+        this.initialZoom       = 0.7;
+        this.maxHealth         = 100;
+        this.playerCountText   = null;
     }
 
     preload() {
-        // Player, projectiles, tilesets, map
+        // Player & projectiles
         this.load.image('player', '/assets/PNG/Hitman_1/hitman1_gun.png');
-        this.load.image('sniper', '/assets/PNG/projectile/sniper.png');
+        this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
+        this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
-        this.load.image('rifle_bullet', '/assets/PNG/projectile/rifle.png');
-        this.load.image('mine', '/assets/PNG/explosion/bomb.png');
+        this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
-        this.load.tilemapTiledJSON('map', `/assets/${this.mapKey}.tmj`);
+
+        // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
+        this.load.tilemapTiledJSON('map', '/assets/mapAli.tmj');
     }
 
     create() {
-        // Camera & world
+        // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
+
+        // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
-        const tiles = map.addTilesetImage('spritesheet_tiles', 'tileset', 64, 64);
-        this.groundLayer = map.createLayer('Boden', tiles, 0, 0);
-        this.wallLayer   = map.createLayer('Wand', tiles, 0, 0);
-        this.groundLayer.setCollisionByExclusion([-1]);
-        this.wallLayer.setCollisionByExclusion([-1]);
+        const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
+        map.createLayer('Boden', tileset, 0,0);
+        map.createLayer('Wand',  tileset, 0,0);
 
-        const w = map.widthInPixels;
-        const h = map.heightInPixels;
-        this.physics.world.setBounds(0, 0, w, h);
-        this.cameras.main.setBounds(0, 0, w, h);
-        this.cameras.main.setZoom(this.initialZoom);
+        // Physik-Welt & Kamera
+        const width  = map.widthInPixels;
+        const height = map.heightInPixels;
+        this.physics.world.setBounds(0, 0, width, height);
+        this.cameras.main.setBounds(0, 0, width, height);
 
-        // Input & UI
-        this.keys = this.input.keyboard.addKeys({
-            up: 'W', down: 'S', left: 'A', right: 'D'
-        });
-        this.playerCountText = this.add.text(16, 16, '0/0 players', {
-            font: 'bold 24px Arial',
-            fill: '#fff',
-            stroke: '#000', strokeThickness: 3
-        }).setScrollFactor(0);
-        this.exitButton = this.add.text(16, 56, 'Exit', { fontSize:'18px', fill:'#f00' })
-            .setScrollFactor(0).setInteractive().setVisible(false)
-            .on('pointerdown', () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-                this.scene.start('SplashScene');
-            });
+        // Zoom auf ganze Karte
+        const fitZoom = Math.min(this.cameras.main.width / width, this.cameras.main.height / height);
+        this.cameras.main.setZoom(fitZoom);
+        this.cameras.main.centerOn(width/2, height/2);
 
-        // Ammo bar graphics
+        // UI: Ammo-Bar
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
 
-        // Explosion animation
+        // UI: Spielerzahl
+        this.playerCountText = this.add.text(16, 16, '0/0 players', {
+            fontFamily: 'Arial', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3
+        }).setScrollFactor(0);
+
+        // UI: Exit-Button
+        this.exitButton = this.add.text(16, 48, 'Exit', { fontSize: '18px', fill: '#ff0000' })
+            .setScrollFactor(0)
+            .setInteractive()
+            .setVisible(false)
+            .on('pointerdown', () => {
+                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+                this.socket.disconnect();
+                this.scene.start('SplashScene');
+            });
+
+        // Explosion-Animation
         this.anims.create({
             key: 'explode',
             frames: Array.from({ length: 25 }, (_, i) => ({ key: `explosion${i}` })),
@@ -81,137 +86,178 @@ export default class GameScene extends Phaser.Scene {
             hideOnComplete: true
         });
         this.explosionGroup = this.add.group();
-        this.prevProjectileIds = new Set();
+        this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
 
-        // Networking
+        // Eingabe: Waffenwechsel
+        this.input.keyboard.on('keydown', evt => {
+            let newWep = this.selectedWeapon;
+            if (evt.code === 'Digit1') newWep = 'SNIPER';
+            else if (evt.code === 'Digit2') newWep = 'SHOTGUN_PELLET';
+            else if (evt.code === 'Digit3') newWep = 'RIFLE_BULLET';
+            else if (evt.code === 'Digit4') newWep = 'MINE';
+            else return;
+            this.selectedWeapon = newWep;
+            this.socket.emit('changeWeapon', { roomId: this.roomId, playerId: this.playerId, projectileType: newWep });
+        });
+
+        // Eingabe: WASD
+        this.keys = this.input.keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D' });
+        // Eingabe: Schuss
+        this.input.on('pointerdown', pointer => this.startFiring(pointer));
+        this.input.on('pointerup',   ()      => this.stopFiring());
+        this.input.on('pointerout',  ()      => this.stopFiring());
+
+        // Socket-Update
         this.socket.on('stateUpdate', state => this.latestState = state);
-        this.input.keyboard.on('keydown', evt => this.changeWeapon(evt));
-        this.input.on('pointerdown', ptr => this.startFiring(ptr));
-        this.input.on('pointerup',  ()  => this.stopFiring());
-
-        // Physics groups & collisions
-        this.projectilesGroup = this.physics.add.group();
-        this.physics.add.collider(this.projectilesGroup, this.wallLayer, (proj) => proj.destroy());
-        // Will overlap with players when created
-    }
-
-    changeWeapon(evt) {
-        const mapKey = { Digit1: 'SNIPER', Digit2: 'SHOTGUN_PELLET', Digit3: 'RIFLE_BULLET', Digit4: 'MINE' }[evt.code];
-        if (!mapKey) return;
-        this.selectedWeapon = mapKey;
-        this.socket.emit('changeWeapon', { roomId: this.roomId, playerId: this.playerId, projectileType: mapKey });
     }
 
     startFiring(pointer) {
-        const meState = this.latestState?.players.find(p => p.playerId === this.playerId);
         const meSprite = this.playerSprites[this.playerId];
-        if (!meState || !meSprite || meState.ammo <= 0) return;
-        const shoot = () => {
-            const dir = new Phaser.Math.Vector2(
-                pointer.worldX - meSprite.x, pointer.worldY - meSprite.y
-            ).normalize();
+        const meState  = this.latestState?.players.find(p => p.playerId === this.playerId);
+        if (!meSprite || !meState || meState.ammo <= 0) return;
+
+        const emitShot = () => {
+            const dir = new Phaser.Math.Vector2(pointer.worldX - meSprite.x, pointer.worldY - meSprite.y).normalize();
             this.socket.emit('shootProjectile', {
-                roomId: this.roomId, playerId: this.playerId,
-                direction: { x: dir.x, y: dir.y }, projectileType: this.selectedWeapon
+                roomId: this.roomId,
+                playerId: this.playerId,
+                direction: { x: dir.x, y: dir.y },
+                projectileType: this.selectedWeapon
             });
         };
-        if (this.selectedWeapon === 'RIFLE_BULLET' && !this.isFiring) {
+
+        if (this.selectedWeapon === 'RIFLE_BULLET') {
+            if (this.isFiring) return;
             this.isFiring = true;
-            this.fireEvent = this.time.addEvent({ delay:100, loop:true, callback:()=>{
-                    if (this.latestState.players.find(p=>p.playerId===this.playerId).ammo<=0) {
-                        this.stopFiring(); return; }
-                    shoot();
+            this.fireEvent = this.time.addEvent({ delay: 100, loop: true, callback: () => {
+                    if (this.latestState.players.find(p => p.playerId === this.playerId).ammo <= 0) return this.stopFiring();
+                    emitShot();
                 }});
-        } else if (this.selectedWeapon !== 'RIFLE_BULLET') {
-            shoot();
+        } else {
+            emitShot();
         }
     }
 
     stopFiring() {
-        if (this.fireEvent) this.fireEvent.remove();
+        if (this.fireEvent) {
+            this.fireEvent.remove();
+            this.fireEvent = null;
+        }
         this.isFiring = false;
     }
 
     update() {
         if (!this.latestState) return;
-        // Update player count
-        const alive = this.latestState.players.filter(p=>p.currentHealth>0).length;
-        this.playerCountText.setText(`${alive}/${this.latestState.players.length} players`);
-        // Show exit if dead
-        const me = this.latestState.players.find(p=>p.playerId===this.playerId);
-        if (me?.currentHealth<=0) this.exitButton.setVisible(true);
 
-        // Handle mine explosions
-        const currIds = new Set(this.latestState.projectiles.filter(p=>p.projectileType==='MINE').map(p=>p.id));
+        // Explosion für verschwundene Mines
+        const currIds = new Set(this.latestState.projectiles
+            .filter(p => p.projectileType === 'MINE')
+            .map(p => p.id));
         this.prevProjectileIds.forEach(id => {
-            if (!currIds.has(id) && this.previousMinePositions[id]) {
+            if (!currIds.has(id)) {
                 const pos = this.previousMinePositions[id];
-                const e = this.explosionGroup.create(pos.x,pos.y,'explosion0').setOrigin(0.5);
-                e.play('explode');
+                if (pos) {
+                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
+                    expl.play('explode');
+                }
             }
         });
         this.previousMinePositions = {};
-        this.latestState.projectiles.forEach(p=>{ if(p.projectileType==='MINE') this.previousMinePositions[p.id] = p.position; });
+        this.latestState.projectiles.forEach(p => {
+            if (p.projectileType === 'MINE') {
+                this.previousMinePositions[p.id] = { x: p.position.x, y: p.position.y };
+            }
+        });
         this.prevProjectileIds = currIds;
 
-        // Send movement
+        // Bewegung senden
+        const me = this.latestState.players.find(p => p.playerId === this.playerId);
         if (me) {
-            const dirX = (this.keys.left.isDown?-1:0)+(this.keys.right.isDown?1:0);
-            const dirY = (this.keys.up.isDown?-1:0)+(this.keys.down.isDown?1:0);
-            const ptr = this.input.activePointer;
-            const world = this.cameras.main.getWorldPoint(ptr.x,ptr.y);
-            const angle = Phaser.Math.Angle.Between(me.position.x,me.position.y,world.x,world.y);
-            this.socket.emit('move', { roomId:this.roomId, playerId:this.playerId, dirX, dirY, angle });
+            const dirX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
+            const dirY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
+            const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
+            const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
+            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
         }
 
-        // Render players
+        // Spieler rendern & Health Bar
+        const connected = this.latestState.players.filter(p => p.currentHealth > 0).length;
+        const total = this.latestState.players.length;
+        this.playerCountText.setText(`${connected}/${total} players`);
+
+        const cam = this.cameras.main;
         this.latestState.players.forEach(p => {
-            if (p.currentHealth<=0) return;
             let spr = this.playerSprites[p.playerId];
-            if (!spr) {
-                spr = this.physics.add.sprite(p.position.x,p.position.y,'player').setOrigin(0.5);
+            if (!spr && p.currentHealth > 0) {
+                spr = this.physics.add.sprite(p.position.x, p.position.y, 'player').setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
-                this.physics.add.overlap(this.projectilesGroup, spr, (proj, hit)=>{
-                    proj.destroy();
-                });
-                if (p.playerId===this.playerId) {
-                    this.cameras.main.startFollow(spr);
+                if (p.playerId === this.playerId) {
+                    cam.startFollow(spr);
+                    cam.setZoom(this.initialZoom);
+                }
+                // Kollision gegen Wände
+                this.physics.add.collider(spr, this.obstacleLayer);
+            }
+            if (spr) {
+                if (p.currentHealth <= 0) {
+                    spr.healthBar.destroy(); spr.destroy(); delete this.playerSprites[p.playerId];
+                } else {
+                    spr.setPosition(p.position.x, p.position.y);
+                    spr.setRotation(p.position.angle);
+                    spr.setVisible(p.visible);
+                    // Health Bar zeichnen
+                    const barW = 40, barH = 6;
+                    const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
+                    spr.healthBar.clear()
+                        .fillStyle(0x000000)
+                        .fillRect(p.position.x - barW/2 - 1, p.position.y - spr.height/2 - barH - 9, barW+2, barH+2)
+                        .fillStyle(0x00ff00)
+                        .fillRect(p.position.x - barW/2,       p.position.y - spr.height/2 - barH - 8, barW * pct, barH);
                 }
             }
-            spr.setPosition(p.position.x,p.position.y).setRotation(p.position.angle).setVisible(p.visible);
-            // Health bar
-            const pct = Phaser.Math.Clamp(p.currentHealth/this.maxHealth,0,1);
-            spr.healthBar.clear()
-                .fillStyle(0x000000).fillRect(p.position.x-21,p.position.y-spr.height/2-16,42,8)
-                .fillStyle(0x00ff00).fillRect(p.position.x-20,p.position.y-spr.height/2-15,40*pct,6);
         });
+        // Exit anzeigen, wenn tot
+        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
 
-        // Render projectiles
-        const seen = new Set();
+        // Projektile rendern
+        const alive = new Set();
         this.latestState.projectiles.forEach(p => {
-            seen.add(p.id);
+            const key = p.projectileType === 'SNIPER' ? 'sniper'
+                : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
+                    : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
+                        : 'mine';
+            alive.add(p.id);
             let spr = this.projectileSprites[p.id];
             if (!spr) {
-                spr = this.physics.add.sprite(p.position.x,p.position.y,
-                    { SNIPER:'sniper', SHOTGUN_PELLET:'shotgun_pellet', RIFLE_BULLET:'rifle_bullet', MINE:'mine' }[p.projectileType]
-                ).setOrigin(0.5).setScale(p.projectileType==='MINE'?0.3:1);
+                spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
+                if (p.projectileType === 'MINE') spr.setScale(0.3);
                 this.projectileSprites[p.id] = spr;
-                this.projectilesGroup.add(spr);
-            } else spr.setPosition(p.position.x,p.position.y);
+            } else {
+                spr.setPosition(p.position.x, p.position.y);
+            }
         });
+        // Entfernen
         Object.keys(this.projectileSprites).forEach(id => {
-            if (!seen.has(id)) {
-                this.projectileSprites[id].destroy(); delete this.projectileSprites[id];
+            if (!alive.has(id)) {
+                this.projectileSprites[id].destroy();
+                delete this.projectileSprites[id];
             }
         });
 
-        // Draw ammo bar
-        const weapon = me?.currentWeapon;
-        const ammo   = me?.ammo ?? 0;
-        const max    = weapon==='RIFLE_BULLET'?15:(weapon==='SNIPER'||weapon==='MINE'?1:3);
-        this.ammoBarBg.clear().fillStyle(0x000000,0.5).fillRect(10,10,100,10);
-        this.ammoBarFill.clear().fillStyle(0xffffff).fillRect(12,12, (100-4)*(ammo/max), 6);
+        // Ammo-Bar
+        if (me) {
+            const weapon = me.currentWeapon;
+            const ammo= me?.ammo ?? 0;
+            const max    = weapon === 'RIFLE_BULLET' ? 15
+                : weapon === 'SHOTGUN_PELLET' ? 3
+                    : weapon === 'SNIPER' ? 1
+                        : 1;
+            const barX = 10, barY = 10, barW = 100, barH = 10;
+            this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
+            this.ammoBarFill.clear().fillStyle(0xffffff, 1)
+                .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+        }
     }
 }

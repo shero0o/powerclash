@@ -33,27 +33,38 @@ public class DefaultGameLogic implements GameLogic {
     }
 
     @Override
+    public Player getPlayer(String playerId) {
+        return players.get(playerId);
+    }
+
+    @Override
+    public void attack(String playerId, float dirX, float dirY, float angle) {
+
+    }
+
+    @Override
     public void addPlayer(String playerId, String brawlerId) {
-        // 1) Spawn-Position je nach Reihenfolge
+        // wenn kein Brawler übergeben wurde, Default nehmen
+        if (brawlerId == null || brawlerId.isBlank()) {
+            brawlerId = "sniper";
+        }
+
+        // spawn-Logik wie gehabt …
         int index = players.size();
         Position spawn = (index == 0)
-                ? new Position(1200, 1200, 0)   // Spieler 1
-                : new Position(6520, 1200, 0);  // Spieler 2
-
-        // 2) Brawler erzeugen
-        Brawler br = switch (brawlerId.toLowerCase()) {
-            case "tank"  -> new Brawler(playerId, 1, 200, spawn);
-            case "mage"  -> new Brawler(playerId, 1,  80, spawn);
-            case "healer"-> new Brawler(playerId, 1, 100, spawn);
-            default      -> new Brawler(playerId, 1, 100, spawn); // sniper
+                ? new Position(1200, 1200, 0)
+                : new Position(6520, 1200, 0);
+        Brawler br = switch(brawlerId.toLowerCase()) {
+            case "tank"   -> new Brawler(playerId,1,200,spawn);
+            case "mage"   -> new Brawler(playerId,1, 80,spawn);
+            case "healer" -> new Brawler(playerId,1,100,spawn);
+            default       -> new Brawler(playerId,1,100,spawn);
         };
-
-        // 3) Player-Objekt anlegen
         players.put(playerId,
                 new Player(br.getId(), br.getLevel(), br.getMaxHealth(), br.getPosition())
         );
 
-        // 4) Ammo-System initialisieren
+        // Ammo initialisieren …
         playerWeapon.put(playerId, ProjectileType.RIFLE_BULLET);
         ammoMap.put(playerId, getMaxAmmoForType(ProjectileType.RIFLE_BULLET));
         lastRefill.put(playerId, System.currentTimeMillis());
@@ -87,6 +98,7 @@ public class DefaultGameLogic implements GameLogic {
             p.setPosition(new Position(x, y, angle));
         }
     }
+
 
     @Override
     public void setPlayerWeapon(String playerId, ProjectileType type) {
@@ -320,6 +332,8 @@ public class DefaultGameLogic implements GameLogic {
         msg.setProjectiles(new ArrayList<>(projectiles.values()));
         return msg;
     }
+
+
 
     @Override
     public List<Projectile> getProjectiles() {
