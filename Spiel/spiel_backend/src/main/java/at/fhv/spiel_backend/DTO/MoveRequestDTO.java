@@ -1,18 +1,12 @@
 package at.fhv.spiel_backend.DTO;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Getter
-@Setter
+@Data
 public class MoveRequestDTO {
     private String roomId;
     private String playerId;
-    private float  x;
-    private float  y;
+    private float dirX;
+    private float dirY;
+    private float angle;
 }
-

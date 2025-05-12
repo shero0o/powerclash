@@ -18,7 +18,7 @@ export default class WaitingScene extends Phaser.Scene {
 
         // 1) Listener registrieren
         this.socket.on('startGame', () => {
-            this.scene.start('PreloadScene', {
+            this.scene.start('GameScene', {
                 roomId: this.registry.get('roomId'),
                 playerId: localStorage.getItem('playerId')
             });

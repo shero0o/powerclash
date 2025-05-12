@@ -19,7 +19,8 @@ public class RoomFactoryImpl implements IRoomFactory {
     }
 
     @Override
-    public IGameRoom createRoom() {
-        return new GameRoomImpl(mapFactory, new DefaultGameLogic(), eventPublisher);
+    public IGameRoom createRoom(String levelId) {
+        return new GameRoomImpl(mapFactory, new DefaultGameLogic(), eventPublisher, levelId);
     }
+
 }

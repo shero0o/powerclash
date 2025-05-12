@@ -12,4 +12,7 @@ import lombok.Setter;
 @Setter
 public class JoinRequestDTO {
     String playerId;
+    private String brawlerId;
+    private String levelId;
+
 }

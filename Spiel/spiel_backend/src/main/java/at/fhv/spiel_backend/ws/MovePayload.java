@@ -8,5 +8,6 @@ import lombok.Data;
 public class MovePayload {
     private float x;
     private float y;
+    private float angle;
 }
 

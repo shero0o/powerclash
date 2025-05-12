@@ -1,8 +1,8 @@
+// at.fhv.spiel_backend.ws.StateUpdateMessage.java
 package at.fhv.spiel_backend.ws;
 
 import at.fhv.spiel_backend.model.Projectile;
 import lombok.Data;
-
 import java.util.List;
 
 @Data

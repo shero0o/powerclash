@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 public class Position implements Entity {
     private float x;
     private float y;
+    private float angle;
 
     @Override
     public String getId() {
@@ -21,6 +22,7 @@ public class Position implements Entity {
     public void setPosition(Position position) {
         this.x = position.x;
         this.y = position.y;
+        this.angle = position.angle;
     }
     @Override
     @JsonIgnore
