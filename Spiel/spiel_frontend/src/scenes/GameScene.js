@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
-        this.selectedWeapon    = 'RIFLE_BULLET';
+
         this.isFiring          = false;
         this.fireEvent         = null;
     }
@@ -12,6 +12,8 @@ export default class GameScene extends Phaser.Scene {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
         this.mapKey            = data.levelId;
+        const regWeapon = this.registry.get('weapon');
+        this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
         this.latestState       = null;
         this.playerSprites     = {};
         this.projectileSprites = {};
@@ -89,17 +91,7 @@ export default class GameScene extends Phaser.Scene {
         this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
 
-        // Eingabe: Waffenwechsel
-        this.input.keyboard.on('keydown', evt => {
-            let newWep = this.selectedWeapon;
-            if (evt.code === 'Digit1') newWep = 'SNIPER';
-            else if (evt.code === 'Digit2') newWep = 'SHOTGUN_PELLET';
-            else if (evt.code === 'Digit3') newWep = 'RIFLE_BULLET';
-            else if (evt.code === 'Digit4') newWep = 'MINE';
-            else return;
-            this.selectedWeapon = newWep;
-            this.socket.emit('changeWeapon', { roomId: this.roomId, playerId: this.playerId, projectileType: newWep });
-        });
+
 
         // Eingabe: WASD
         this.keys = this.input.keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D' });
@@ -110,6 +102,13 @@ export default class GameScene extends Phaser.Scene {
 
         // Socket-Update
         this.socket.on('stateUpdate', state => this.latestState = state);
+
+        this.socket.emit('changeWeapon', {
+            roomId: this.roomId,
+            playerId: this.playerId,
+            projectileType: this.selectedWeapon
+        });
+
     }
 
     startFiring(pointer) {

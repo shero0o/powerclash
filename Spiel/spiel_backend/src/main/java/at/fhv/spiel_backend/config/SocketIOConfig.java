@@ -41,6 +41,13 @@ public class SocketIOConfig {
             IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
             server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
+
+            if (data.getChosenWeapon() != null) {
+                 room.getGameLogic().setPlayerWeapon(
+                         data.getPlayerId(),
+                         data.getChosenWeapon());
+            }
+
             room.start();
             ack.sendAckData(new JoinResponseDTO(roomId));
         });

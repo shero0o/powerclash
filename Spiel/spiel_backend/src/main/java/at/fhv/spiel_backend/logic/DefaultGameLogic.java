@@ -250,9 +250,11 @@ public class DefaultGameLogic implements GameLogic {
             // --- Wand-Kollision ---
             int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
             int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
-            if (gameMap.isWallAt(tx, ty)) {
-                it.remove();
-                continue;
+            if (p.getProjectileType() != ProjectileType.MINE) {
+                  if (gameMap.isWallAt(tx, ty)) {
+                      it.remove();
+                      continue;
+                  }
             }
 
             // --- Spieler-Kollision ---
