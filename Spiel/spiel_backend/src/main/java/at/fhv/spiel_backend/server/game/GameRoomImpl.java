@@ -30,31 +30,33 @@ public class GameRoomImpl implements IGameRoom {
     private static final float MAX_SPEED = 300f; // pixels per second
     private static final float TICK_DT    = 0.016f;
 
-    public GameRoomImpl(IMapFactory mapFactory, DefaultGameLogic gameLogic, EventPublisher eventPublisher) {
-        this.mapFactory = mapFactory;
-        this.gameLogic = gameLogic;
-        this.eventPublisher = eventPublisher;
-        this.gameMap = mapFactory.create("level1");
-        this.gameLogic.setGameMap(this.gameMap);
-    }
+    public GameRoomImpl(IMapFactory mapFactory, DefaultGameLogic gameLogic, EventPublisher eventPublisher, String levelId) {
+            this.mapFactory = mapFactory;
+            this.gameLogic = gameLogic;
+            this.eventPublisher = eventPublisher;
+            this.gameMap = mapFactory.create(levelId);
+            this.gameLogic.setGameMap(this.gameMap);
+        }
 
-    @Override
+
+        @Override
     public String getId() {
         return id;
     }
 
-    @Override
-    public void addPlayer(String playerId) {
-        if (players.size() >= MAX_PLAYERS) {
-            throw new IllegalStateException("Room " + id + " is full");
+        @Override
+        public void addPlayer(String playerId, String brawlerId) {
+            if (players.size() >= MAX_PLAYERS) {
+                throw new IllegalStateException("Room is full");
+            }
+            players.computeIfAbsent(playerId, pid -> {
+                gameLogic.addPlayer(pid, brawlerId);
+                return new Object();
+            });
         }
-        players.computeIfAbsent(playerId, pid -> {
-            gameLogic.addPlayer(pid);
-            return new Object();
-        });
-    }
 
-    @Override
+
+        @Override
     public void removePlayer(String playerId) {
         players.remove(playerId);
         readyPlayers.remove(playerId);
@@ -73,7 +75,7 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     @Override
-    public void markReady(String playerId) {
+    public void markReady(String playerId, String brawlerId) {
         if (!readyPlayers.containsKey(playerId)) {
             readyPlayers.put(playerId, new Object());
         }

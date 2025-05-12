@@ -24,8 +24,8 @@ public class RoomManagerImpl implements IRoomManager {
         this.roomFactory = roomFactory;
     }
 
-    public IGameRoom createRoom() {
-        IGameRoom newRoom = roomFactory.createRoom();
+    public IGameRoom createRoom(String levelId) {
+        IGameRoom newRoom = roomFactory.createRoom(levelId);
         rooms.add(newRoom);
         return newRoom;
     }
@@ -46,15 +46,15 @@ public class RoomManagerImpl implements IRoomManager {
      * @return die ID des gewählten Raums
      */
     @Override
-    public String assignToRoom(String playerId) {
+    public String assignToRoom(String playerId, String brawlerId, String levelId) {
         for (IGameRoom room : rooms) {
             if (!room.isFull()) {
-                room.addPlayer(playerId);
+                room.addPlayer(playerId, brawlerId);
                 return room.getId();
             }
         }
-        IGameRoom newRoom = createRoom();
-        newRoom.addPlayer(playerId);
+        IGameRoom newRoom = createRoom(levelId); // <– levelId hier verwenden
+        newRoom.addPlayer(playerId, brawlerId);
         return newRoom.getId();
     }
 

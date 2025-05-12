@@ -7,7 +7,7 @@ public interface IRoomManager {
      * Creates a new game room and registers it.
      * @return the created IGameRoom
      */
-    IGameRoom createRoom();
+    IGameRoom createRoom(String levelId);
 
     /**
      * Retrieves an existing room by its ID, or null if not found.
@@ -21,7 +21,8 @@ public interface IRoomManager {
      * @param playerId unique identifier for the player
      * @return the ID of the room the player was assigned to
      */
-    String assignToRoom(String playerId);
+    String assignToRoom(String playerId, String brawlerId, String levelId);
+
 
     /**
      * Removes a player from their room and cleans up empty rooms.

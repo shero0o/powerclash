@@ -8,16 +8,21 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         this.roomId      = data.roomId;
         this.playerId    = data.playerId;
+        this.mapKey = data.levelId;
         this.latestState = null;
         this.playerSprites = {};
         this.bulletSprites = {};
         this.initialZoom = 0.7;
         this.maxHealth   = 100;
+        this.playerCountText = null;
+
     }
+
 
     preload() {
         this.load.image('player', '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.tilemapTiledJSON('map', '/assets/mapAli.tmj');
+        //this.load.tilemapTiledJSON('map', `/assets/${this.mapKey}.tmj`);
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
     }
 
@@ -31,6 +36,21 @@ export default class GameScene extends Phaser.Scene {
         this.keys = this.input.keyboard.addKeys({
             up:'W', down:'S', left:'A', right:'D'
         });
+        this.playerCountText = this.add.text(0, 0, '0/0 players', {
+            fontFamily: 'Arial',
+            fontSize: 32, // Jetzt als Zahl
+            fontStyle: 'bold',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4,
+            align: 'left'
+        })
+            .setScrollFactor(0)
+            .setOrigin(0, 0)
+            .setDepth(10);
+
+
+
 
         this.exitButton = this.add
             .text(16,16,'Exit',{ fontSize:'18px', fill:'#ff0000' })
@@ -67,6 +87,11 @@ export default class GameScene extends Phaser.Scene {
 
     update() {
         if (!this.latestState) return;
+        const connected = this.latestState.players.filter(p => p.currentHealth > 0).length;
+        const total = 2;
+        this.playerCountText.setText(`${connected}/${total} players`);
+
+
 
         // remove dead players & their bars
         Object.entries(this.playerSprites).forEach(([id,spr]) => {

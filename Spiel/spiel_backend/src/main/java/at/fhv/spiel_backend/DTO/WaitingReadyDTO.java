@@ -6,11 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class WaitingReadyDTO {
-    private String roomId;
     private String playerId;
+    private String roomId;
+    private String brawlerId;  // NEU
+    private String levelId;    // NEU
 }

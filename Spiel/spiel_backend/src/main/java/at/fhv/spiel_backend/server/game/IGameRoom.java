@@ -16,7 +16,8 @@ public interface IGameRoom {
      * Adds a player to this room.
      * @param playerId unique identifier of the player
      */
-    void addPlayer(String playerId);
+
+    void addPlayer(String playerId, String brawlerId);
 
     /**
      * Removes a player from this room.
@@ -49,7 +50,7 @@ public interface IGameRoom {
      * @return read-only view of the players map (playerId -> session or data)
      */
     Map<String, Object> getPlayers();
-    void markReady(String playerId);
+    void markReady(String playerId, String brawlerId);
     int  getReadyCount();
     GameLogic getGameLogic();
 

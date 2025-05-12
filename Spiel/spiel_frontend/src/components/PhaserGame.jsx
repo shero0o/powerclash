@@ -6,6 +6,7 @@ import io from 'socket.io-client';
 import SplashScene    from '../scenes/SplashScene';    // originally turn8file3
 import WaitingScene   from '../scenes/WaitingScene';   // originally turn8file4
 import GameScene      from '../scenes/GameScene';      // originally turn8file1
+import SelectionScene from "../scenes/SelectionScene.js";
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -18,6 +19,7 @@ export default function PhaserGame() {
 
         const scenes = [
             new SplashScene(),
+            new SelectionScene(),
             new WaitingScene(),
             new GameScene()
         ];

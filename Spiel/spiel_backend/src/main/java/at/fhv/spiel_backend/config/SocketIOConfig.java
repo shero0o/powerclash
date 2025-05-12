@@ -32,13 +32,13 @@ public class SocketIOConfig {
 
         // Spieler joinen und anlegen
         server.addEventListener("joinRoom", JoinRequestDTO.class, (client, data, ack) -> {
-            String roomId = roomManager.assignToRoom(data.getPlayerId());
+            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId());
             IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
             server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
             ack.sendAckData(new JoinResponseDTO(roomId));
-            log.info("Player {} assigned to room {}", data.getPlayerId(), roomId);
         });
+
 
         // Ready-Phase
         server.addEventListener("waitingReady", WaitingReadyDTO.class,
@@ -49,7 +49,11 @@ public class SocketIOConfig {
 
                     // — if no such room, auto-create & join a fresh one —
                     if (room == null) {
-                        String newId = roomManager.assignToRoom(data.getPlayerId());
+                        String newId = roomManager.assignToRoom(
+                                data.getPlayerId(),
+                                data.getBrawlerId(),
+                                data.getLevelId()
+                        );
                         room = roomManager.getRoom(newId);
                         client.joinRoom(newId);
 
@@ -64,7 +68,7 @@ public class SocketIOConfig {
                     }
 
                     // — now mark ready in whichever room we have —
-                    room.markReady(data.getPlayerId());
+                    room.markReady(data.getPlayerId(), data.getBrawlerId());
 
                     // — if everybody’s marked, start the game —
                     if (room.getReadyCount() == room.getPlayerCount()) {

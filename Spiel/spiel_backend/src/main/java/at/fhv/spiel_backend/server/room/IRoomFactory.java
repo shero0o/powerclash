@@ -7,5 +7,6 @@ import org.springframework.stereotype.Component;
 
 
 public interface IRoomFactory {
-    IGameRoom createRoom();
+    IGameRoom createRoom(String levelId);
 }
+

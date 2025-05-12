@@ -8,7 +8,7 @@ import at.fhv.spiel_backend.ws.StateUpdateMessage;
 public interface GameLogic {
     StateUpdateMessage buildStateUpdate();
     void movePlayer(String playerId, float x, float y, float angle);
-    void addPlayer(String playerId);
+    void addPlayer(String playerId, String brawlerId);
     void removePlayer(String playerId);
     void setGameMap(GameMap gameMap);
     /**

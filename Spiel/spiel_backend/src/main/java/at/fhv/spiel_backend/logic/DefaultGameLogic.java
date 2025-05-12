@@ -29,15 +29,38 @@ public class DefaultGameLogic implements GameLogic {
     }
 
     @Override
-    public void addPlayer(String playerId) {
-        Brawler br = new Brawler(playerId, 1, 100, new Position(1200, 1200, 0));
+    public void addPlayer(String playerId, String brawlerId) {
+        int index = players.size(); // 0 = erster Spieler, 1 = zweiter Spieler
+        Position spawn;
+
+        // Unterschiedliche Startpositionen
+        if (index == 0) {
+            spawn = new Position(1200, 1200, 0); // Spieler 1 (links oben)
+        } else {
+            spawn = new Position(6520, 1200, 0); // Spieler 2 (rechts unten)
+        }
+
+        Brawler br;
+        switch (brawlerId) {
+            case "tank":
+                br = new Brawler(playerId, 1, 200, spawn); break;
+            case "mage":
+                br = new Brawler(playerId, 1, 80, spawn); break;
+            case "healer":
+                br = new Brawler(playerId, 1, 100, spawn); break;
+            default: // sniper
+                br = new Brawler(playerId, 1, 100, spawn); break;
+        }
+
         players.put(playerId, new Player(
-                playerId,
+                br.getId(),
                 br.getLevel(),
                 br.getMaxHealth(),
                 br.getPosition()
         ));
     }
+
+
 
     @Override
     public void removePlayer(String playerId) {
