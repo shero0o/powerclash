@@ -73,7 +73,7 @@ public class SocketIOConfig {
                     }
 
                     room.markReady(data.getPlayerId(), data.getBrawlerId());
-                    if (room.getReadyCount() == room.getPlayerCount()) {
+                    if (room.getReadyCount() == room.getPlayerCount() && room.getPlayerCount() == room.getMaxPlayers()) {
                         server.getRoomOperations(room.getId()).sendEvent("startGame");
                         room.start();
                     }
