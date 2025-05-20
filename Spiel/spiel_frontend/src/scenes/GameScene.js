@@ -11,7 +11,7 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
-        this.mapKey            = data.levelId;
+        this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
         const regWeapon = this.registry.get('weapon');
         this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
         this.latestState       = null;
@@ -35,7 +35,14 @@ export default class GameScene extends Phaser.Scene {
 
         // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
-        this.load.tilemapTiledJSON('map', '/assets/mapAli.tmj');
+        let mapFile;
+        if (this.mapKey === 'level1') {
+            mapFile = 'map1.tmj';
+        } else {
+            mapFile = 'map2.0.tmj'; // shared by level2 and level3
+        }
+
+        this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
     }
 
     create() {
@@ -45,8 +52,16 @@ export default class GameScene extends Phaser.Scene {
         // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        map.createLayer('Boden', tileset, 0,0);
-        map.createLayer('Wand',  tileset, 0,0);
+        if (this.mapKey === 'level1') {
+            map.createLayer('Boden', tileset, 0, 0);
+            map.createLayer('Wand', tileset, 0, 0);
+        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
+            map.createLayer('Boden', tileset, 0, 0);
+            map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
+            map.createLayer('Kisten', tileset, 0, 0);
+            map.createLayer('Wand', tileset, 0, 0);
+        }
+
 
         // Physik-Welt & Kamera
         const width  = map.widthInPixels;

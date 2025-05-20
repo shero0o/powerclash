@@ -23,6 +23,7 @@ import java.util.concurrent.*;
  */
 public class GameRoomImpl implements IGameRoom {
     private final String id = UUID.randomUUID().toString();
+    private final String levelId;
     private final Map<String, Object> players      = new ConcurrentHashMap<>();
     private final Map<String, Object> readyPlayers = new ConcurrentHashMap<>();
     private final Map<String, PlayerInput> inputs  = new ConcurrentHashMap<>();
@@ -47,6 +48,7 @@ public class GameRoomImpl implements IGameRoom {
         this.mapFactory     = mapFactory;
         this.gameLogic      = gameLogic;
         this.eventPublisher = eventPublisher;
+        this.levelId = levelId;
         this.gameMap        = mapFactory.create(levelId);
         this.gameLogic.setGameMap(this.gameMap);
     }
@@ -54,6 +56,11 @@ public class GameRoomImpl implements IGameRoom {
     @Override
     public String getId() {
         return id;
+    }
+
+    @Override
+    public String getLevelId() {
+        return this.levelId;
     }
 
     @Override

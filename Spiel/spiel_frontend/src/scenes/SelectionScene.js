@@ -67,13 +67,21 @@ export default class SelectionScene extends Phaser.Scene {
                 const playerId = localStorage.getItem('playerId') || crypto.randomUUID();
                 localStorage.setItem('playerId', playerId);
 
+                console.log("🚀 Sending joinRoom with", {
+                    playerId,
+                    levelId: this.selectedLevel,
+                    chosenWeapon: this.selectedWeapon
+                });
+
                 // Join-Payload mit chosenWeapon
                 this.socket.emit('joinRoom', {
+
                     playerId,
                     brawlerId: null,              // Server wählt Default-Brawler
                     levelId: this.selectedLevel,
                     chosenWeapon: this.selectedWeapon
                 }, (response) => {
+                    console.log("📥 Server response from joinRoom:", response);
                     // Raum‐Daten im Registry speichern
                     this.registry.set('roomId',   response.roomId);
                     this.registry.set('playerId', playerId);

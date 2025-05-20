@@ -12,6 +12,7 @@ public interface IGameRoom {
      */
     String getId();
 
+    String getLevelId();
     /**
      * Adds a player to this room.
      * @param playerId unique identifier of the player

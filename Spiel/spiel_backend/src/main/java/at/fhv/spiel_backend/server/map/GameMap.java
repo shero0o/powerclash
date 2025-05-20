@@ -15,7 +15,19 @@ public class GameMap {
 
     public GameMap(String id) {
         this.id = id;
-        try (InputStream is = getClass().getResourceAsStream("/" + "mapAli" + ".tmj")) {
+
+        // Dynamisch den richtigen Map-Dateinamen wählen
+        String mapFile = switch (id) {
+            case "level1" -> "map1.tmj";
+            case "level2", "level3" -> "map2.0.tmj";
+            default -> throw new IllegalArgumentException("Unknown Level: " + id);
+        };
+
+        try (InputStream is = getClass().getResourceAsStream("/" + mapFile)) {
+            if (is == null) {
+                throw new RuntimeException("Map-File not found: " + mapFile);
+            }
+
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.readTree(is);
 
@@ -39,9 +51,10 @@ public class GameMap {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error loading map '" + id + "'", e);
+            throw new RuntimeException("Error by loading the map '" + id + "'", e);
         }
     }
+
 
     public String getId()         { return id; }
     public int     getTileWidth() { return tileWidth; }

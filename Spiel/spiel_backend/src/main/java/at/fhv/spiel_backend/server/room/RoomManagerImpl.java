@@ -46,6 +46,7 @@ public class RoomManagerImpl implements IRoomManager {
      * @return die ID des gewählten Raums
      */
     @Override
+
     public String assignToRoom(String playerId, String brawlerId, String levelId) {
         for (IGameRoom room : rooms) {
             if (!room.isFull()) {
@@ -53,6 +54,7 @@ public class RoomManagerImpl implements IRoomManager {
                 return room.getId();
             }
         }
+
         IGameRoom newRoom = createRoom(levelId); // <– levelId hier verwenden
         newRoom.addPlayer(playerId, brawlerId);
         return newRoom.getId();
