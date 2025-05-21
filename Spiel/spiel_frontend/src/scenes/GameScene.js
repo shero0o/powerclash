@@ -57,7 +57,7 @@ export default class GameScene extends Phaser.Scene {
             map.createLayer('Wand', tileset, 0, 0);
         } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
-            map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
+            this.hideLayer = map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             map.createLayer('Kisten', tileset, 0, 0);
             map.createLayer('Wand', tileset, 0, 0);
         }
@@ -220,7 +220,19 @@ export default class GameScene extends Phaser.Scene {
                 } else {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
-                    spr.setVisible(p.visible);
+                    if (this.hideLayer) {
+                        const tile = this.hideLayer.getTileAtWorldXY(p.position.x, p.position.y);
+
+                        if (p.playerId === this.playerId) {
+                            // Du selbst siehst dich nicht, wenn du im Gebüsch bist
+                            spr.setVisible(!tile);
+                        } else {
+                            // Andere Spieler sehen dich nicht, wenn du im Gebüsch bist
+                            spr.setVisible(!tile);
+                            if (spr.healthBar) spr.healthBar.setVisible(!tile);
+                        }
+                    }
+
                     // Health Bar zeichnen
                     const barW = 40, barH = 6;
                     const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
