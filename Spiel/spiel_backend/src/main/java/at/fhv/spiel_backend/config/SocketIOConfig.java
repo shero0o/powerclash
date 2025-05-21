@@ -48,7 +48,6 @@ public class SocketIOConfig {
                          data.getChosenWeapon());
             }
 
-            room.start();
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
 

@@ -42,16 +42,19 @@ public class RoomManagerImpl implements IRoomManager {
     public String assignToRoom(String playerId, String brawlerId, String levelId) {
         for (IGameRoom room : rooms) {
             if (!room.isFull() && room.getLevelId().equals(levelId)) {
-                room.addPlayer(playerId, brawlerId);
-                return room.getId();
+                if (!((GameRoomImpl) room).hasGameStarted()) {
+                    room.addPlayer(playerId, brawlerId);
+                    return room.getId();
+                }
             }
         }
 
-        // Kein passender Raum mit gleichem Level → neuen erstellen
         IGameRoom newRoom = createRoom(levelId);
         newRoom.addPlayer(playerId, brawlerId);
         return newRoom.getId();
     }
+
+
 
     @Override
     public void removeFromRoom(String playerId) {
