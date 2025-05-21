@@ -3,10 +3,9 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import io from 'socket.io-client';
 
-import SplashScene    from '../scenes/SplashScene';    // originally turn8file3
-import WaitingScene   from '../scenes/WaitingScene';   // originally turn8file4
-import GameScene      from '../scenes/GameScene';      // originally turn8file1
-import SelectionScene from "../scenes/SelectionScene.js";
+import WaitingScene   from '../scenes/WaitingScene';
+import GameScene      from '../scenes/GameScene';
+import SelectionScene from '../scenes/SelectionScene';
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -14,17 +13,28 @@ export default function PhaserGame() {
     useEffect(() => {
         if (!containerRef.current) return;
 
-        // 1) single socket for all scenes
-        const socket = io('http://localhost:8081');
+        const playerId = localStorage.getItem('playerId');
+        const roomId   = localStorage.getItem('roomId');
+
+        const socket = io('http://localhost:8081', {
+            query: { playerId, roomId }
+        });
         console.log('Setting up socket connection...');
 
+        const beforeUnloadHandler = () => {
+            if (roomId && playerId) {
+                socket.emit('leaveRoom', { roomId, playerId });
+            }
+            socket.disconnect();
+        };
+
+        window.addEventListener('beforeunload', beforeUnloadHandler);
+
         const scenes = [
-            new SplashScene(),
             new SelectionScene(),
             new WaitingScene(),
             new GameScene()
         ];
-        // inject socket into each scene instance
         scenes.forEach(s => s.socket = socket);
 
         const config = {
@@ -33,10 +43,10 @@ export default function PhaserGame() {
             width: 1280,
             height: 720,
             scale: {
-                mode: Phaser.Scale.FIT,               // keep 16:9 aspect
-                autoCenter: Phaser.Scale.CENTER_BOTH, // center in container
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
             },
-            backgroundColor: '#222222',             // dark BG behind scenes
+            backgroundColor: '#222222',
             physics: { default: 'arcade', arcade: { debug: false } },
             scene: scenes
         };
@@ -44,7 +54,8 @@ export default function PhaserGame() {
         const game = new Phaser.Game(config);
 
         return () => {
-            socket.close();
+            window.removeEventListener('beforeunload', beforeUnloadHandler);
+            socket.disconnect();
             game.destroy(true);
         };
     }, []);
@@ -56,7 +67,7 @@ export default function PhaserGame() {
             style={{
                 width: '100%',
                 height: '100%',
-                background: '#6a0dad', // purple behind the canvas
+                background: '#6a0dad',
                 overflow: 'hidden'
             }}
         />

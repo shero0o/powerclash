@@ -91,8 +91,9 @@ export default class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
                 this.socket.disconnect();
-                this.scene.start('SplashScene');
+                this.scene.start('SelectionScene');
             });
+
 
         // Explosion-Animation
         this.anims.create({

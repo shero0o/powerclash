@@ -123,6 +123,22 @@ public class SocketIOConfig {
                 }
         );
 
+        server.addDisconnectListener(client -> {
+            String playerId = client.getHandshakeData().getSingleUrlParam("playerId");
+            if (playerId != null) {
+                roomManager.removeFromRoom(playerId);
+                log.info("Player {} disconnected and was removed from their room", playerId);
+            }
+        });
+
+        server.addEventListener("leaveRoom", WaitingReadyDTO.class, (client, data, ack) -> {
+            String playerId = data.getPlayerId();
+            roomManager.removeFromRoom(playerId);
+            log.info("Player {} left the room voluntarily", playerId);
+            ack.sendAckData("ok");
+        });
+
+
         server.start();
         return server;
     }
