@@ -55,4 +55,5 @@ public interface IGameRoom {
     int  getReadyCount();
     GameLogic getGameLogic();
 
+    int getMaxPlayers();
 }

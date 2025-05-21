@@ -203,4 +203,8 @@ public class GameRoomImpl implements IGameRoom {
             this.angle = a;
         }
     }
+
+    public int getMaxPlayers(){
+        return MAX_PLAYERS;
+    }
 }
