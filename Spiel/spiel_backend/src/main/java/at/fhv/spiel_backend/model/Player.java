@@ -15,6 +15,7 @@ public class Player extends Brawler {
     int gadgetMaxUses = 3;
     int gadgetUsesThisRound = 0;
     long lastGadgetTime = 0L;
+    boolean visible = true;
 
     public Player(String id, int level, int maxHealth, Position pos) {
         super(id, level, maxHealth, pos);

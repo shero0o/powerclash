@@ -96,6 +96,14 @@ public class DefaultGameLogic implements GameLogic {
         // nur bewegen, wenn kein Wall-Tile
         if (!gameMap.isWallAt(tileX, tileY)) {
             p.setPosition(new Position(x, y, angle));
+
+            // 🟡 Sichtbarkeit setzen anhand Busch
+            Position tilePos = new Position(tileX, tileY);
+            if (gameMap.isBushTile(tilePos)) {
+                p.setVisible(false);
+            } else {
+                p.setVisible(true);
+            }
         }
     }
 
@@ -259,7 +267,7 @@ public class DefaultGameLogic implements GameLogic {
 
             // --- Spieler-Kollision ---
             for (Player target : players.values()) {
-                if (target.getId().equals(p.getPlayerId()) || !target.isVisible()) continue;
+                if (target.getId().equals(p.getPlayerId())) continue;
                 float dx = target.getPosition().getX() - p.getPosition().getX();
                 float dy = target.getPosition().getY() - p.getPosition().getY();
                 float radius = 32f;
@@ -307,6 +315,7 @@ public class DefaultGameLogic implements GameLogic {
                 lastRifleRefill.put(pid, now);
             }
         }
+
     }
 
     @Override
@@ -357,4 +366,5 @@ public class DefaultGameLogic implements GameLogic {
             default             -> DEFAULT_MAX_AMMO;
         };
     }
+
 }

@@ -57,7 +57,7 @@ export default class GameScene extends Phaser.Scene {
             map.createLayer('Wand', tileset, 0, 0);
         } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
-            this.hideLayer = map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
+            map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             map.createLayer('Kisten', tileset, 0, 0);
             map.createLayer('Wand', tileset, 0, 0);
         }
@@ -116,8 +116,15 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerout',  ()      => this.stopFiring());
 
         // Socket-Update
-        this.socket.on('stateUpdate', state => this.latestState = state);
+        this.socket.on('stateUpdate', state => {
+            this.latestState = state;
 
+            // 🌿 Sichtbarkeits-Testausgabe
+            console.log("📦 Spieler-Sichtbarkeit:");
+            state.players.forEach(p => {
+                console.log(`👤 ${p.playerId} – visible: ${p.visible}`);
+            });
+        });
         this.socket.emit('changeWeapon', {
             roomId: this.roomId,
             playerId: this.playerId,
@@ -185,8 +192,9 @@ export default class GameScene extends Phaser.Scene {
         });
         this.prevProjectileIds = currIds;
 
-        // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
+
+        // Bewegung senden
         if (me) {
             const dirX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
             const dirY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
@@ -202,16 +210,18 @@ export default class GameScene extends Phaser.Scene {
 
         const cam = this.cameras.main;
         this.latestState.players.forEach(p => {
+            const isMe = p.playerId === this.playerId;
             let spr = this.playerSprites[p.playerId];
-            if (!spr && p.currentHealth > 0) {
+            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
                 spr = this.physics.add.sprite(p.position.x, p.position.y, 'player').setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
-                if (p.playerId === this.playerId) {
+
+                if (isMe) {
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
                 }
-                // Kollision gegen Wände
+
                 this.physics.add.collider(spr, this.obstacleLayer);
             }
             if (spr) {
@@ -220,27 +230,21 @@ export default class GameScene extends Phaser.Scene {
                 } else {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
-                    if (this.hideLayer) {
-                        const tile = this.hideLayer.getTileAtWorldXY(p.position.x, p.position.y);
+                    spr.setVisible(p.visible);
 
-                        if (p.playerId === this.playerId) {
-                            // Du selbst siehst dich nicht, wenn du im Gebüsch bist
-                            spr.setVisible(!tile);
-                        } else {
-                            // Andere Spieler sehen dich nicht, wenn du im Gebüsch bist
-                            spr.setVisible(!tile);
-                            if (spr.healthBar) spr.healthBar.setVisible(!tile);
-                        }
-                    }
+                    spr.healthBar.clear();
 
-                    // Health Bar zeichnen
+                    const shouldShowHealthBar = p.visible || isMe;
+
                     const barW = 40, barH = 6;
                     const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
-                    spr.healthBar.clear()
-                        .fillStyle(0x000000)
-                        .fillRect(p.position.x - barW/2 - 1, p.position.y - spr.height/2 - barH - 9, barW+2, barH+2)
-                        .fillStyle(0x00ff00)
-                        .fillRect(p.position.x - barW/2,       p.position.y - spr.height/2 - barH - 8, barW * pct, barH);
+                    if (shouldShowHealthBar) {
+                        spr.healthBar.clear()
+                            .fillStyle(0x000000)
+                            .fillRect(p.position.x - barW / 2 - 1, p.position.y - spr.height / 2 - barH - 9, barW + 2, barH + 2)
+                            .fillStyle(0x00ff00)
+                            .fillRect(p.position.x - barW / 2, p.position.y - spr.height / 2 - barH - 8, barW * pct, barH);
+                    }
                 }
             }
         });
