@@ -6,10 +6,23 @@ export default class SelectionScene extends Phaser.Scene {
         this.selectedWeapon = 'RIFLE_BULLET';
         this.selectedLevel  = 'level1';
         this.selectedBrawler = 'sniper';
+        this.playerName = '';
     }
 
     create() {
         const { width } = this.scale;
+
+        this.add.text(width / 2, 10, 'Enter Name:', { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5);
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.maxLength = 12;
+        nameInput.placeholder = 'Your name';
+        nameInput.style.position = 'absolute';
+        nameInput.style.top = '50px';
+        nameInput.style.left = '50%';
+        nameInput.style.transform = 'translateX(-50%)';
+        nameInput.style.zIndex = '1000';
+        document.body.appendChild(nameInput);
 
         // Weapon‐Optionen: Label + korrespondierender ProjectileType
         const weapons = [
@@ -99,6 +112,13 @@ export default class SelectionScene extends Phaser.Scene {
                     brawlerId: this.selectedBrawler
                 });
 
+                const enteredName = nameInput.value.trim() || 'Player';
+                this.playerName = enteredName;
+                localStorage.setItem('playerName', enteredName);
+
+
+                document.body.removeChild(nameInput);
+
                 // Join-Payload mit chosenWeapon
                 this.socket.emit('joinRoom', {
 
@@ -114,6 +134,7 @@ export default class SelectionScene extends Phaser.Scene {
                     this.registry.set('levelId',  this.selectedLevel);
                     this.registry.set('weapon',   this.selectedWeapon);
                     this.registry.set('brawler',  this.selectedBrawler);
+                    this.registry.set('playerName', enteredName);
                     this.scene.start('WaitingScene');
                 });
             });

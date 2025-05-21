@@ -15,12 +15,14 @@ export default class GameScene extends Phaser.Scene {
         const regWeapon = this.registry.get('weapon');
         this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
         this.selectedBrawler = this.registry.get('brawler') || 'sniper';
+        this.playerName = this.registry.get('playerName') || 'Player';
         this.latestState       = null;
         this.playerSprites     = {};
         this.projectileSprites = {};
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
+
     }
 
     preload() {
@@ -226,6 +228,14 @@ export default class GameScene extends Phaser.Scene {
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
                 if (p.playerId === this.playerId) {
+                    spr.label = this.add.text(0, 0, this.playerName, {
+                        fontSize: '20px',
+                        fontFamily: 'Arial',
+                        color: '#ffffff',
+                        stroke: '#000000',
+                        strokeThickness: 4,
+                        fontStyle: "bold"
+                    }).setOrigin(0.5).setDepth(10);
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
                 }
@@ -247,6 +257,11 @@ export default class GameScene extends Phaser.Scene {
                         .fillRect(p.position.x - barW/2 - 1, p.position.y - spr.height/2 - barH - 9, barW+2, barH+2)
                         .fillStyle(0x00ff00)
                         .fillRect(p.position.x - barW/2,       p.position.y - spr.height/2 - barH - 8, barW * pct, barH);
+                }
+
+                if (spr.label) {
+                    spr.label.setPosition(p.position.x, p.position.y - 50);
+                    spr.label.setVisible(p.visible);
                 }
             }
         });
