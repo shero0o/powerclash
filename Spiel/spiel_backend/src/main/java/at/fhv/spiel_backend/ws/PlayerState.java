@@ -14,4 +14,6 @@ public class PlayerState {
     private boolean visible;
     private int ammo;
     private ProjectileType currentWeapon;
+    private String brawlerId; // NEU
+
 }

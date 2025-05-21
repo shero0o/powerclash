@@ -25,6 +25,7 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, Long>    lastRifleRefill     = new ConcurrentHashMap<>();
     private final Set<String>          rifleReloading      = ConcurrentHashMap.newKeySet();
     private final Map<String, ProjectileType> playerWeapon = new ConcurrentHashMap<>();
+    private final Map<String, String> playerBrawler = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
     @Override
@@ -70,6 +71,7 @@ public class DefaultGameLogic implements GameLogic {
         lastRefill.put(playerId, System.currentTimeMillis());
         rifleAmmoMap.put(playerId, RIFLE_MAX_AMMO);
         lastRifleRefill.put(playerId, System.currentTimeMillis());
+        playerBrawler.put(playerId, brawlerId);
     }
 
     @Override
@@ -81,6 +83,7 @@ public class DefaultGameLogic implements GameLogic {
         lastRifleRefill.remove(playerId);
         rifleReloading.remove(playerId);
         playerWeapon.remove(playerId);
+        playerBrawler.remove(playerId);
 
         // Auch alle zugehörigen Projektile löschen
         projectiles.values().removeIf(p -> p.getPlayerId().equals(playerId));
@@ -324,7 +327,8 @@ public class DefaultGameLogic implements GameLogic {
                     p.getCurrentHealth(),
                     p.isVisible(),
                     ammo,
-                    wep
+                    wep,
+                    playerBrawler.getOrDefault(p.getId(), "sniper")
             );
         }).collect(Collectors.toList());
 

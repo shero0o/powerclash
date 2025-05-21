@@ -5,6 +5,7 @@ export default class SelectionScene extends Phaser.Scene {
         super({ key: 'SelectionScene' });
         this.selectedWeapon = 'RIFLE_BULLET';
         this.selectedLevel  = 'level1';
+        this.selectedBrawler = 'sniper';
     }
 
     create() {
@@ -21,8 +22,16 @@ export default class SelectionScene extends Phaser.Scene {
         // Level‐Optionen (wie gehabt)
         const levels = ['level1', 'level2', 'level3'];
 
+        const brawlers = [
+            { label: 'Sniper', value: 'sniper' },
+            { label: 'Tank', value: 'tank' },
+            { label: 'Mage', value: 'mage' },
+            { label: 'Healer', value: 'healer' }
+        ];
+
         this.weaponTexts = [];
         this.levelTexts  = [];
+        this.brawlerTexts = [];
 
         // --- Weapon Auswahl ---
         this.add.text(50, 30, 'Choose Weapon:', { fontSize: '24px', fill: '#ffffff' });
@@ -58,6 +67,22 @@ export default class SelectionScene extends Phaser.Scene {
             this.levelTexts.push({ txt, value: lvl });
         });
 
+        // Brawler Auswahl
+        this.add.text(width - 300, 30, 'Choose Brawler:', { fontSize: '24px', fill: '#ffffff' });
+        brawlers.forEach((b, i) => {
+            const txt = this.add.text(width - 300, 70 + i * 30, b.label, {
+                fontSize: '20px',
+                fill: b.value === this.selectedBrawler ? '#ffff00' : '#ff00ff'
+            }).setInteractive();
+
+            txt.on('pointerdown', () => {
+                this.selectedBrawler = b.value;
+                this.updateBrawlerHighlight();
+            });
+
+            this.brawlerTexts.push({ txt, value: b.value });
+        });
+
         // --- Play Button ---
         this.add.text(width / 2, 250, 'PLAY', { fontSize: '32px', fill: '#ffffff' })
             .setOrigin(0.5)
@@ -70,14 +95,15 @@ export default class SelectionScene extends Phaser.Scene {
                 console.log("🚀 Sending joinRoom with", {
                     playerId,
                     levelId: this.selectedLevel,
-                    chosenWeapon: this.selectedWeapon
+                    chosenWeapon: this.selectedWeapon,
+                    brawlerId: this.selectedBrawler
                 });
 
                 // Join-Payload mit chosenWeapon
                 this.socket.emit('joinRoom', {
 
                     playerId,
-                    brawlerId: null,              // Server wählt Default-Brawler
+                    brawlerId: this.selectedBrawler,              // Server wählt Default-Brawler
                     levelId: this.selectedLevel,
                     chosenWeapon: this.selectedWeapon
                 }, (response) => {
@@ -87,6 +113,7 @@ export default class SelectionScene extends Phaser.Scene {
                     this.registry.set('playerId', playerId);
                     this.registry.set('levelId',  this.selectedLevel);
                     this.registry.set('weapon',   this.selectedWeapon);
+                    this.registry.set('brawler',  this.selectedBrawler);
                     this.scene.start('WaitingScene');
                 });
             });
@@ -94,6 +121,7 @@ export default class SelectionScene extends Phaser.Scene {
         // erste Hervorhebungen zeichnen
         this.updateWeaponHighlight();
         this.updateLevelHighlight();
+        this.updateBrawlerHighlight();
     }
 
     updateWeaponHighlight() {
@@ -105,6 +133,12 @@ export default class SelectionScene extends Phaser.Scene {
     updateLevelHighlight() {
         this.levelTexts.forEach(({ txt, value }) => {
             txt.setColor(value === this.selectedLevel ? '#ffff00' : '#00ffff');
+        });
+    }
+
+    updateBrawlerHighlight() {
+        this.brawlerTexts.forEach(({ txt, value }) => {
+            txt.setColor(value === this.selectedBrawler ? '#ffff00' : '#ff00ff');
         });
     }
 }

@@ -79,11 +79,7 @@ public class GameRoomImpl implements IGameRoom {
             return;
         }
         players.computeIfAbsent(playerId, pid -> {
-            if (brawlerId == null) {
-                gameLogic.addPlayer(pid, brawlerId);
-            } else {
-                gameLogic.addPlayer(pid, brawlerId);
-            }
+            gameLogic.addPlayer(pid, brawlerId);
             return new Object();
         });
         System.out.println("[INFO] Player added: " + playerId);

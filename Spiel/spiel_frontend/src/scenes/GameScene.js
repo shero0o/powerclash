@@ -14,6 +14,7 @@ export default class GameScene extends Phaser.Scene {
         this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
         const regWeapon = this.registry.get('weapon');
         this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
+        this.selectedBrawler = this.registry.get('brawler') || 'sniper';
         this.latestState       = null;
         this.playerSprites     = {};
         this.projectileSprites = {};
@@ -24,11 +25,17 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         // Player & projectiles
-        this.load.image('player', '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
+
+        // Brawler Sprites
+        this.load.image('brawler_sniper', '/assets/PNG/Hitman_1/hitman1_gun.png');
+        this.load.image('brawler_tank', '/assets/PNG/Robot_1/robot1_machine.png');
+        this.load.image('brawler_mage', '/assets/PNG/Soldier_1/soldier1_silencer.png');
+        this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -162,6 +169,15 @@ export default class GameScene extends Phaser.Scene {
         this.isFiring = false;
     }
 
+    getBrawlerSpriteName(brawlerId) {
+        switch (brawlerId) {
+            case 'tank': return 'brawler_tank';
+            case 'mage': return 'brawler_mage';
+            case 'healer': return 'brawler_healer';
+            default: return 'brawler_sniper';
+        }
+    }
+
     update() {
         if (!this.latestState) return;
 
@@ -205,7 +221,8 @@ export default class GameScene extends Phaser.Scene {
         this.latestState.players.forEach(p => {
             let spr = this.playerSprites[p.playerId];
             if (!spr && p.currentHealth > 0) {
-                spr = this.physics.add.sprite(p.position.x, p.position.y, 'player').setOrigin(0.5);
+                const spriteKey = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
+                spr = this.physics.add.sprite(p.position.x, p.position.y, spriteKey).setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
                 if (p.playerId === this.playerId) {
