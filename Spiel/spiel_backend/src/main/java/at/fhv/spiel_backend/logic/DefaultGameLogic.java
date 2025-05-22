@@ -184,7 +184,7 @@ public class DefaultGameLogic implements GameLogic {
                         playerId,
                         position,
                         direction,
-                        850f, 40, now,
+                        750f, 40, now,
                         ProjectileType.MINE, 700f
                 );
                 p.setArmTime(0L);
