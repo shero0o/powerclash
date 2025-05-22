@@ -195,6 +195,10 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (!this.latestState) return;
 
+        if (this.hasWon || this.defeatShown) {
+            return;
+        }
+
         // Explosion für verschwundene Mines
         const currIds = new Set(this.latestState.projectiles
             .filter(p => p.projectileType === 'MINE')
@@ -256,21 +260,21 @@ export default class GameScene extends Phaser.Scene {
 
                 this.playerSprites[p.playerId] = spr;
 
-                spr.outline = this.add.sprite(p.position.x, p.position.y, 'player')
+                spr.outline = this.add.sprite(p.position.x, p.position.y, spriteKey)
                     .setOrigin(0.5)
                     .setTint(0x00ffff)     // zyanfarben
                     .setAlpha(0.4)         // halbtransparent
                     .setDepth(10)          // liegt über anderem Zeug
                     .setVisible(false);    // zunächst nicht sichtbar
 
-                spr.healOutline = this.add.sprite(p.position.x, p.position.y, 'player')
+                spr.healOutline = this.add.sprite(p.position.x, p.position.y, spriteKey)
                     .setOrigin(0.5)
                     .setTint(0x00ff00)
                     .setAlpha(0.4)
                     .setDepth(11)
                     .setVisible(false);
 
-                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, 'player')
+                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, spriteKey)
                     .setOrigin(0.5)
                     .setTint(0xff0000)
                     .setAlpha(0.4)
