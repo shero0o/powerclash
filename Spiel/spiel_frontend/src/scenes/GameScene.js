@@ -49,8 +49,11 @@ export default class GameScene extends Phaser.Scene {
         // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
+        this.tileSize = 64;
+
         // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
+        this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
         if (this.mapKey === 'level1') {
             map.createLayer('Boden', tileset, 0, 0);
@@ -217,6 +220,29 @@ export default class GameScene extends Phaser.Scene {
                 spr.healthBar = this.add.graphics();
                 this.playerSprites[p.playerId] = spr;
 
+                spr.outline = this.add.sprite(p.position.x, p.position.y, 'player')
+                    .setOrigin(0.5)
+                    .setTint(0x00ffff)     // zyanfarben
+                    .setAlpha(0.4)         // halbtransparent
+                    .setDepth(10)          // liegt über anderem Zeug
+                    .setVisible(false);    // zunächst nicht sichtbar
+
+                spr.healOutline = this.add.sprite(p.position.x, p.position.y, 'player')
+                    .setOrigin(0.5)
+                    .setTint(0x00ff00)
+                    .setAlpha(0.4)
+                    .setDepth(11)
+                    .setVisible(false);
+
+                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, 'player')
+                    .setOrigin(0.5)
+                    .setTint(0xff0000)
+                    .setAlpha(0.4)
+                    .setDepth(11)
+                    .setVisible(false);
+
+
+
                 if (isMe) {
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
@@ -226,11 +252,38 @@ export default class GameScene extends Phaser.Scene {
             }
             if (spr) {
                 if (p.currentHealth <= 0) {
-                    spr.healthBar.destroy(); spr.destroy(); delete this.playerSprites[p.playerId];
+                    spr.healthBar.destroy();
+                    spr.outline.destroy();
+                    spr.healOutline?.destroy();
+                    spr.poisonOutline?.destroy();
+                    spr.destroy();
+                    delete this.playerSprites[p.playerId];
                 } else {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
                     spr.setVisible(p.visible);
+
+                    let gid = -1;
+                    if (isMe && this.map) {
+                        const tileX = Math.floor(p.position.x / this.tileSize);
+                        const tileY = Math.floor(p.position.y / this.tileSize);
+                        const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
+                        gid = tile?.index ?? -1;
+                    }
+
+                    const showOutline        = isMe && !p.visible;
+                    const showHealOutline    = isMe && [19, 20].includes(gid);
+                    const showPoisonOutline  = isMe && gid === 186;
+
+                    spr.outline.setVisible(showOutline);
+                    spr.healOutline.setVisible(showHealOutline);
+                    spr.poisonOutline.setVisible(showPoisonOutline);
+
+                    [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
+                        o.setPosition(p.position.x, p.position.y);
+                        o.setRotation(p.position.angle);
+                    });
+
 
                     spr.healthBar.clear();
 
