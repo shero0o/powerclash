@@ -21,6 +21,7 @@ import java.util.concurrent.*;
  * - Projectile & game logic updates
  * - State broadcasting via EventPublisher
  */
+
 public class GameRoomImpl implements IGameRoom {
     private final String id = UUID.randomUUID().toString();
     private final String levelId;
