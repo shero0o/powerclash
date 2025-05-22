@@ -85,4 +85,7 @@ public interface GameLogic {
      * Change the current weapon & reset ammo
      */
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
+
+    void applyEnvironmentalEffects();
+
 }

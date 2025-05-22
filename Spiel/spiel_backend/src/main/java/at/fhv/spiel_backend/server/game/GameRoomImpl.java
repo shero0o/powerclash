@@ -182,6 +182,7 @@ public class GameRoomImpl implements IGameRoom {
 
                 // Update projectiles (movement, collisions, cleanup)
                 gameLogic.updateProjectiles();
+                gameLogic.applyEnvironmentalEffects();
 
                 // Broadcast updated state
                 StateUpdateMessage update = buildStateUpdate();
