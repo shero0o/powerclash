@@ -146,7 +146,7 @@ public class DefaultGameLogic implements GameLogic {
         switch (type) {
             case SHOTGUN_PELLET -> {
                 final int PELLET_COUNT = 5;
-                final float SPREAD_DEG = 25f;
+                final float SPREAD_DEG = 10f;
                 double step    = SPREAD_DEG / (PELLET_COUNT - 1);
                 for (int i = 0; i < PELLET_COUNT; i++) {
                     double offset = -SPREAD_DEG/2 + i * step;
@@ -157,8 +157,8 @@ public class DefaultGameLogic implements GameLogic {
                             playerId,
                             position,
                             dirI,
-                            500f, 20, now,
-                            ProjectileType.SHOTGUN_PELLET, 400f
+                            800f, 5, now,
+                            ProjectileType.SHOTGUN_PELLET, 700f
                     );
                 }
             }
@@ -167,16 +167,16 @@ public class DefaultGameLogic implements GameLogic {
                     playerId,
                     position,
                     direction,
-                    800f, 75, now,
-                    ProjectileType.SNIPER, 2000f
+                    1400f, 30, now,
+                    ProjectileType.SNIPER, 2500f
             );
             case RIFLE_BULLET -> spawnSingle(
                     projectId(playerId),
                     playerId,
                     position,
                     direction,
-                    500f, 15, now,
-                    ProjectileType.RIFLE_BULLET, 1000f
+                    1000f, 2, now,
+                    ProjectileType.RIFLE_BULLET, 2000f
             );
             case MINE -> {
                 Projectile p = spawnSingle(
@@ -184,8 +184,8 @@ public class DefaultGameLogic implements GameLogic {
                         playerId,
                         position,
                         direction,
-                        300f, 100, now,
-                        ProjectileType.MINE, 300f
+                        850f, 40, now,
+                        ProjectileType.MINE, 700f
                 );
                 p.setArmTime(0L);
                 p.setArmed(false);
@@ -241,16 +241,46 @@ public class DefaultGameLogic implements GameLogic {
                 if (p.getTravelled() < p.getMaxRange()) {
                     float dx = p.getDirection().getX() * p.getSpeed() * delta;
                     float dy = p.getDirection().getY() * p.getSpeed() * delta;
-                    p.getPosition().setX(p.getPosition().getX() + dx);
-                    p.getPosition().setY(p.getPosition().getY() + dy);
+                    float newX = p.getPosition().getX() + dx;
+                    float newY = p.getPosition().getY() + dy;
+
+                    int tileX = (int)(newX / gameMap.getTileWidth());
+                    int tileY = (int)(newY / gameMap.getTileHeight());
+
+                    // Wenn neue Position NICHT auf Wand ist, normal bewegen
+                    if (!gameMap.isWallAt(tileX, tileY)) {
+                        p.getPosition().setX(newX);
+                        p.getPosition().setY(newY);
+                    } else {
+                        // Wenn Wand, trotzdem weiterreisen (ohne Bewegung)
+                        // Optional: Du kannst hier die Position trotzdem aktualisieren,
+                        // um sie "durchfliegen" zu lassen – einfach:
+                        p.getPosition().setX(newX);
+                        p.getPosition().setY(newY);
+                    }
+
                     p.setTravelled(p.getTravelled() + (float)Math.hypot(dx, dy));
                 } else {
                     if (p.getArmTime() == 0L) {
-                        p.setArmTime(now + 2000);
+                        int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
+                        int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
+
+                        // Wenn Mine über Wand ist → nicht scharf machen → leicht weiterbewegen
+                        if (gameMap.isWallAt(tx, ty)) {
+                            float dx = p.getDirection().getX() * p.getSpeed() * delta;
+                            float dy = p.getDirection().getY() * p.getSpeed() * delta;
+                            p.getPosition().setX(p.getPosition().getX() + dx);
+                            p.getPosition().setY(p.getPosition().getY() + dy);
+                        } else {
+                            p.setArmTime(now + 2000);
+                        }
                     } else if (!p.isArmed() && now >= p.getArmTime()) {
                         p.setArmed(true);
                     }
                 }
+
+
+
             }
 
             // --- Wand-Kollision ---
