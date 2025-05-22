@@ -102,6 +102,14 @@ public class DefaultGameLogic implements GameLogic {
         // nur bewegen, wenn kein Wall-Tile
         if (!gameMap.isWallAt(tileX, tileY)) {
             p.setPosition(new Position(x, y, angle));
+
+            // 🟡 Sichtbarkeit setzen anhand Busch
+            Position tilePos = new Position(tileX, tileY);
+            if (gameMap.isBushTile(tilePos)) {
+                p.setVisible(false);
+            } else {
+                p.setVisible(true);
+            }
         }
     }
 
@@ -112,6 +120,50 @@ public class DefaultGameLogic implements GameLogic {
         int max = getMaxAmmoForType(type);
         ammoMap.put(playerId, max);
         lastRefill.put(playerId, System.currentTimeMillis());
+    }
+
+    @Override
+    public void applyEnvironmentalEffects() {
+        long now = System.currentTimeMillis();
+
+        for (Player p : players.values()) {
+            if (p.getCurrentHealth() <= 0) continue;
+
+            Position pos = p.getPosition();
+            int tileX = (int)(pos.getX() / gameMap.getTileWidth());
+            int tileY = (int)(pos.getY() / gameMap.getTileHeight());
+            Position tilePos = new Position(tileX, tileY);
+
+            if (gameMap.isPoisonTile(tilePos)) {
+                long last = p.getLastPoisonTime();
+                if (now - last >= 1000) {
+                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - 15));
+                    p.setLastPoisonTime(now);
+
+
+                    if (p.getCurrentHealth() <= 0) {
+                        p.setVisible(false); // Optional: unsichtbar wenn tot
+                    }
+                }
+            } else {
+                // Nicht in Giftfeld → Reset poison timer
+                p.setLastPoisonTime(0);
+            }
+
+            if (gameMap.isHealTile(tilePos)) {
+                long lastHeal = p.getLastHealTime();
+                if (now - lastHeal >= 1000) {
+                    int newHP = Math.min(p.getMaxHealth(), p.getCurrentHealth() + 15);
+                    p.setCurrentHealth(newHP);
+                    p.setLastHealTime(now);
+
+                    System.out.println("💖 Energiezone: Spieler " + p.getId() +
+                            " heilt +15 HP → " + p.getCurrentHealth());
+                }
+            } else {
+                p.setLastHealTime(0);
+            }
+        }
     }
 
     @Override
@@ -295,7 +347,7 @@ public class DefaultGameLogic implements GameLogic {
 
             // --- Spieler-Kollision ---
             for (Player target : players.values()) {
-                if (target.getId().equals(p.getPlayerId()) || !target.isVisible()) continue;
+                if (target.getId().equals(p.getPlayerId())) continue;
                 float dx = target.getPosition().getX() - p.getPosition().getX();
                 float dy = target.getPosition().getY() - p.getPosition().getY();
                 float radius = 32f;
@@ -343,6 +395,7 @@ public class DefaultGameLogic implements GameLogic {
                 lastRifleRefill.put(pid, now);
             }
         }
+
     }
 
     @Override
@@ -395,4 +448,5 @@ public class DefaultGameLogic implements GameLogic {
             default             -> DEFAULT_MAX_AMMO;
         };
     }
+
 }
