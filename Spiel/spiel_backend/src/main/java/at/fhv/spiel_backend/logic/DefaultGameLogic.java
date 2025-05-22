@@ -14,6 +14,14 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, Player> players = new ConcurrentHashMap<>();
     private final Map<String, Projectile> projectiles = new ConcurrentHashMap<>();
     private GameMap gameMap;
+    private long lastFrameTimeMs = System.currentTimeMillis();
+    // --- Zone fields ────────────────────────────────────
+    private boolean zoneActive     = false;
+    private Position zoneCenter;
+    private float zoneRadius;
+    private float zoneShrinkRate;      // px/sec
+    private long  zoneStartTimeMs;
+    private long  zoneDurationMs;
 
     // --- Waffen & Ammo ---
     private static final int DEFAULT_MAX_AMMO      = 3;
@@ -43,6 +51,16 @@ public class DefaultGameLogic implements GameLogic {
     public void attack(String playerId, float dirX, float dirY, float angle) {
 
     }
+
+    public void activateZone(Position center, float initialRadius, long durationMs) {
+        this.zoneActive      = true;
+        this.zoneCenter      = center;
+        this.zoneRadius      = initialRadius;
+        this.zoneDurationMs  = durationMs;
+        this.zoneStartTimeMs = System.currentTimeMillis();
+        this.zoneShrinkRate  = initialRadius / (durationMs / 1000f);
+    }
+
 
     @Override
     public void addPlayer(String playerId, String brawlerId, String playerName) {
@@ -125,6 +143,8 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public void applyEnvironmentalEffects() {
         long now = System.currentTimeMillis();
+        float deltaSec = (now - lastFrameTimeMs) / 1000f;
+        lastFrameTimeMs = now;
 
         for (Player p : players.values()) {
             if (p.getCurrentHealth() <= 0) continue;
@@ -164,6 +184,23 @@ public class DefaultGameLogic implements GameLogic {
                 p.setLastHealTime(0);
             }
         }
+        if (zoneActive) {
+            // shrink radius
+            zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
+
+            // damage players outside safe circle at 2 HP/sec
+            for (Player p : players.values()) {
+                if (p.getCurrentHealth() <= 0) continue;
+                float dx = p.getPosition().getX() - zoneCenter.getX();
+                float dy = p.getPosition().getY() - zoneCenter.getY();
+                if (Math.hypot(dx, dy) > zoneRadius) {
+                    // only 2 HP per second
+                    int dmg = (int) Math.ceil(0.05f * deltaSec);
+                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - dmg));
+                }
+            }
+        }
+
     }
 
     @Override
@@ -423,6 +460,11 @@ public class DefaultGameLogic implements GameLogic {
         msg.setPlayers(ps);
         msg.setEvents(Collections.emptyList());
         msg.setProjectiles(new ArrayList<>(projectiles.values()));
+        if (zoneActive) {
+            long elapsed = System.currentTimeMillis() - zoneStartTimeMs;
+            long timeLeft = Math.max(0, zoneDurationMs - elapsed);
+            msg.setZoneState(new ZoneState(zoneCenter, zoneRadius, timeLeft));
+        }
         return msg;
     }
 

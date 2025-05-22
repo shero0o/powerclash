@@ -1,5 +1,6 @@
 package at.fhv.spiel_backend.server.game;
 
+import at.fhv.spiel_backend.logic.DefaultGameLogic;
 import at.fhv.spiel_backend.logic.GameLogic;
 import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.model.Position;
@@ -161,6 +162,16 @@ public class GameRoomImpl implements IGameRoom {
         if (started  || getPlayerCount() < MAX_PLAYERS) return;
         started = true;
         hasStarted = true;
+        if ("level3".equals(levelId) && gameLogic instanceof DefaultGameLogic) {
+            // center of map in pixels
+            float cx = gameMap.getWidthInPixels()  / 2f;
+            float cy = gameMap.getHeightInPixels() / 2f;
+// half‐diagonal = sqrt(cx² + cy²)
+            float initialRadius = (float) Math.hypot(cx, cy);
+            long  durationMs    = 2 * 60_000L;   // keep your desired shrink time
+            ((DefaultGameLogic)gameLogic)
+                    .activateZone(new Position(cx, cy, 0), initialRadius, durationMs);
+        }
         executor.scheduleAtFixedRate(() -> {
             try {
                 // Process movement inputs

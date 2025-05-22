@@ -4,112 +4,116 @@ export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
 
-        this.isFiring          = false;
-        this.fireEvent         = null;
+        this.isFiring         = false;
+        this.fireEvent        = null;
+        this.victoryText      = null;
+        this.hasWon           = false;
+        this.exitButtonGame   = null;
+        this.defeatShown      = false;
 
-        this.victoryText = null;
-        // this.playAgainButton = null;
-        this.hasWon = false;
-        this.exitButtonGame = null;
-        this.defeatShown = false;
-
-
-
+        // zone overlay
+        this.zoneState        = null;
+        this.graphicsZone      = null;
+        this.textZoneTimer     = null;
     }
 
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
         this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
-        const regWeapon = this.registry.get('weapon');
-        this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
-        this.selectedBrawler = this.registry.get('brawler') || 'sniper';
-        this.playerName = this.registry.get('playerName') || 'Player';
+        this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 'RIFLE_BULLET';
+        this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
+        this.playerName        = this.registry.get('playerName') || 'Player';
+
         this.latestState       = null;
         this.playerSprites     = {};
         this.projectileSprites = {};
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
-
     }
 
     preload() {
-        // Player & projectiles
+        // projectiles
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
 
-        // Brawler Sprites
+        // brawlers
         this.load.image('brawler_sniper', '/assets/PNG/Hitman_1/hitman1_gun.png');
-        this.load.image('brawler_tank', '/assets/PNG/Robot_1/robot1_machine.png');
-        this.load.image('brawler_mage', '/assets/PNG/Soldier_1/soldier1_silencer.png');
+        this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
+        this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
         this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
 
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
 
-        // Map tileset & tilemap
+        // tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
-        let mapFile;
-        if (this.mapKey === 'level1') {
-            mapFile = 'map1.tmj';
-        } else {
-            mapFile = 'map2.0.tmj'; // shared by level2 and level3
-        }
-
+        const mapFile = this.mapKey === 'level1' ? 'map1.tmj' : 'map2.0.tmj';
         this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
     }
 
     create() {
-        // Hintergrundfarbe
+        // background
         this.cameras.main.setBackgroundColor('#222222');
-
         this.tileSize = 64;
 
-        // Karte & Layer
+        // map & layers
         const map = this.make.tilemap({ key: 'map' });
-        this.map = this.make.tilemap({ key: 'map' });
+        this.map = map;
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
         if (this.mapKey === 'level1') {
             map.createLayer('Boden', tileset, 0, 0);
-            map.createLayer('Wand', tileset, 0, 0);
+            map.createLayer('Wand',  tileset, 0, 0);
             this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
-        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
-            map.createLayer('Boden', tileset, 0, 0);
-            map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
-            map.createLayer('Kisten', tileset, 0, 0);
-            map.createLayer('Wand', tileset, 0, 0);
+        } else {
+            map.createLayer('Boden',                         tileset, 0, 0);
+            map.createLayer('Gebüsch, Giftzone, Energiezone',tileset, 0, 0);
+            map.createLayer('Kisten',                        tileset, 0, 0);
+            map.createLayer('Wand',                          tileset, 0, 0);
             this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
         }
 
-
-        // Physik-Welt & Kamera
+        // physics & camera bounds
         const width  = map.widthInPixels;
         const height = map.heightInPixels;
         this.physics.world.setBounds(0, 0, width, height);
-        this.cameras.main.setBounds(0, 0, width, height);
+        this.cameras.main.setBounds(  0, 0, width, height);
 
-        // Zoom auf ganze Karte
-        const fitZoom = Math.min(this.cameras.main.width / width, this.cameras.main.height / height);
-        this.cameras.main.setZoom(fitZoom);
-        this.cameras.main.centerOn(width/2, height/2);
+        // zoom to fit
+        const fitZoom = Math.min(
+            this.cameras.main.width  / width,
+            this.cameras.main.height / height
+        );
+        this.cameras.main.setZoom(fitZoom)
+            .centerOn(width/2, height/2);
         this.input.topOnly = true;
 
+        // ─── zone overlay setup ──────────────────────────────
+        // AFTER: no scrollFactor → it's in world‐space
+        this.graphicsZone = this.add.graphics();
 
-        // UI: Ammo-Bar
+        this.textZoneTimer   = this.add.text(10, 50, '', {
+            fontFamily: 'Arial', fontSize: '24px',
+            color: '#ffffff', stroke: '#000000',
+            strokeThickness: 3
+        }).setScrollFactor(0);
+
+        // ammo UI
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
 
-        // UI: Spielerzahl
+        // player count
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
-            fontFamily: 'Arial', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3
+            fontFamily: 'Arial', fontSize: '24px',
+            fontStyle: 'bold', color: '#ffffff',
+            stroke: '#000000', strokeThickness: 3
         }).setScrollFactor(0);
 
-
-        // Explosion-Animation
+        // explosion animation
         this.anims.create({
             key: 'explode',
             frames: Array.from({ length: 25 }, (_, i) => ({ key: `explosion${i}` })),
@@ -117,35 +121,36 @@ export default class GameScene extends Phaser.Scene {
             repeat: 0,
             hideOnComplete: true
         });
-        this.explosionGroup = this.add.group();
-        this.prevProjectileIds     = new Set();
-        this.previousMinePositions = {};
+        this.explosionGroup         = this.add.group();
+        this.prevProjectileIds      = new Set();
+        this.previousMinePositions  = {};
 
-
-
-        // Eingabe: WASD
-        this.keys = this.input.keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D' });
-        // Eingabe: Schuss
+        // input
+        this.keys = this.input.keyboard.addKeys({
+            up: 'W', down: 'S', left: 'A', right: 'D'
+        });
         this.input.on('pointerdown', pointer => this.startFiring(pointer));
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
 
-        // Socket-Update
+        // socket state updates
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
+            this.zoneState   = state.zoneState || null;
 
-            // 🌿 Sichtbarkeits-Testausgabe
+            // debug visibility
             console.log("📦 Spieler-Sichtbarkeit:");
-            state.players.forEach(p => {
-                console.log(`👤 ${p.playerId} – visible: ${p.visible}`);
-            });
+            state.players.forEach(p =>
+                console.log(`👤 ${p.playerId} – visible: ${p.visible}`)
+            );
         });
+
+        // initial weapon set
         this.socket.emit('changeWeapon', {
             roomId: this.roomId,
             playerId: this.playerId,
             projectileType: this.selectedWeapon
         });
-
     }
 
     startFiring(pointer) {
@@ -154,11 +159,14 @@ export default class GameScene extends Phaser.Scene {
         if (!meSprite || !meState || meState.ammo <= 0) return;
 
         const emitShot = () => {
-            const dir = new Phaser.Math.Vector2(pointer.worldX - meSprite.x, pointer.worldY - meSprite.y).normalize();
+            const dir = new Phaser.Math.Vector2(
+                pointer.worldX - meSprite.x,
+                pointer.worldY - meSprite.y
+            ).normalize();
             this.socket.emit('shootProjectile', {
-                roomId: this.roomId,
-                playerId: this.playerId,
-                direction: { x: dir.x, y: dir.y },
+                roomId:        this.roomId,
+                playerId:      this.playerId,
+                direction:     { x: dir.x, y: dir.y },
                 projectileType: this.selectedWeapon
             });
         };
@@ -166,10 +174,16 @@ export default class GameScene extends Phaser.Scene {
         if (this.selectedWeapon === 'RIFLE_BULLET') {
             if (this.isFiring) return;
             this.isFiring = true;
-            this.fireEvent = this.time.addEvent({ delay: 100, loop: true, callback: () => {
-                    if (this.latestState.players.find(p => p.playerId === this.playerId).ammo <= 0) return this.stopFiring();
+            this.fireEvent = this.time.addEvent({
+                delay: 100,
+                loop:  true,
+                callback: () => {
+                    const ammo = this.latestState.players
+                        .find(p => p.playerId === this.playerId).ammo;
+                    if (ammo <= 0) return this.stopFiring();
                     emitShot();
-                }});
+                }
+            });
         } else {
             emitShot();
         }
@@ -185,21 +199,45 @@ export default class GameScene extends Phaser.Scene {
 
     getBrawlerSpriteName(brawlerId) {
         switch (brawlerId) {
-            case 'tank': return 'brawler_tank';
-            case 'mage': return 'brawler_mage';
+            case 'tank':   return 'brawler_tank';
+            case 'mage':   return 'brawler_mage';
             case 'healer': return 'brawler_healer';
-            default: return 'brawler_sniper';
+            default:       return 'brawler_sniper';
         }
     }
 
     update() {
         if (!this.latestState) return;
 
-        if (this.hasWon || this.defeatShown) {
-            return;
+        // ─── world‐space overlay ─────────────────────────────
+        // ─── world‐space safe‐zone outline ───────────────────────────
+        const cam = this.cameras.main;
+        this.graphicsZone.clear();
+
+        if (this.zoneState) {
+            const { center, radius, timeMsRemaining } = this.zoneState;
+
+            // Draw a green circle outline at the true world coords
+            this.graphicsZone
+                .lineStyle(4, 0x00aa00)          // 4px thick, green
+                .strokeCircle(center.x, center.y, radius);
+
+            // Update the timer text (screen‐locked)
+            const secs = Math.ceil(timeMsRemaining / 1000);
+            const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
+            const ss   = String(secs % 60).padStart(2, '0');
+            this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
+        } else {
+            this.textZoneTimer.setText('');
         }
 
-        // Explosion für verschwundene Mines
+// ───────────────────────────────────────────────────────
+
+
+        // if game won/lost, stop here
+        if (this.hasWon || this.defeatShown) return;
+
+        // ─── handle mines/explosions ────────────────────────
         const currIds = new Set(this.latestState.projectiles
             .filter(p => p.projectileType === 'MINE')
             .map(p => p.id));
@@ -207,7 +245,8 @@ export default class GameScene extends Phaser.Scene {
             if (!currIds.has(id)) {
                 const pos = this.previousMinePositions[id];
                 if (pos) {
-                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
+                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1')
+                        .setOrigin(0.5);
                     expl.play('explode');
                 }
             }
@@ -215,166 +254,147 @@ export default class GameScene extends Phaser.Scene {
         this.previousMinePositions = {};
         this.latestState.projectiles.forEach(p => {
             if (p.projectileType === 'MINE') {
-                this.previousMinePositions[p.id] = { x: p.position.x, y: p.position.y };
+                this.previousMinePositions[p.id] = {
+                    x: p.position.x, y: p.position.y
+                };
             }
         });
         this.prevProjectileIds = currIds;
 
+        // ─── send movement ──────────────────────────────────
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
-
-        // Bewegung senden
         if (me) {
-            const dirX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-            const dirY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
-            const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
-            const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+            const dirX = (this.keys.left.isDown ? -1 : 0)
+                + (this.keys.right.isDown ? 1 : 0);
+            const dirY = (this.keys.up.isDown    ? -1 : 0)
+                + (this.keys.down.isDown  ? 1 : 0);
+            const world = cam.getWorldPoint(
+                this.input.activePointer.x,
+                this.input.activePointer.y
+            );
+            const angle = Phaser.Math.Angle.Between(
+                me.position.x, me.position.y,
+                world.x, world.y
+            );
+            this.socket.emit('move', {
+                roomId:   this.roomId,
+                playerId: this.playerId,
+                dirX, dirY, angle
+            });
         }
 
-        // Spieler rendern & Health Bar
-        const connected = this.latestState.players.filter(p => p.currentHealth > 0).length;
+        // ─── render players & health ───────────────────────
+        const connected = this.latestState.players
+            .filter(p => p.currentHealth > 0).length;
         const total = this.latestState.players.length;
         this.playerCountText.setText(`${connected}/${total} players`);
 
-        const cam = this.cameras.main;
         this.latestState.players.forEach(p => {
             const isMe = p.playerId === this.playerId;
-            let spr = this.playerSprites[p.playerId];
+            let spr   = this.playerSprites[p.playerId];
+
+            // spawn sprite if needed...
             if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
-                const spriteKey = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
-                spr = this.physics.add.sprite(p.position.x, p.position.y, spriteKey).setOrigin(0.5);
+                const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
+                spr = this.physics.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
 
-                const isOwnPlayer = p.playerId === this.playerId;
-                const nameColor = isOwnPlayer ? '#ffffff' : '#ff0000';
-
-                spr.label = this.add.text(0, 0, p.playerName || 'Player', {
-                    fontSize: '20px',
-                    fontFamily: 'Arial',
-                    color: nameColor,
-                    stroke: '#000000',
-                    strokeThickness: 4,
-                    fontStyle: 'bold'
+                // name label
+                spr.label = this.add.text(0,0,p.playerName||'Player', {
+                    fontSize: '20px', fontFamily:'Arial',
+                    color: isMe?'#ffffff':'#ff0000',
+                    stroke: '#000000', strokeThickness: 4,
+                    fontStyle:'bold'
                 }).setOrigin(0.5).setDepth(10);
-
 
                 this.playerSprites[p.playerId] = spr;
 
-                spr.outline = this.add.sprite(p.position.x, p.position.y, spriteKey)
-                    .setOrigin(0.5)
-                    .setTint(0x00ffff)     // zyanfarben
-                    .setAlpha(0.4)         // halbtransparent
-                    .setDepth(10)          // liegt über anderem Zeug
-                    .setVisible(false);    // zunächst nicht sichtbar
-
-                spr.healOutline = this.add.sprite(p.position.x, p.position.y, spriteKey)
-                    .setOrigin(0.5)
-                    .setTint(0x00ff00)
-                    .setAlpha(0.4)
-                    .setDepth(11)
-                    .setVisible(false);
-
-                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, spriteKey)
-                    .setOrigin(0.5)
-                    .setTint(0xff0000)
-                    .setAlpha(0.4)
-                    .setDepth(11)
-                    .setVisible(false);
-
-
+                // outlines
+                spr.outline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
+                    .setDepth(10).setVisible(false);
+                spr.healOutline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
+                spr.poisonOutline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
 
                 if (isMe) {
-                    spr.label = this.add.text(0, 0, this.playerName, {
-                        fontSize: '20px',
-                        fontFamily: 'Arial',
-                        color: '#ffffff',
-                        stroke: '#000000',
-                        strokeThickness: 4,
-                        fontStyle: "bold"
-                    }).setOrigin(0.5).setDepth(10);
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
                 }
 
                 this.physics.add.collider(spr, this.obstacleLayer);
             }
+
             if (spr) {
                 if (p.currentHealth <= 0) {
                     spr.healthBar.destroy();
                     spr.outline.destroy();
-                    spr.healOutline?.destroy();
-                    spr.poisonOutline?.destroy();
+                    spr.healOutline.destroy();
+                    spr.poisonOutline.destroy();
                     spr.destroy();
                     delete this.playerSprites[p.playerId];
                 } else {
-                    spr.setPosition(p.position.x, p.position.y);
-                    spr.setRotation(p.position.angle);
-                    spr.setVisible(p.visible);
+                    // update position/rotation/visibility
+                    spr.setPosition(p.position.x, p.position.y)
+                        .setRotation(p.position.angle)
+                        .setVisible(p.visible);
+                    spr.label.setPosition(p.position.x, p.position.y-50)
+                        .setVisible(p.visible);
 
+                    // decide which outline to show
                     let gid = -1;
                     if (isMe && this.map) {
-                        const tileX = Math.floor(p.position.x / this.tileSize);
-                        const tileY = Math.floor(p.position.y / this.tileSize);
-                        const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
-                        gid = tile?.index ?? -1;
+                        const tx = Math.floor(p.position.x/this.tileSize);
+                        const ty = Math.floor(p.position.y/this.tileSize);
+                        gid = this.map.getTileAt(tx, ty, true,
+                            'Gebüsch, Giftzone, Energiezone')?.index||-1;
                     }
+                    spr.outline.setVisible(isMe && !p.visible);
+                    spr.healOutline.setVisible(isMe && [19,20].includes(gid));
+                    spr.poisonOutline.setVisible(isMe && gid===186);
+                    [spr.outline, spr.healOutline, spr.poisonOutline]
+                        .forEach(o => o.setPosition(p.position.x,p.position.y)
+                            .setRotation(p.position.angle));
 
-                    const showOutline        = isMe && !p.visible;
-                    const showHealOutline    = isMe && [19, 20].includes(gid);
-                    const showPoisonOutline  = isMe && gid === 186;
-
-                    spr.outline.setVisible(showOutline);
-                    spr.healOutline.setVisible(showHealOutline);
-                    spr.poisonOutline.setVisible(showPoisonOutline);
-
-                    [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
-                        o.setPosition(p.position.x, p.position.y);
-                        o.setRotation(p.position.angle);
-                    });
-
-
+                    // draw health bar
+                    const pct = Phaser.Math.Clamp(p.currentHealth/this.maxHealth,0,1);
                     spr.healthBar.clear();
-
-                    const shouldShowHealthBar = p.visible || isMe;
-
-                    const barW = 40, barH = 6;
-                    const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
-                    if (shouldShowHealthBar) {
-                        spr.healthBar.clear()
-                            .fillStyle(0x000000)
-                            .fillRect(p.position.x - barW / 2 - 1, p.position.y - spr.height / 2 - barH - 9, barW + 2, barH + 2)
+                    if (p.visible || isMe) {
+                        const bw=40,bh=6;
+                        spr.healthBar.fillStyle(0x000000)
+                            .fillRect(p.position.x-bw/2-1,
+                                p.position.y-spr.height/2-bh-9,
+                                bw+2, bh+2)
                             .fillStyle(0x00ff00)
-                            .fillRect(p.position.x - barW / 2, p.position.y - spr.height / 2 - barH - 8, barW * pct, barH);
+                            .fillRect(p.position.x-bw/2,
+                                p.position.y-spr.height/2-bh-8,
+                                bw*pct, bh);
                     }
-                }
-
-                if (spr.label) {
-                    spr.label.setPosition(p.position.x, p.position.y - 50);
-                    spr.label.setVisible(p.visible);
                 }
             }
-
-
         });
 
-        // Projektile rendern
+        // ─── render projectiles ────────────────────────────
         const alive = new Set();
         this.latestState.projectiles.forEach(p => {
-            const key = p.projectileType === 'SNIPER' ? 'sniper'
-                : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
-                    : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
-                        : 'mine';
+            const key = p.projectileType==='SNIPER'?'sniper':
+                p.projectileType==='SHOTGUN_PELLET'?'shotgun_pellet':
+                    p.projectileType==='RIFLE_BULLET'?'rifle_bullet':'mine';
             alive.add(p.id);
             let spr = this.projectileSprites[p.id];
             if (!spr) {
-                spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
-                if (p.projectileType === 'MINE') spr.setScale(0.3);
-                this.projectileSprites[p.id] = spr;
+                spr = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5);
+                if (p.projectileType==='MINE') spr.setScale(0.3);
+                this.projectileSprites[p.id]=spr;
             } else {
-                spr.setPosition(p.position.x, p.position.y);
+                spr.setPosition(p.position.x,p.position.y);
             }
         });
-        // Entfernen
         Object.keys(this.projectileSprites).forEach(id => {
             if (!alive.has(id)) {
                 this.projectileSprites[id].destroy();
@@ -382,111 +402,91 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // Ammo-Bar
+        // ─── ammo bar ──────────────────────────────────────
         if (me) {
             const weapon = me.currentWeapon;
-            const ammo= me?.ammo ?? 0;
-            const max    = weapon === 'RIFLE_BULLET' ? 15
-                : weapon === 'SHOTGUN_PELLET' ? 3
-                    : weapon === 'SNIPER' ? 1
-                        : 1;
-            const barX = 10, barY = 10, barW = 100, barH = 10;
-            this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
-            this.ammoBarFill.clear().fillStyle(0xffffff, 1)
-                .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+            const ammo   = me.ammo || 0;
+            const max    = weapon==='RIFLE_BULLET'?15:
+                weapon==='SHOTGUN_PELLET'?3:
+                    weapon==='SNIPER'?1:1;
+            const barX=10, barY=10, barW=100, barH=10;
+            this.ammoBarBg.fillStyle(0x000000,0.5)
+                .fillRect(barX,barY,barW,barH);
+            this.ammoBarFill.fillStyle(0xffffff,1)
+                .fillRect(barX+2,barY+2,
+                    Math.floor((barW-4)*(ammo/max)),
+                    barH-4);
         }
 
-        if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
-            if (me && me.currentHealth > 0) {
+        // ─── victory / defeat ─────────────────────────────
+        if (!this.hasWon && this.latestState.players.filter(p=>p.currentHealth>0).length===1) {
+            const meAlive = this.latestState.players.find(p=>p.playerId===this.playerId);
+            if (meAlive && meAlive.currentHealth>0) {
                 this.showVictoryScreen();
                 this.hasWon = true;
             }
         }
-
-        // Wenn Spieler tot ist, aber Spiel nicht gewonnen => YOU DIED
-        if (!this.hasWon) {
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
-            if (me && me.currentHealth <= 0 && !this.defeatShown) {
-                this.showDefeatScreen();
-                this.defeatShown = true;
-            }
+        if (!this.hasWon && me && me.currentHealth<=0 && !this.defeatShown) {
+            this.showDefeatScreen();
+            this.defeatShown = true;
         }
-
-
-
     }
 
     createButton(x, y, text, onClick) {
         const btn = this.add.text(x, y, text, {
-            fontSize: '32px',
-            fontFamily: 'Arial',
-            color: '#ffffff',
-            backgroundColor: '#333333',
-            padding: { x: 20, y: 10 },
-            align: 'center'
+            fontSize: '32px', fontFamily: 'Arial',
+            color: '#ffffff', backgroundColor: '#333333',
+            padding: { x: 20, y: 10 }, align: 'center'
         })
             .setOrigin(0.5)
             .setInteractive()
-            .setScrollFactor(0);
-
-        btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#555555' }));
-        btn.on('pointerout',  () => btn.setStyle({ backgroundColor: '#333333' }));
-        btn.on('pointerdown', onClick);
-
-
-        btn.on('pointerdown', () => {
-            console.log(`Button '${text}' clicked`);
-            onClick();
-        });
-
+            .setScrollFactor(0)
+            .on('pointerover', () => btn.setStyle({ backgroundColor: '#555555' }))
+            .on('pointerout',  () => btn.setStyle({ backgroundColor: '#333333' }))
+            .on('pointerdown', onClick);
 
         return btn;
     }
 
     showVictoryScreen() {
         const { width, height } = this.scale;
+        this.victoryText = this.add.text(
+            width/2, height/2-80,'YOU WON!',{
+                fontSize:'52px',fontFamily:'Arial',
+                color:'#00ff00',stroke:'#000000',
+                strokeThickness:6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
 
-        this.victoryText = this.add.text(width / 2, height / 2 - 80, 'YOU WON!', {
-            fontSize: '52px',
-            fontFamily: 'Arial',
-            color: '#00ff00',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        // this.playAgainButton = this.createButton(width / 2, height / 2, 'Play Again', () => {
-        //     this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-        //     this.socket.disconnect();
-        //     window.location.reload();
-        //     this.scene.start('SelectionScene');
-        // });
-
-        this.exitButtonGame = this.createButton(width / 2, height / 2 + 70, 'Exit', () => {
-            this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-            this.socket.disconnect();
-            window.location.reload();
-        });
+        this.exitButtonGame = this.createButton(
+            width/2, height/2+70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
     }
 
     showDefeatScreen() {
         const { width, height } = this.scale;
+        this.victoryText = this.add.text(
+            width/2, height/2-80,'YOU DIED',{
+                fontSize:'52px',fontFamily:'Arial',
+                color:'#ff0000',stroke:'#000000',
+                strokeThickness:6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
 
-        this.victoryText = this.add.text(width / 2, height / 2 - 80, 'YOU DIED', {
-            fontSize: '52px',
-            fontFamily: 'Arial',
-            color: '#ff0000',
-            stroke: '#000000',
-            strokeThickness: 6
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        this.exitButtonGame = this.createButton(width / 2, height / 2 + 70, 'Exit', () => {
-            this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-            this.socket.disconnect();
-            window.location.reload();
-        });
+        this.exitButtonGame = this.createButton(
+            width/2, height/2+70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
     }
-
-
-
 }

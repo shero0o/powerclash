@@ -2,6 +2,7 @@
 package at.fhv.spiel_backend.ws;
 
 import at.fhv.spiel_backend.model.Projectile;
+import at.fhv.spiel_backend.model.ZoneState;
 import lombok.Data;
 import java.util.List;
 
@@ -11,5 +12,6 @@ public class StateUpdateMessage {
     private List<PlayerState> players;
     private List<Event> events;
     private List<Projectile> projectiles;
+    private ZoneState zoneState;
 
 }

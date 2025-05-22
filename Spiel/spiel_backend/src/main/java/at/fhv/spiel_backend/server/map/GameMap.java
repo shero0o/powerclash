@@ -10,6 +10,7 @@ import java.util.Set;
 
 public class GameMap {
     private final String id;
+
     private final int width;
     private final int height;
     private final int tileWidth;
@@ -22,6 +23,7 @@ public class GameMap {
 
     public GameMap(String id) {
         this.id = id;
+
 
         // Dynamisch den richtigen Map-Dateinamen wählen
         String mapFile = switch (id) {
@@ -112,5 +114,23 @@ public class GameMap {
     }
     public boolean isHealTile(Position pos) {
         return healPositions.contains(pos);
+    }
+    public int getTileCountX() {
+        return width;
+    }
+
+    /** Number of tiles vertically */
+    public int getTileCountY() {
+        return height;
+    }
+
+    /** Total width in pixels */
+    public int getWidthInPixels() {
+        return width * tileWidth;
+    }
+
+    /** Total height in pixels */
+    public int getHeightInPixels() {
+        return height * tileHeight;
     }
 }
