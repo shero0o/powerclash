@@ -58,7 +58,9 @@ public class GameMap {
                 }
             }
 
-            Set<Integer> bushGids = Set.of(183);
+            Set<Integer> bushGids   = Set.of(183);
+            Set<Integer> poisonGids = Set.of(186);
+            Set<Integer> healGids   = Set.of(19, 20);
 
             for (JsonNode layer : root.get("layers")) {
                 if ("Gebüsch, Giftzone, Energiezone".equalsIgnoreCase(layer.get("name").asText())) {
@@ -67,50 +69,22 @@ public class GameMap {
                         int gid = data.get(i).asInt();
                         int x = i % width;
                         int y = i / width;
+                        Position pos = new Position(x, y);
 
                         if (bushGids.contains(gid)) {
-                            bushPositions.add(new Position(x, y));
+                            bushPositions.add(pos);
                         }
-                    }
-                    break;
-                }
-            }
-
-            Set<Integer> poisonGids = Set.of(186);
-
-            for (JsonNode layer : root.get("layers")) {
-                if ("Gebüsch, Giftzone, Energiezone".equalsIgnoreCase(layer.get("name").asText())) {
-                    JsonNode data = layer.get("data");
-                    for (int i = 0; i < data.size(); i++) {
-                        int gid = data.get(i).asInt();
-                        int x = i % width;
-                        int y = i / width;
-
-                        Position pos = new Position(x, y);
                         if (poisonGids.contains(gid)) {
                             poisonPositions.add(pos);
                         }
-                    }
-                }
-            }
-
-            Set<Integer> HealGids = Set.of(19, 20);
-
-            for (JsonNode layer : root.get("layers")) {
-                if ("Gebüsch, Giftzone, Energiezone".equalsIgnoreCase(layer.get("name").asText())) {
-                    JsonNode data = layer.get("data");
-                    for (int i = 0; i < data.size(); i++) {
-                        int gid = data.get(i).asInt();
-                        int x = i % width;
-                        int y = i / width;
-
-                        Position pos = new Position(x, y);
-                        if (HealGids.contains(gid)) {
+                        if (healGids.contains(gid)) {
                             healPositions.add(pos);
                         }
                     }
+                    break; // jetzt nur EIN break nötig
                 }
             }
+
 
         } catch (Exception e) {
             throw new RuntimeException("Error by loading the map '" + id + "'", e);
