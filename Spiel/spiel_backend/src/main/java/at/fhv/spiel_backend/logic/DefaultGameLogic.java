@@ -26,6 +26,7 @@ public class DefaultGameLogic implements GameLogic {
     private final Set<String>          rifleReloading      = ConcurrentHashMap.newKeySet();
     private final Map<String, ProjectileType> playerWeapon = new ConcurrentHashMap<>();
     private final Map<String, String> playerBrawler = new ConcurrentHashMap<>();
+    private final Map<String, String> playerNames = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
     @Override
@@ -44,7 +45,7 @@ public class DefaultGameLogic implements GameLogic {
     }
 
     @Override
-    public void addPlayer(String playerId, String brawlerId) {
+    public void addPlayer(String playerId, String brawlerId, String playerName) {
         // wenn kein Brawler übergeben wurde, Default nehmen
         if (brawlerId == null || brawlerId.isBlank()) {
             brawlerId = "sniper";
@@ -72,6 +73,8 @@ public class DefaultGameLogic implements GameLogic {
         rifleAmmoMap.put(playerId, RIFLE_MAX_AMMO);
         lastRifleRefill.put(playerId, System.currentTimeMillis());
         playerBrawler.put(playerId, brawlerId);
+        playerNames.put(playerId, playerName); // aus DTO übergeben
+
     }
 
     @Override
@@ -328,7 +331,8 @@ public class DefaultGameLogic implements GameLogic {
                     p.isVisible(),
                     ammo,
                     wep,
-                    playerBrawler.getOrDefault(p.getId(), "sniper")
+                    playerBrawler.getOrDefault(p.getId(), "sniper"),
+                    playerNames.getOrDefault(p.getId(), "Player")
             );
         }).collect(Collectors.toList());
 

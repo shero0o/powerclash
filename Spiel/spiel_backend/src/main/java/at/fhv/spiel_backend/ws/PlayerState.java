@@ -15,5 +15,5 @@ public class PlayerState {
     private int ammo;
     private ProjectileType currentWeapon;
     private String brawlerId; // NEU
-
+    private String playerName;
 }

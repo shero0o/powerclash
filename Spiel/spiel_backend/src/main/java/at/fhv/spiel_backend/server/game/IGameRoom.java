@@ -18,7 +18,7 @@ public interface IGameRoom {
      * @param playerId unique identifier of the player
      */
 
-    void addPlayer(String playerId, String brawlerId);
+    void addPlayer(String playerId, String brawlerId, String playerName);
 
     /**
      * Removes a player from this room.

@@ -39,18 +39,18 @@ public class RoomManagerImpl implements IRoomManager {
     }
 
     @Override
-    public String assignToRoom(String playerId, String brawlerId, String levelId) {
+    public String assignToRoom(String playerId, String brawlerId, String levelId, String playerName) {
         for (IGameRoom room : rooms) {
             if (!room.isFull() && room.getLevelId().equals(levelId)) {
                 if (!((GameRoomImpl) room).hasGameStarted()) {
-                    room.addPlayer(playerId, brawlerId);
+                    room.addPlayer(playerId, brawlerId, playerName);
                     return room.getId();
                 }
             }
         }
 
         IGameRoom newRoom = createRoom(levelId);
-        newRoom.addPlayer(playerId, brawlerId);
+        newRoom.addPlayer(playerId, brawlerId, playerName);
         return newRoom.getId();
     }
 

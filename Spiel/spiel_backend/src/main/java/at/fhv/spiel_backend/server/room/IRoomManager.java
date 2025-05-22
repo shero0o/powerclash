@@ -21,7 +21,7 @@ public interface IRoomManager {
      * @param playerId unique identifier for the player
      * @return the ID of the room the player was assigned to
      */
-    String assignToRoom(String playerId, String brawlerId, String levelId);
+    String assignToRoom(String playerId, String brawlerId, String levelId, String playerName);
 
 
     /**

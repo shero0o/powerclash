@@ -4,15 +4,19 @@ export default class SelectionScene extends Phaser.Scene {
     constructor() {
         super({ key: 'SelectionScene' });
         this.selectedWeapon = 'RIFLE_BULLET';
-        this.selectedLevel  = 'level1';
+        this.selectedLevel = 'level1';
         this.selectedBrawler = 'sniper';
         this.playerName = '';
+        this.nameInput = null;
     }
 
     create() {
         const { width } = this.scale;
 
-        this.add.text(width / 2, 10, 'Enter Name:', { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5);
+        // Entferne ggf. alte Inputs (bei Refresh oder erneutem Eintritt)
+        Array.from(document.querySelectorAll('input[type="text"]')).forEach(el => el.remove());
+
+        // Eingabefeld für Namen
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
         nameInput.maxLength = 12;
@@ -22,9 +26,17 @@ export default class SelectionScene extends Phaser.Scene {
         nameInput.style.left = '50%';
         nameInput.style.transform = 'translateX(-50%)';
         nameInput.style.zIndex = '1000';
+        nameInput.style.fontSize = '18px';
+        nameInput.style.padding = '5px';
+        nameInput.autofocus = true;
         document.body.appendChild(nameInput);
+        this.nameInput = nameInput;
 
-        // Weapon‐Optionen: Label + korrespondierender ProjectileType
+        this.add.text(width / 2, 10, 'Enter Name:', {
+            fontSize: '20px',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+
         const weapons = [
             { label: 'Rifle', value: 'RIFLE_BULLET' },
             { label: 'Sniper', value: 'SNIPER' },
@@ -32,7 +44,6 @@ export default class SelectionScene extends Phaser.Scene {
             { label: 'Mine', value: 'MINE' }
         ];
 
-        // Level‐Optionen (wie gehabt)
         const levels = ['level1', 'level2', 'level3'];
 
         const brawlers = [
@@ -43,10 +54,10 @@ export default class SelectionScene extends Phaser.Scene {
         ];
 
         this.weaponTexts = [];
-        this.levelTexts  = [];
+        this.levelTexts = [];
         this.brawlerTexts = [];
 
-        // --- Weapon Auswahl ---
+        // Weapon Auswahl
         this.add.text(50, 30, 'Choose Weapon:', { fontSize: '24px', fill: '#ffffff' });
         weapons.forEach((w, i) => {
             const txt = this.add.text(50, 70 + i * 30, w.label, {
@@ -62,15 +73,13 @@ export default class SelectionScene extends Phaser.Scene {
             this.weaponTexts.push({ txt, value: w.value });
         });
 
-        // --- Level Auswahl ---
-        this.add.text(width / 2, 30, 'Choose Map:', { fontSize: '24px', fill: '#ffffff' })
-            .setOrigin(0.5);
+        // Level Auswahl
+        this.add.text(width / 2, 110, 'Choose Map:', { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
         levels.forEach((lvl, i) => {
-            const txt = this.add.text(width / 2, 70 + i * 30, lvl, {
+            const txt = this.add.text(width / 2, 150 + i * 30, lvl, {
                 fontSize: '20px',
                 fill: lvl === this.selectedLevel ? '#ffff00' : '#00ffff'
-            }).setOrigin(0.5)
-                .setInteractive();
+            }).setOrigin(0.5).setInteractive();
 
             txt.on('pointerdown', () => {
                 this.selectedLevel = lvl;
@@ -96,53 +105,48 @@ export default class SelectionScene extends Phaser.Scene {
             this.brawlerTexts.push({ txt, value: b.value });
         });
 
-        // --- Play Button ---
+        // PLAY-Button
         this.add.text(width / 2, 250, 'PLAY', { fontSize: '32px', fill: '#ffffff' })
             .setOrigin(0.5)
             .setInteractive()
             .on('pointerdown', () => {
-                // PlayerId aus LocalStorage oder neu generieren
                 const playerId = localStorage.getItem('playerId') || crypto.randomUUID();
                 localStorage.setItem('playerId', playerId);
-
-                console.log("🚀 Sending joinRoom with", {
-                    playerId,
-                    levelId: this.selectedLevel,
-                    chosenWeapon: this.selectedWeapon,
-                    brawlerId: this.selectedBrawler
-                });
 
                 const enteredName = nameInput.value.trim() || 'Player';
                 this.playerName = enteredName;
                 localStorage.setItem('playerName', enteredName);
 
+                if (this.nameInput && this.nameInput.parentNode) {
+                    this.nameInput.parentNode.removeChild(this.nameInput);
+                }
 
-                document.body.removeChild(nameInput);
-
-                // Join-Payload mit chosenWeapon
                 this.socket.emit('joinRoom', {
-
                     playerId,
-                    brawlerId: this.selectedBrawler,              // Server wählt Default-Brawler
+                    brawlerId: this.selectedBrawler,
                     levelId: this.selectedLevel,
-                    chosenWeapon: this.selectedWeapon
+                    chosenWeapon: this.selectedWeapon,
+                    playerName: this.playerName
                 }, (response) => {
-                    console.log("📥 Server response from joinRoom:", response);
-                    // Raum‐Daten im Registry speichern
-                    this.registry.set('roomId',   response.roomId);
+                    this.registry.set('roomId', response.roomId);
                     this.registry.set('playerId', playerId);
-                    this.registry.set('levelId',  this.selectedLevel);
-                    this.registry.set('weapon',   this.selectedWeapon);
-                    this.registry.set('brawler',  this.selectedBrawler);
+                    this.registry.set('levelId', this.selectedLevel);
+                    this.registry.set('weapon', this.selectedWeapon);
+                    this.registry.set('brawler', this.selectedBrawler);
                     this.registry.set('playerName', enteredName);
                     this.scene.start('WaitingScene');
                 });
             });
 
-        // erste Hervorhebungen zeichnen
         this.updateWeaponHighlight();
         this.updateLevelHighlight();
         this.updateBrawlerHighlight();
+    }
+
+    shutdown() {
+        if (this.nameInput && this.nameInput.parentNode) {
+            this.nameInput.parentNode.removeChild(this.nameInput);
+        }
     }
 
     updateWeaponHighlight() {

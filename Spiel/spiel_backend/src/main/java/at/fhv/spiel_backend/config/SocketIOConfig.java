@@ -37,7 +37,7 @@ public class SocketIOConfig {
 
         // Spieler joinen und anlegen
         server.addEventListener("joinRoom", JoinRequestDTO.class, (client, data, ack) -> {
-            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId());
+            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
             IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
             server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
@@ -60,7 +60,7 @@ public class SocketIOConfig {
 
                     if (room == null) {
                         String newId = roomManager.assignToRoom(
-                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId()
+                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName()
                         );
                         room = roomManager.getRoom(newId);
                         client.joinRoom(newId);

@@ -66,7 +66,7 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     @Override
-    public void addPlayer(String playerId, String brawlerId) {
+    public void addPlayer(String playerId, String brawlerId, String playerName) {
         if (hasStarted) {
             throw new IllegalStateException("Cannot join: Game already started.");
         }
@@ -79,7 +79,7 @@ public class GameRoomImpl implements IGameRoom {
             return;
         }
         players.computeIfAbsent(playerId, pid -> {
-            gameLogic.addPlayer(pid, brawlerId);
+            gameLogic.addPlayer(pid, brawlerId, playerName);
             return new Object();
         });
         System.out.println("[INFO] Player added: " + playerId);

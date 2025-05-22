@@ -6,6 +6,15 @@ export default class GameScene extends Phaser.Scene {
 
         this.isFiring          = false;
         this.fireEvent         = null;
+
+        this.victoryText = null;
+        // this.playAgainButton = null;
+        this.hasWon = false;
+        this.exitButtonGame = null;
+        this.defeatShown = false;
+
+
+
     }
 
     init(data) {
@@ -58,17 +67,20 @@ export default class GameScene extends Phaser.Scene {
         // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
+
         // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
         if (this.mapKey === 'level1') {
             map.createLayer('Boden', tileset, 0, 0);
             map.createLayer('Wand', tileset, 0, 0);
+            this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
         } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             map.createLayer('Kisten', tileset, 0, 0);
             map.createLayer('Wand', tileset, 0, 0);
+            this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
         }
 
 
@@ -82,6 +94,8 @@ export default class GameScene extends Phaser.Scene {
         const fitZoom = Math.min(this.cameras.main.width / width, this.cameras.main.height / height);
         this.cameras.main.setZoom(fitZoom);
         this.cameras.main.centerOn(width/2, height/2);
+        this.input.topOnly = true;
+
 
         // UI: Ammo-Bar
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
@@ -91,17 +105,6 @@ export default class GameScene extends Phaser.Scene {
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
             fontFamily: 'Arial', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3
         }).setScrollFactor(0);
-
-        // UI: Exit-Button
-        this.exitButton = this.add.text(16, 48, 'Exit', { fontSize: '18px', fill: '#ff0000' })
-            .setScrollFactor(0)
-            .setInteractive()
-            .setVisible(false)
-            .on('pointerdown', () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-                this.socket.disconnect();
-                this.scene.start('SelectionScene');
-            });
 
 
         // Explosion-Animation
@@ -226,6 +229,20 @@ export default class GameScene extends Phaser.Scene {
                 const spriteKey = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
                 spr = this.physics.add.sprite(p.position.x, p.position.y, spriteKey).setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
+
+                const isOwnPlayer = p.playerId === this.playerId;
+                const nameColor = isOwnPlayer ? '#ffffff' : '#ff0000';
+
+                spr.label = this.add.text(0, 0, p.playerName || 'Player', {
+                    fontSize: '20px',
+                    fontFamily: 'Arial',
+                    color: nameColor,
+                    stroke: '#000000',
+                    strokeThickness: 4,
+                    fontStyle: 'bold'
+                }).setOrigin(0.5).setDepth(10);
+
+
                 this.playerSprites[p.playerId] = spr;
                 if (p.playerId === this.playerId) {
                     spr.label = this.add.text(0, 0, this.playerName, {
@@ -264,9 +281,9 @@ export default class GameScene extends Phaser.Scene {
                     spr.label.setVisible(p.visible);
                 }
             }
+
+
         });
-        // Exit anzeigen, wenn tot
-        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
 
         // Projektile rendern
         const alive = new Set();
@@ -306,5 +323,98 @@ export default class GameScene extends Phaser.Scene {
             this.ammoBarFill.clear().fillStyle(0xffffff, 1)
                 .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
         }
+
+        if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (me && me.currentHealth > 0) {
+                this.showVictoryScreen();
+                this.hasWon = true;
+            }
+        }
+
+        // Wenn Spieler tot ist, aber Spiel nicht gewonnen => YOU DIED
+        if (!this.hasWon) {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (me && me.currentHealth <= 0 && !this.defeatShown) {
+                this.showDefeatScreen();
+                this.defeatShown = true;
+            }
+        }
+
+
+
     }
+
+    createButton(x, y, text, onClick) {
+        const btn = this.add.text(x, y, text, {
+            fontSize: '32px',
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            backgroundColor: '#333333',
+            padding: { x: 20, y: 10 },
+            align: 'center'
+        })
+            .setOrigin(0.5)
+            .setInteractive()
+            .setScrollFactor(0);
+
+        btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#555555' }));
+        btn.on('pointerout',  () => btn.setStyle({ backgroundColor: '#333333' }));
+        btn.on('pointerdown', onClick);
+
+
+        btn.on('pointerdown', () => {
+            console.log(`Button '${text}' clicked`);
+            onClick();
+        });
+
+
+        return btn;
+    }
+
+    showVictoryScreen() {
+        const { width, height } = this.scale;
+
+        this.victoryText = this.add.text(width / 2, height / 2 - 80, 'YOU WON!', {
+            fontSize: '52px',
+            fontFamily: 'Arial',
+            color: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        // this.playAgainButton = this.createButton(width / 2, height / 2, 'Play Again', () => {
+        //     this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+        //     this.socket.disconnect();
+        //     window.location.reload();
+        //     this.scene.start('SelectionScene');
+        // });
+
+        this.exitButtonGame = this.createButton(width / 2, height / 2 + 70, 'Exit', () => {
+            this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+    }
+
+    showDefeatScreen() {
+        const { width, height } = this.scale;
+
+        this.victoryText = this.add.text(width / 2, height / 2 - 80, 'YOU DIED', {
+            fontSize: '52px',
+            fontFamily: 'Arial',
+            color: '#ff0000',
+            stroke: '#000000',
+            strokeThickness: 6
+        }).setOrigin(0.5).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(width / 2, height / 2 + 70, 'Exit', () => {
+            this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+    }
+
+
+
 }
