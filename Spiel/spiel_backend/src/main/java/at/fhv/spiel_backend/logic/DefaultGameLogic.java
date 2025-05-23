@@ -1,6 +1,7 @@
 package at.fhv.spiel_backend.logic;
 
 import at.fhv.spiel_backend.model.*;
+import at.fhv.spiel_backend.ws.CrateState;
 import at.fhv.spiel_backend.ws.PlayerState;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 import at.fhv.spiel_backend.server.map.GameMap;
@@ -27,6 +28,8 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, ProjectileType> playerWeapon = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
+    private final List<Crate> crates = new ArrayList<>();
+
     @Override
     public void setGameMap(GameMap gameMap) {
         this.gameMap = gameMap;
@@ -94,10 +97,13 @@ public class DefaultGameLogic implements GameLogic {
         int tileX = (int)(x / gameMap.getTileWidth());
         int tileY = (int)(y / gameMap.getTileHeight());
         // nur bewegen, wenn kein Wall-Tile
-        if (!gameMap.isWallAt(tileX, tileY)) {
+        if (!gameMap.isWallAt(tileX, tileY) && !gameMap.isCrateAt(tileX, tileY)) {
+            System.out.println("Move to " + tileX + "," + tileY +
+                    " – wall: " + gameMap.isWallAt(tileX, tileY) +
+                    ", crate: " + gameMap.isCrateAt(tileX, tileY));
+
             p.setPosition(new Position(x, y, angle));
 
-            // 🟡 Sichtbarkeit setzen anhand Busch
             Position tilePos = new Position(tileX, tileY);
             if (gameMap.isBushTile(tilePos)) {
                 p.setVisible(false);
@@ -105,6 +111,7 @@ public class DefaultGameLogic implements GameLogic {
                 p.setVisible(true);
             }
         }
+
     }
 
 
@@ -151,8 +158,6 @@ public class DefaultGameLogic implements GameLogic {
                     p.setCurrentHealth(newHP);
                     p.setLastHealTime(now);
 
-                    System.out.println("💖 Energiezone: Spieler " + p.getId() +
-                            " heilt +15 HP → " + p.getCurrentHealth());
                 }
             } else {
                 p.setLastHealTime(0);
@@ -326,6 +331,21 @@ public class DefaultGameLogic implements GameLogic {
                     break;
                 }
             }
+
+            // --- Crate-Kollision ---
+            int tileX = (int) (p.getPosition().getX() / gameMap.getTileWidth());
+            int tileY = (int) (p.getPosition().getY() / gameMap.getTileHeight());
+
+            for (Crate crate : crates) {
+                int crateTileX = (int) (crate.getPosition().getX() / gameMap.getTileWidth());
+                int crateTileY = (int) (crate.getPosition().getY() / gameMap.getTileHeight());
+
+                if (crateTileX == tileX && crateTileY == tileY && crate.getHp() > 0) {
+                    crate.setHp(Math.max(0, crate.getHp() - p.getDamage()));
+                    it.remove(); // Projektil verschwindet
+                    break;
+                }
+            }
         }
 
         // --- Lifetime & Range Cleanup (non-mines) ---
@@ -385,10 +405,20 @@ public class DefaultGameLogic implements GameLogic {
         msg.setPlayers(ps);
         msg.setEvents(Collections.emptyList());
         msg.setProjectiles(new ArrayList<>(projectiles.values()));
+
+        msg.setCrates(
+                crates.stream()
+                        .filter(c -> c.getHp() > 0)
+                        .map(c -> {
+                            int tileX = (int)(c.getPosition().getX() / gameMap.getTileWidth());
+                            int tileY = (int)(c.getPosition().getY() / gameMap.getTileHeight());
+                            return new CrateState(c.getId(), tileX, tileY, c.getHp());
+                        })
+                        .collect(Collectors.toList())
+        );
+
         return msg;
     }
-
-
 
     @Override
     public List<Projectile> getProjectiles() {
@@ -399,6 +429,13 @@ public class DefaultGameLogic implements GameLogic {
     public Position getPlayerPosition(String playerId) {
         return players.get(playerId).getPosition();
     }
+
+    @Override
+    public List<Crate> getCrates() {
+        return crates;
+    }
+
+
 
     // Hilfsfunktion
     private int getMaxAmmoForType(ProjectileType type) {

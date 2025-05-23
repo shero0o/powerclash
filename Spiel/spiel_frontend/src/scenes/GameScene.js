@@ -118,9 +118,13 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
 
+
+        this.crateSprites = {};
         // Socket-Update
         this.socket.on('stateUpdate', state => {
             this.latestState = state;
+            this.latestCrates = state.crates || [];
+
 
             // 🌿 Sichtbarkeits-Testausgabe
             console.log("📦 Spieler-Sichtbarkeit:");
@@ -342,5 +346,52 @@ export default class GameScene extends Phaser.Scene {
             this.ammoBarFill.clear().fillStyle(0xffffff, 1)
                 .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
         }
+
+        if (!this.latestCrates) return;
+        const crateIds = new Set();
+
+        this.latestCrates.forEach(crate => {
+            crateIds.add(crate.id);
+
+            let bundle = this.crateSprites[crate.id];
+            const tileSize = this.tileSize;
+            const x = crate.tileX * tileSize + tileSize / 2;
+            const y = crate.tileY * tileSize + tileSize / 2;
+
+            if (!bundle) {
+                const sprite = this.add.rectangle(x, y, tileSize, tileSize, 0x8B4513).setOrigin(0.5);
+                const healthBar = this.add.graphics();
+                this.crateSprites[crate.id] = { sprite, healthBar, damaged: false };
+                bundle = this.crateSprites[crate.id];
+            }
+
+            // Healthbar nur anzeigen, wenn beschädigt
+            if (crate.hp < 100) {
+                bundle.damaged = true;
+            }
+
+            if (bundle.damaged) {
+                const hpPct = Phaser.Math.Clamp(crate.hp / 100, 0, 1);
+                const barW = 40, barH = 6;
+                bundle.healthBar.clear()
+                    .fillStyle(0x000000)
+                    .fillRect(x - barW / 2 - 1, y - tileSize / 2 - 10, barW + 2, barH + 2)
+                    .fillStyle(0xff0000)
+                    .fillRect(x - barW / 2, y - tileSize / 2 - 9, barW * hpPct, barH);
+            }
+
+            // Sicherheitshalber Position aktualisieren
+            bundle.sprite.setPosition(x, y);
+        });
+
+        Object.entries(this.crateSprites).forEach(([id, bundle]) => {
+            if (!crateIds.has(id)) {
+                bundle.sprite.destroy();
+                bundle.healthBar.destroy();
+                delete this.crateSprites[id];
+            }
+        });
+
+
     }
 }

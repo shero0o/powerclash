@@ -11,5 +11,5 @@ public class StateUpdateMessage {
     private List<PlayerState> players;
     private List<Event> events;
     private List<Projectile> projectiles;
-
+    private List<CrateState> crates;
 }

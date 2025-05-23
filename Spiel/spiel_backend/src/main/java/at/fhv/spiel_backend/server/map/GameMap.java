@@ -18,6 +18,7 @@ public class GameMap {
     private Set<Position> bushPositions = new HashSet<>();
     private Set<Position> poisonPositions = new HashSet<>();
     private Set<Position> healPositions = new HashSet<>();
+    Set<Position> cratePositions = new HashSet<>();
 
 
     public GameMap(String id) {
@@ -57,6 +58,22 @@ public class GameMap {
                     break;
                 }
             }
+
+            for (JsonNode layer : root.get("layers")) {
+                if ("Kisten".equalsIgnoreCase(layer.get("name").asText())) {
+                    JsonNode data = layer.get("data");
+                    for (int i = 0; i < data.size(); i++) {
+                        int gid = data.get(i).asInt();
+                        int x = i % width;
+                        int y = i / width;
+                        if (gid == 129) {
+                            cratePositions.add(new Position(x, y));
+                        }
+                    }
+                    break;
+                }
+            }
+
 
             Set<Integer> bushGids   = Set.of(183);
             Set<Integer> poisonGids = Set.of(186);
@@ -113,4 +130,9 @@ public class GameMap {
     public boolean isHealTile(Position pos) {
         return healPositions.contains(pos);
     }
+
+    public boolean isCrateAt(int tileX, int tileY) {
+        return cratePositions.contains(new Position(tileX, tileY));
+    }
+
 }

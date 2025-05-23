@@ -1,6 +1,7 @@
 package at.fhv.spiel_backend.server.game;
 
 import at.fhv.spiel_backend.logic.GameLogic;
+import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.server.EventPublisher;
@@ -8,9 +9,7 @@ import at.fhv.spiel_backend.server.map.GameMap;
 import at.fhv.spiel_backend.server.map.IMapFactory;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 
 /**
@@ -209,4 +208,6 @@ public class GameRoomImpl implements IGameRoom {
     public int getMaxPlayers(){
         return MAX_PLAYERS;
     }
+
+
 }

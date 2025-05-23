@@ -1,12 +1,10 @@
 package at.fhv.spiel_backend.logic;
 
-import at.fhv.spiel_backend.model.Position;
-import at.fhv.spiel_backend.model.Projectile;
-import at.fhv.spiel_backend.model.ProjectileType;
-import at.fhv.spiel_backend.model.Player;
+import at.fhv.spiel_backend.model.*;
 import at.fhv.spiel_backend.server.map.GameMap;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -87,5 +85,6 @@ public interface GameLogic {
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
 
     void applyEnvironmentalEffects();
+    List<Crate> getCrates();
 
 }
