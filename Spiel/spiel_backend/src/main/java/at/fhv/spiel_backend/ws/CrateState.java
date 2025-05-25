@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CrateState {
-    private String id;
+    private String crateId;
     private int x;
     private int y;
-    private int hp;
+    private int crateHp;
 }

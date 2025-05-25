@@ -1,12 +1,12 @@
 // GameMap.java
 package at.fhv.spiel_backend.server.map;
 
+import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.model.Position;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class GameMap {
     private final String id;
@@ -18,7 +18,8 @@ public class GameMap {
     private Set<Position> bushPositions = new HashSet<>();
     private Set<Position> poisonPositions = new HashSet<>();
     private Set<Position> healPositions = new HashSet<>();
-    Set<Position> cratePositions = new HashSet<>();
+    private Set<Position> cratePositions = new HashSet<>();
+    private final List<Crate> crates = new ArrayList<>();
 
 
     public GameMap(String id) {
@@ -59,6 +60,7 @@ public class GameMap {
                 }
             }
 
+
             for (JsonNode layer : root.get("layers")) {
                 if ("Kisten".equalsIgnoreCase(layer.get("name").asText())) {
                     JsonNode data = layer.get("data");
@@ -67,8 +69,12 @@ public class GameMap {
                         int x = i % width;
                         int y = i / width;
                         if (gid == 129) {
-                            cratePositions.add(new Position(x, y));
+                            Position pos = new Position(x, y);
+                            cratePositions.add(pos);
+                            Crate crate = new Crate(UUID.randomUUID().toString(), pos); // nur 2 Argumente!
+                            crates.add(crate); // hinzufügen zur Liste!
                         }
+
                     }
                     break;
                 }
@@ -133,6 +139,10 @@ public class GameMap {
 
     public boolean isCrateAt(int tileX, int tileY) {
         return cratePositions.contains(new Position(tileX, tileY));
+    }
+
+    public Position[] getCratePositions() {
+        return cratePositions.toArray(new Position[0]);
     }
 
 }

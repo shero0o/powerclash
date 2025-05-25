@@ -30,12 +30,24 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, String> playerNames = new ConcurrentHashMap<>();
 
     // -------------------------------------------------------------------------
-    private final List<Crate> crates = new ArrayList<>();
+    private final Map<String, Crate> crates = new ConcurrentHashMap<>();
+
+
 
     @Override
     public void setGameMap(GameMap gameMap) {
         this.gameMap = gameMap;
+
+        for (Position pos : gameMap.getCratePositions()) {
+            int tileX = (int) pos.getX();
+            int tileY = (int) pos.getY();
+            String key = tileX + "," + tileY;
+            crates.put(key, new Crate(UUID.randomUUID().toString(), new Position(tileX, tileY)));
+        }
+
     }
+
+
 
     @Override
     public Player getPlayer(String playerId) {
@@ -103,10 +115,17 @@ public class DefaultGameLogic implements GameLogic {
         int tileX = (int)(x / gameMap.getTileWidth());
         int tileY = (int)(y / gameMap.getTileHeight());
         // nur bewegen, wenn kein Wall-Tile
-        if (!gameMap.isWallAt(tileX, tileY) && !gameMap.isCrateAt(tileX, tileY)) {
+        boolean crateBlocks = crates.values().stream()
+                .anyMatch(c -> {
+                    int cx = (int) c.getPosition().getX();
+                    int cy = (int) c.getPosition().getY();
+                    return cx == tileX && cy == tileY;
+                });
+
+        if (!gameMap.isWallAt(tileX, tileY) && !crateBlocks) {
             System.out.println("Move to " + tileX + "," + tileY +
                     " – wall: " + gameMap.isWallAt(tileX, tileY) +
-                    ", crate: " + gameMap.isCrateAt(tileX, tileY));
+                    ", crate: " + crateBlocks);
 
             p.setPosition(new Position(x, y, angle));
 
@@ -118,7 +137,9 @@ public class DefaultGameLogic implements GameLogic {
             }
         }
 
+
     }
+
 
 
     @Override
@@ -170,6 +191,12 @@ public class DefaultGameLogic implements GameLogic {
             }
         }
     }
+
+    @Override
+    public List<Crate> getCrates() {
+        return new ArrayList<>(crates.values());
+    }
+
 
     @Override
     public void spawnProjectile(String playerId,
@@ -289,7 +316,7 @@ public class DefaultGameLogic implements GameLogic {
                 p.getPosition().setY(p.getPosition().getY()
                         + p.getDirection().getY() * p.getSpeed() * delta);
                 p.setTravelled(p.getTravelled()
-                        + (float)Math.hypot(
+                        + (float) Math.hypot(
                         p.getDirection().getX() * p.getSpeed() * delta,
                         p.getDirection().getY() * p.getSpeed() * delta
                 ));
@@ -301,8 +328,8 @@ public class DefaultGameLogic implements GameLogic {
                     float newX = p.getPosition().getX() + dx;
                     float newY = p.getPosition().getY() + dy;
 
-                    int tileX = (int)(newX / gameMap.getTileWidth());
-                    int tileY = (int)(newY / gameMap.getTileHeight());
+                    int tileX = (int) (newX / gameMap.getTileWidth());
+                    int tileY = (int) (newY / gameMap.getTileHeight());
 
                     // Wenn neue Position NICHT auf Wand ist, normal bewegen
                     if (!gameMap.isWallAt(tileX, tileY)) {
@@ -316,11 +343,11 @@ public class DefaultGameLogic implements GameLogic {
                         p.getPosition().setY(newY);
                     }
 
-                    p.setTravelled(p.getTravelled() + (float)Math.hypot(dx, dy));
+                    p.setTravelled(p.getTravelled() + (float) Math.hypot(dx, dy));
                 } else {
                     if (p.getArmTime() == 0L) {
-                        int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
-                        int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
+                        int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
+                        int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
 
                         // Wenn Mine über Wand ist → nicht scharf machen → leicht weiterbewegen
                         if (gameMap.isWallAt(tx, ty)) {
@@ -337,18 +364,40 @@ public class DefaultGameLogic implements GameLogic {
                 }
 
 
-
             }
 
             // --- Wand-Kollision ---
-            int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
-            int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
+            int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
+            int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
             if (p.getProjectileType() != ProjectileType.MINE) {
-                  if (gameMap.isWallAt(tx, ty)) {
-                      it.remove();
-                      continue;
-                  }
+                if (gameMap.isWallAt(tx, ty)) {
+                    it.remove();
+                    continue;
+                }
             }
+
+            int tileX = (int)(p.getPosition().getX() / gameMap.getTileWidth());
+            int tileY = (int)(p.getPosition().getY() / gameMap.getTileHeight());
+            String key = tileX + "," + tileY;
+
+            Crate crate = crates.get(key);
+            if (crate != null) {
+                crate.setWasHit(true);
+                crate.setCurrentHealth(Math.max(0, crate.getCurrentHealth() - p.getDamage()));
+                it.remove();
+
+                System.out.println("💥 Kiste getroffen bei Tile: " + key);
+
+                if (crate.getCurrentHealth() <= 0) {
+                    crates.remove(key);
+                    System.out.println("🧨 Kiste zerstört");
+                }
+
+                continue;
+            }
+
+
+
 
             // --- Spieler-Kollision ---
             for (Player target : players.values()) {
@@ -368,20 +417,6 @@ public class DefaultGameLogic implements GameLogic {
                 }
             }
 
-            // --- Crate-Kollision ---
-            int tileX = (int) (p.getPosition().getX() / gameMap.getTileWidth());
-            int tileY = (int) (p.getPosition().getY() / gameMap.getTileHeight());
-
-            for (Crate crate : crates) {
-                int crateTileX = (int) (crate.getPosition().getX() / gameMap.getTileWidth());
-                int crateTileY = (int) (crate.getPosition().getY() / gameMap.getTileHeight());
-
-                if (crateTileX == tileX && crateTileY == tileY && crate.getHp() > 0) {
-                    crate.setHp(Math.max(0, crate.getHp() - p.getDamage()));
-                    it.remove(); // Projektil verschwindet
-                    break;
-                }
-            }
         }
 
         // --- Lifetime & Range Cleanup (non-mines) ---
@@ -444,16 +479,16 @@ public class DefaultGameLogic implements GameLogic {
         msg.setEvents(Collections.emptyList());
         msg.setProjectiles(new ArrayList<>(projectiles.values()));
 
-        msg.setCrates(
-                crates.stream()
-                        .filter(c -> c.getHp() > 0)
-                        .map(c -> {
-                            int tileX = (int)(c.getPosition().getX() / gameMap.getTileWidth());
-                            int tileY = (int)(c.getPosition().getY() / gameMap.getTileHeight());
-                            return new CrateState(c.getId(), tileX, tileY, c.getHp());
-                        })
-                        .collect(Collectors.toList())
-        );
+        List<CrateState> crateStates = crates.values().stream()
+                .map(c -> new CrateState(
+                        c.getId(),
+                        (int) c.getPosition().getX(),
+                        (int) c.getPosition().getY(),
+                        c.getCurrentHealth()
+                ))
+                .collect(Collectors.toList());
+        msg.setCrates(crateStates);
+
 
         return msg;
     }
@@ -468,10 +503,6 @@ public class DefaultGameLogic implements GameLogic {
         return players.get(playerId).getPosition();
     }
 
-    @Override
-    public List<Crate> getCrates() {
-        return crates;
-    }
 
 
 

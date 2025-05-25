@@ -85,6 +85,7 @@ public interface GameLogic {
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
 
     void applyEnvironmentalEffects();
+
     List<Crate> getCrates();
 
 }
