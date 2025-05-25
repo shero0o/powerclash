@@ -37,7 +37,7 @@ public class SocketIOConfig {
 
         // Spieler joinen und anlegen
         server.addEventListener("joinRoom", JoinRequestDTO.class, (client, data, ack) -> {
-            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId());
+            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
             IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
             server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
@@ -48,7 +48,6 @@ public class SocketIOConfig {
                          data.getChosenWeapon());
             }
 
-            room.start();
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
 
@@ -61,7 +60,7 @@ public class SocketIOConfig {
 
                     if (room == null) {
                         String newId = roomManager.assignToRoom(
-                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId()
+                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName()
                         );
                         room = roomManager.getRoom(newId);
                         client.joinRoom(newId);
@@ -122,6 +121,22 @@ public class SocketIOConfig {
                     ack.sendAckData("ok");
                 }
         );
+
+        server.addDisconnectListener(client -> {
+            String playerId = client.getHandshakeData().getSingleUrlParam("playerId");
+            if (playerId != null) {
+                roomManager.removeFromRoom(playerId);
+                log.info("Player {} disconnected and was removed from their room", playerId);
+            }
+        });
+
+        server.addEventListener("leaveRoom", WaitingReadyDTO.class, (client, data, ack) -> {
+            String playerId = data.getPlayerId();
+            roomManager.removeFromRoom(playerId);
+            log.info("Player {} left the room voluntarily", playerId);
+            ack.sendAckData("ok");
+        });
+
 
         server.start();
         return server;

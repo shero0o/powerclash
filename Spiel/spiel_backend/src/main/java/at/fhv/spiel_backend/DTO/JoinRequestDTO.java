@@ -16,5 +16,6 @@ public class JoinRequestDTO {
     private String brawlerId;
     private String levelId;
     private ProjectileType chosenWeapon;
+    private String playerName;
 
 }

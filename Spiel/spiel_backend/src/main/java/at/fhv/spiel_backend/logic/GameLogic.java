@@ -37,7 +37,7 @@ public interface GameLogic {
     /**
      * Register a new player with specific Brawler
      */
-    void addPlayer(String playerId, String brawlerId);
+    void addPlayer(String playerId, String brawlerId, String playerName);
 
     /**
      * Remove a player from the simulation

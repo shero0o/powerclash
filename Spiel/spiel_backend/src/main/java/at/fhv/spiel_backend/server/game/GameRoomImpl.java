@@ -40,6 +40,8 @@ public class GameRoomImpl implements IGameRoom {
 
     // Guard so we only start the loop once
     private boolean started = false;
+    private boolean hasStarted = false;
+
 
     public GameRoomImpl(IMapFactory mapFactory,
                         GameLogic gameLogic,
@@ -64,7 +66,11 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     @Override
-    public void addPlayer(String playerId, String brawlerId) {
+    public void addPlayer(String playerId, String brawlerId, String playerName) {
+        if (hasStarted) {
+            throw new IllegalStateException("Cannot join: Game already started.");
+        }
+
         if (players.size() >= MAX_PLAYERS) {
             throw new IllegalStateException("Room " + id + " is full");
         }
@@ -73,11 +79,7 @@ public class GameRoomImpl implements IGameRoom {
             return;
         }
         players.computeIfAbsent(playerId, pid -> {
-            if (brawlerId == null) {
-                gameLogic.addPlayer(pid, brawlerId);
-            } else {
-                gameLogic.addPlayer(pid, brawlerId);
-            }
+            gameLogic.addPlayer(pid, brawlerId, playerName);
             return new Object();
         });
         System.out.println("[INFO] Player added: " + playerId);
@@ -155,8 +157,9 @@ public class GameRoomImpl implements IGameRoom {
      */
     @Override
     public synchronized void start() {
-        if (started) return;
+        if (started  || getPlayerCount() < MAX_PLAYERS) return;
         started = true;
+        hasStarted = true;
         executor.scheduleAtFixedRate(() -> {
             try {
                 // Process movement inputs
@@ -203,6 +206,10 @@ public class GameRoomImpl implements IGameRoom {
             this.dirY = dy;
             this.angle = a;
         }
+    }
+
+    public boolean hasGameStarted() {
+        return hasStarted;
     }
 
     public int getMaxPlayers(){
