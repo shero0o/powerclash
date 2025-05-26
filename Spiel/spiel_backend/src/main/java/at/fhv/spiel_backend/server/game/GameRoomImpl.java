@@ -72,7 +72,6 @@ public class GameRoomImpl implements IGameRoom {
         if (hasStarted) {
             throw new IllegalStateException("Cannot join: Game already started.");
         }
-
         if (players.size() >= MAX_PLAYERS) {
             throw new IllegalStateException("Room " + id + " is full");
         }
@@ -80,12 +79,18 @@ public class GameRoomImpl implements IGameRoom {
             System.err.println("[ERROR] addPlayer called with null ID");
             return;
         }
-        players.computeIfAbsent(playerId, pid -> {
-            gameLogic.addPlayer(pid, brawlerId, playerName);
-            return new Object();
-        });
+
+        // 1) register in logic
+        gameLogic.addPlayer(playerId, brawlerId, playerName);
+        // 2) track locally
+        players.put(playerId, new Object());
         System.out.println("[INFO] Player added: " + playerId);
+
+        // ↓↓↓ new: immediately push the very first snapshot ↓↓↓
+        StateUpdateMessage initial = gameLogic.buildStateUpdate();
+        eventPublisher.publish(id, initial);
     }
+
 
     @Override
     public void removePlayer(String playerId) {
@@ -159,22 +164,39 @@ public class GameRoomImpl implements IGameRoom {
      */
     @Override
     public synchronized void start() {
-        if (started  || getPlayerCount() < MAX_PLAYERS) return;
+        if (started || getPlayerCount() < MAX_PLAYERS) return;
         started = true;
         hasStarted = true;
+
+        // Only for level 3: spawn two melee‐NPCs (“zombies”) at map center
         if ("level3".equals(levelId) && gameLogic instanceof DefaultGameLogic) {
-            // center of map in pixels
+            DefaultGameLogic logic = (DefaultGameLogic) gameLogic;
+
+            // compute center of map in pixels
             float cx = gameMap.getWidthInPixels()  / 2f;
             float cy = gameMap.getHeightInPixels() / 2f;
-// half‐diagonal = sqrt(cx² + cy²)
+
+            // spawn two NPCs at center: id, position, health, attackRadius, damage, speed, cooldown
+            logic.addNpc("zombie-1", new Position(1200, 1200, 0),
+                    /*health*/ 50,
+                    /*attackRadius*/ 32f,
+                    /*damage*/ 10,
+                    /*speed*/ 100f,
+                    /*attackCooldownMs*/ 1000L);
+
+            logic.addNpc("zombie-2", new Position(cx, cy, 0),
+                    50, 32f, 10, 100f, 1000L);
+
+            // activate safe‐zone shrink for level 3
             float initialRadius = (float) Math.hypot(cx, cy);
-            long  durationMs    = 2 * 60_000L;   // keep your desired shrink time
-            ((DefaultGameLogic)gameLogic)
-                    .activateZone(new Position(cx, cy, 0), initialRadius, durationMs);
+            long durationMs     = 2 * 60_000L;
+            logic.activateZone(new Position(cx, cy, 0), initialRadius, durationMs);
         }
+
+        // schedule the main game loop at ~60 ticks/sec
         executor.scheduleAtFixedRate(() -> {
             try {
-                // Process movement inputs
+                // 1) process buffered player inputs
                 for (var entry : inputs.entrySet()) {
                     String pid = entry.getKey();
                     PlayerInput in = entry.getValue();
@@ -183,8 +205,8 @@ public class GameRoomImpl implements IGameRoom {
 
                     Position pos = p.getPosition();
                     float len = (float) Math.hypot(in.dirX, in.dirY);
-                    float nx = len > 0 ? in.dirX / len : 0;
-                    float ny = len > 0 ? in.dirY / len : 0;
+                    float nx  = len > 0 ? in.dirX / len : 0;
+                    float ny  = len > 0 ? in.dirY / len : 0;
                     float newX = pos.getX() + nx * MAX_SPEED * TICK_DT;
                     float newY = pos.getY() + ny * MAX_SPEED * TICK_DT;
 
@@ -195,11 +217,11 @@ public class GameRoomImpl implements IGameRoom {
                     }
                 }
 
-                // Update projectiles (movement, collisions, cleanup)
+                // 2) update projectiles & apply environmental effects (including NPC AI)
                 gameLogic.updateProjectiles();
                 gameLogic.applyEnvironmentalEffects();
 
-                // Broadcast updated state
+                // 3) broadcast the new state to all clients in this room
                 StateUpdateMessage update = buildStateUpdate();
                 eventPublisher.publish(id, update);
 
@@ -209,6 +231,7 @@ public class GameRoomImpl implements IGameRoom {
             }
         }, 0, (long)(TICK_DT * 1000), TimeUnit.MILLISECONDS);
     }
+
 
     // DTO for input buffering
     private static class PlayerInput {

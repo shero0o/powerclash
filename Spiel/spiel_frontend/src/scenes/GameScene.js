@@ -31,6 +31,10 @@ export default class GameScene extends Phaser.Scene {
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
+        this.npcSprites = {};
+        this.npcBars    = {};
+        this.npcLabels  = {};
+
     }
 
     preload() {
@@ -45,6 +49,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
         this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
         this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
+        this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
 
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
@@ -113,6 +118,8 @@ export default class GameScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 3
         }).setScrollFactor(0);
 
+
+
         // explosion animation
         this.anims.create({
             key: 'explode',
@@ -135,6 +142,7 @@ export default class GameScene extends Phaser.Scene {
 
         // socket state updates
         this.socket.on('stateUpdate', state => {
+            this.npcs = state.npcs || [];
             this.latestState = state;
             this.zoneState   = state.zoneState || null;
 
@@ -154,19 +162,23 @@ export default class GameScene extends Phaser.Scene {
     }
 
     startFiring(pointer) {
-        const meSprite = this.playerSprites[this.playerId];
-        const meState  = this.latestState?.players.find(p => p.playerId === this.playerId);
-        if (!meSprite || !meState || meState.ammo <= 0) return;
+        // only check ammo & existence in latestState, not sprite
+        const meState = this.latestState?.players.find(
+            p => p.playerId === this.playerId
+        );
+        if (!meState || meState.ammo <= 0) {
+            return;
+        }
 
         const emitShot = () => {
             const dir = new Phaser.Math.Vector2(
-                pointer.worldX - meSprite.x,
-                pointer.worldY - meSprite.y
+                pointer.worldX - this.playerSprites[this.playerId].x,
+                pointer.worldY - this.playerSprites[this.playerId].y
             ).normalize();
             this.socket.emit('shootProjectile', {
-                roomId:        this.roomId,
-                playerId:      this.playerId,
-                direction:     { x: dir.x, y: dir.y },
+                roomId:         this.roomId,
+                playerId:       this.playerId,
+                direction:      { x: dir.x, y: dir.y },
                 projectileType: this.selectedWeapon
             });
         };
@@ -175,8 +187,8 @@ export default class GameScene extends Phaser.Scene {
             if (this.isFiring) return;
             this.isFiring = true;
             this.fireEvent = this.time.addEvent({
-                delay: 100,
-                loop:  true,
+                delay:    100,
+                loop:     true,
                 callback: () => {
                     const ammo = this.latestState.players
                         .find(p => p.playerId === this.playerId).ammo;
@@ -188,6 +200,7 @@ export default class GameScene extends Phaser.Scene {
             emitShot();
         }
     }
+
 
     stopFiring() {
         if (this.fireEvent) {
@@ -282,6 +295,111 @@ export default class GameScene extends Phaser.Scene {
                 dirX, dirY, angle
             });
         }
+        // ── render NPCs ─────────────────────────────────────────
+        const aliveNpcIds = new Set();
+
+        this.npcs.forEach(npc => {
+            aliveNpcIds.add(npc.id);
+
+            // 1) Ensure we have three GameObjects for this NPC:
+            let spr = this.npcSprites[npc.id];
+            let bar = this.npcBars[npc.id];
+            let label = this.npcLabels[npc.id];
+
+            if (!spr) {
+                // a) main sprite
+                spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
+                    .setOrigin(0.5);
+                this.physics.add.collider(spr, this.obstacleLayer);
+
+                // b) health-bar graphic
+                bar = this.add.graphics().setDepth(11);
+
+                // c) name label
+                label = this.add.text(0, 0, 'NPC', {
+                    fontSize: '16px', fontFamily: 'Arial',
+                    color: '#ffffff', stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5).setDepth(12);
+
+                this.npcSprites[npc.id] = spr;
+                this.npcBars[npc.id]    = bar;
+                this.npcLabels[npc.id]  = label;
+            }
+
+            // 2) Update position & rotation
+            spr.setPosition(npc.position.x, npc.position.y)
+                .setRotation(npc.position.angle);
+
+            // 3) Redraw health bar above the sprite
+            const maxHp = 50; // or pull from npc.maxHealth if you have it
+            const pct   = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
+            const bw    = 40, bh = 6;
+            bar.clear()
+                .fillStyle(0x000000)
+                .fillRect(
+                    npc.position.x - bw/2 - 1,
+                    npc.position.y - spr.displayHeight/2 - bh - 8,
+                    bw + 2, bh + 2
+                )
+                .fillStyle(0x00ff00)
+                .fillRect(
+                    npc.position.x - bw/2,
+                    npc.position.y - spr.displayHeight/2 - bh - 7,
+                    bw * pct, bh
+                );
+
+            // 4) Position the “NPC” label just above the bar
+            label.setPosition(
+                npc.position.x,
+                npc.position.y - spr.displayHeight/2 - bh - 16
+            );
+
+            // 5) Hide if dead
+            const visible = npc.currentHealth > 0;
+            spr.setVisible(visible);
+            bar.setVisible(visible);
+            label.setVisible(visible);
+        });
+
+// 6) Cleanup any despawned NPCs
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
+
+// Cleanup despawned NPCs
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
+
+        // cleanup
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
 
         // ─── render players & health ───────────────────────
         const connected = this.latestState.players
