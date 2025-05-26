@@ -18,6 +18,7 @@ public class Player extends Brawler {
     private long lastPoisonTime = 0;
     private long lastHealTime = 0;
     boolean visible = true;
+    int coinCount = 0;
 
     public Player(String id, int level, int maxHealth, Position pos) {
         super(id, level, maxHealth, pos);

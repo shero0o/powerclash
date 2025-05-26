@@ -16,10 +16,16 @@ export default class GameScene extends Phaser.Scene {
         this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
         this.latestState       = null;
         this.playerSprites     = {};
+        this.crateSprites      = {};
         this.projectileSprites = {};
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
+        this.maxCrateHealth    = 100; // oder was im Backend verwendet wird
+        this.coinText = null;
+        this.lastCoinCount = 0;
+        this.coinFloatingTexts = this.add.group();
+
     }
 
     preload() {
@@ -43,6 +49,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
+
     }
 
     create() {
@@ -61,7 +68,7 @@ export default class GameScene extends Phaser.Scene {
         } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
-            map.createLayer('Kisten', tileset, 0, 0);
+            this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             map.createLayer('Wand', tileset, 0, 0);
         }
 
@@ -96,6 +103,31 @@ export default class GameScene extends Phaser.Scene {
                 this.socket.disconnect();
                 this.scene.start('SplashScene');
             });
+
+
+        this.coinText = this.add.text(this.cameras.main.width - 160, 16, '0', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+
+        this.coinText = this.add.text(this.cameras.main.width - 160, 16, 'Coins: 0', {
+            fontFamily: 'Arial',
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        })
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setDepth(1000);
 
         // Explosion-Animation
         this.anims.create({
@@ -170,6 +202,26 @@ export default class GameScene extends Phaser.Scene {
             this.fireEvent = null;
         }
         this.isFiring = false;
+    }
+
+    showFloatingCoinGain(amount, x, y) {
+        const text = this.add.text(x, y - 40, `+${amount}`, {
+            font: 'bold 24px Arial',
+            fill: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        }).setOrigin(0.5);
+
+        this.coinFloatingTexts.add(text);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 80,
+            alpha: 0,
+            duration: 800,
+            ease: 'power1',
+            onComplete: () => text.destroy()
+        });
     }
 
     update() {
@@ -342,6 +394,69 @@ export default class GameScene extends Phaser.Scene {
             this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
             this.ammoBarFill.clear().fillStyle(0xffffff, 1)
                 .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+        }
+
+        if (me && this.coinText) {
+            const newCount = me.coinCount ?? 0;
+            if (newCount > this.lastCoinCount) {
+                const gain = newCount - this.lastCoinCount;
+                this.showFloatingCoinGain(gain, me.position.x, me.position.y);
+            }
+            this.lastCoinCount = newCount;
+            this.coinText.setText(`${newCount}`);
+        }
+
+        // ========== KISTEN VERARBEITEN ==========
+        if (this.latestState.crates) {
+            const currentCrateIds = new Set();
+
+            this.latestState.crates.forEach(crate => {
+                currentCrateIds.add(crate.crateId);
+                let spr = this.crateSprites[crate.crateId];
+
+                if (!spr) {
+                    spr = this.add.sprite(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32, 'crateTexture').setOrigin(0.5);
+                    spr.healthBar = this.add.graphics();
+                    this.crateSprites[crate.crateId] = spr;
+                }
+
+                spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
+
+                // Healthbar anzeigen
+                spr.healthBar.clear();
+                if (crate.crateHp < this.maxCrateHealth) {
+                    const pct = Phaser.Math.Clamp(crate.crateHp / this.maxCrateHealth, 0, 1);
+                    const barW = 40, barH = 6;
+                    spr.healthBar
+                        .fillStyle(0x000000)
+                        .fillRect(spr.x - barW / 2 - 1, spr.y - 40, barW + 2, barH + 2)
+                        .fillStyle(0xff0000)
+                        .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
+                }
+            });
+
+            // Entferne verschwundene Crates
+            Object.keys(this.crateSprites).forEach(crateId => {
+                if (!currentCrateIds.has(crateId)) {
+                    const spr = this.crateSprites[crateId];
+                    spr.healthBar?.destroy();
+                    spr.destroy();
+                    delete this.crateSprites[crateId];
+
+// 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
+                    const tileX = Math.floor(spr.x / this.tileSize);
+                    const tileY = Math.floor(spr.y / this.tileSize);
+                    this.crateLayer.putTileAt(401, tileX, tileY);
+
+                }
+            });
+        }
+
+        if (this.latestState && this.latestState.players) {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (me && this.coinText) {
+                this.coinText.setText(`Coins: ${me.coinCount}`);
+            }
         }
 
     }

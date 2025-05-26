@@ -16,4 +16,5 @@ public class PlayerState {
     private ProjectileType currentWeapon;
     private String brawlerId; // NEU
     private String playerName;
+    private int coinCount;
 }

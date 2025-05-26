@@ -31,6 +31,8 @@ public class DefaultGameLogic implements GameLogic {
 
     // -------------------------------------------------------------------------
     private final Map<String, Crate> crates = new ConcurrentHashMap<>();
+    private final Map<String, Integer> playerCoins = new ConcurrentHashMap<>();
+
 
 
 
@@ -89,6 +91,8 @@ public class DefaultGameLogic implements GameLogic {
         lastRifleRefill.put(playerId, System.currentTimeMillis());
         playerBrawler.put(playerId, brawlerId);
         playerNames.put(playerId, playerName); // aus DTO übergeben
+        playerCoins.put(playerId, 0);
+
 
     }
 
@@ -391,7 +395,14 @@ public class DefaultGameLogic implements GameLogic {
                 if (crate.getCurrentHealth() <= 0) {
                     crates.remove(key);
                     System.out.println("🧨 Kiste zerstört");
+
+                    // 💰 Coins vergeben
+                    String shooterId = p.getPlayerId();
+                    int old = playerCoins.getOrDefault(shooterId, 0);
+                    playerCoins.put(shooterId, old + 10);
+                    System.out.println("💰 " + shooterId + " bekommt 10 Coins → gesamt: " + (old + 10));
                 }
+
 
                 continue;
             }
@@ -470,7 +481,8 @@ public class DefaultGameLogic implements GameLogic {
                     ammo,
                     wep,
                     playerBrawler.getOrDefault(p.getId(), "sniper"),
-                    playerNames.getOrDefault(p.getId(), "Player")
+                    playerNames.getOrDefault(p.getId(), "Player"),
+                    playerCoins.getOrDefault(pid, 0)
             );
         }).collect(Collectors.toList());
 
