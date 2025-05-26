@@ -14,7 +14,17 @@ public class DefaultGameLogic implements GameLogic {
     // --- Spielzustand ---
     private final Map<String, Player> players = new ConcurrentHashMap<>();
     private final Map<String, Projectile> projectiles = new ConcurrentHashMap<>();
+    private final List<NPC> npcs = new ArrayList<>();
     private GameMap gameMap;
+    private long lastFrameTimeMs = System.currentTimeMillis();
+
+    // --- Zone fields ---
+    private boolean zoneActive     = false;
+    private Position zoneCenter;
+    private float zoneRadius;
+    private float zoneShrinkRate;      // px/sec
+    private long  zoneStartTimeMs;
+    private long  zoneDurationMs;
 
     // --- Waffen & Ammo ---
     private static final int DEFAULT_MAX_AMMO      = 3;
@@ -49,8 +59,6 @@ public class DefaultGameLogic implements GameLogic {
 
     }
 
-
-
     @Override
     public Player getPlayer(String playerId) {
         return players.get(playerId);
@@ -59,6 +67,38 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public void attack(String playerId, float dirX, float dirY, float angle) {
 
+    /**
+     * Register a new NPC for melee AI
+     */
+    public void addNpc(String npcId,
+                       Position spawn,
+                       int health,
+                       float attackRadius,
+                       int damage,
+                       float speed,
+                       long attackCooldownMs) {
+        NPC npc = new NPC(
+                npcId,
+                spawn,
+                health,
+                attackRadius,
+                damage,
+                speed,
+                attackCooldownMs
+        );
+        npcs.add(npc);
+    }
+
+    /**
+     * Activate shrinking zone
+     */
+    public void activateZone(Position center, float initialRadius, long durationMs) {
+        this.zoneActive      = true;
+        this.zoneCenter      = center;
+        this.zoneRadius      = initialRadius;
+        this.zoneDurationMs  = durationMs;
+        this.zoneStartTimeMs = System.currentTimeMillis();
+        this.zoneShrinkRate  = initialRadius / (durationMs / 1000f);
     }
 
     @Override
@@ -106,6 +146,7 @@ public class DefaultGameLogic implements GameLogic {
         rifleReloading.remove(playerId);
         playerWeapon.remove(playerId);
         playerBrawler.remove(playerId);
+        playerNames.remove(playerId);
 
         // Auch alle zugehörigen Projektile löschen
         projectiles.values().removeIf(p -> p.getPlayerId().equals(playerId));
@@ -133,6 +174,7 @@ public class DefaultGameLogic implements GameLogic {
 
             p.setPosition(new Position(x, y, angle));
 
+            // 🟡 Sichtbarkeit setzen anhand Busch
             Position tilePos = new Position(tileX, tileY);
             if (gameMap.isBushTile(tilePos)) {
                 p.setVisible(false);
@@ -140,10 +182,7 @@ public class DefaultGameLogic implements GameLogic {
                 p.setVisible(true);
             }
         }
-
-
     }
-
 
 
     @Override
@@ -157,6 +196,8 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public void applyEnvironmentalEffects() {
         long now = System.currentTimeMillis();
+        float deltaSec = (now - lastFrameTimeMs) / 1000f;
+        lastFrameTimeMs = now;
 
         for (Player p : players.values()) {
             if (p.getCurrentHealth() <= 0) continue;
@@ -192,6 +233,77 @@ public class DefaultGameLogic implements GameLogic {
                 }
             } else {
                 p.setLastHealTime(0);
+            }
+        }
+
+        // zone shrink & damage outside
+        if (zoneActive) {
+            zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
+            for (Player p : players.values()) {
+                if (p.getCurrentHealth() <= 0) continue;
+                float dx = p.getPosition().getX() - zoneCenter.getX();
+                float dy = p.getPosition().getY() - zoneCenter.getY();
+                if (Math.hypot(dx, dy) > zoneRadius) {
+                    int dmg = (int)Math.ceil(0.05f * deltaSec);
+                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - dmg));
+                }
+            }
+        }
+
+        // ── NPC AI: chase & melee ───────────────────────────────
+        for (NPC npc : npcs) {
+            // 1) find nearest alive player
+            Player target = null;
+            float minDist = Float.MAX_VALUE;
+            for (Player p : players.values()) {
+                if (p.getCurrentHealth() <= 0) continue;
+                float dx = p.getPosition().getX() - npc.getPosition().getX();
+                float dy = p.getPosition().getY() - npc.getPosition().getY();
+                float d  = (float)Math.hypot(dx, dy);
+                if (d < minDist) {
+                    minDist = d;
+                    target = p;
+                }
+            }
+            if (target == null) continue;
+
+            // 2) compute facing angle once
+            float dx = target.getPosition().getX() - npc.getPosition().getX();
+            float dy = target.getPosition().getY() - npc.getPosition().getY();
+            float angle = (float)Math.atan2(dy, dx);
+
+            // 3) move toward if outside attack radius
+            if (minDist > npc.getAttackRadius()) {
+                float len = (float)Math.hypot(dx, dy);
+                if (len > 0) {
+                    float nx = dx / len, ny = dy / len;
+                    float newX = npc.getPosition().getX() + nx * npc.getSpeed() * deltaSec;
+                    float newY = npc.getPosition().getY() + ny * npc.getSpeed() * deltaSec;
+                    int tx = (int)(newX / gameMap.getTileWidth());
+                    int ty = (int)(newY / gameMap.getTileHeight());
+                    if (!gameMap.isWallAt(tx, ty)) {
+                        npc.setPosition(new Position(newX, newY, angle));
+                    } else {
+                        // can't walk through wall, but still update facing
+                        npc.setPosition(new Position(npc.getPosition().getX(),
+                                npc.getPosition().getY(),
+                                angle));
+                    }
+                }
+            } else {
+                // inside melee range: just update facing
+                npc.setPosition(new Position(npc.getPosition().getX(),
+                        npc.getPosition().getY(),
+                        angle));
+            }
+
+            // 4) melee attack if in range & cooldown passed
+            if (minDist <= npc.getAttackRadius()
+                    && now - npc.getLastAttackTime() >= npc.getAttackCooldownMs()) {
+                int newHp = Math.max(0, target.getCurrentHealth() - npc.getDamage());
+                target.setCurrentHealth(newHp);
+                if (newHp == 0) target.setVisible(false);
+                npc.setLastAttackTime(now);
             }
         }
     }
@@ -320,7 +432,7 @@ public class DefaultGameLogic implements GameLogic {
                 p.getPosition().setY(p.getPosition().getY()
                         + p.getDirection().getY() * p.getSpeed() * delta);
                 p.setTravelled(p.getTravelled()
-                        + (float) Math.hypot(
+                        + (float)Math.hypot(
                         p.getDirection().getX() * p.getSpeed() * delta,
                         p.getDirection().getY() * p.getSpeed() * delta
                 ));
@@ -332,8 +444,8 @@ public class DefaultGameLogic implements GameLogic {
                     float newX = p.getPosition().getX() + dx;
                     float newY = p.getPosition().getY() + dy;
 
-                    int tileX = (int) (newX / gameMap.getTileWidth());
-                    int tileY = (int) (newY / gameMap.getTileHeight());
+                    int tileX = (int)(newX / gameMap.getTileWidth());
+                    int tileY = (int)(newY / gameMap.getTileHeight());
 
                     // Wenn neue Position NICHT auf Wand ist, normal bewegen
                     if (!gameMap.isWallAt(tileX, tileY)) {
@@ -347,11 +459,11 @@ public class DefaultGameLogic implements GameLogic {
                         p.getPosition().setY(newY);
                     }
 
-                    p.setTravelled(p.getTravelled() + (float) Math.hypot(dx, dy));
+                    p.setTravelled(p.getTravelled() + (float)Math.hypot(dx, dy));
                 } else {
                     if (p.getArmTime() == 0L) {
-                        int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
-                        int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
+                        int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
+                        int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
 
                         // Wenn Mine über Wand ist → nicht scharf machen → leicht weiterbewegen
                         if (gameMap.isWallAt(tx, ty)) {
@@ -368,47 +480,18 @@ public class DefaultGameLogic implements GameLogic {
                 }
 
 
+
             }
 
             // --- Wand-Kollision ---
-            int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
-            int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
+            int tx = (int)(p.getPosition().getX() / gameMap.getTileWidth());
+            int ty = (int)(p.getPosition().getY() / gameMap.getTileHeight());
             if (p.getProjectileType() != ProjectileType.MINE) {
-                if (gameMap.isWallAt(tx, ty)) {
-                    it.remove();
-                    continue;
-                }
+                  if (gameMap.isWallAt(tx, ty)) {
+                      it.remove();
+                      continue;
+                  }
             }
-
-            int tileX = (int)(p.getPosition().getX() / gameMap.getTileWidth());
-            int tileY = (int)(p.getPosition().getY() / gameMap.getTileHeight());
-            String key = tileX + "," + tileY;
-
-            Crate crate = crates.get(key);
-            if (crate != null) {
-                crate.setWasHit(true);
-                crate.setCurrentHealth(Math.max(0, crate.getCurrentHealth() - p.getDamage()));
-                it.remove();
-
-                System.out.println("💥 Kiste getroffen bei Tile: " + key);
-
-                if (crate.getCurrentHealth() <= 0) {
-                    crates.remove(key);
-                    System.out.println("🧨 Kiste zerstört");
-
-                    // 💰 Coins vergeben
-                    String shooterId = p.getPlayerId();
-                    int old = playerCoins.getOrDefault(shooterId, 0);
-                    playerCoins.put(shooterId, old + 10);
-                    System.out.println("💰 " + shooterId + " bekommt 10 Coins → gesamt: " + (old + 10));
-                }
-
-
-                continue;
-            }
-
-
-
 
             // --- Spieler-Kollision ---
             for (Player target : players.values()) {
@@ -427,7 +510,6 @@ public class DefaultGameLogic implements GameLogic {
                     break;
                 }
             }
-
         }
 
         // --- Lifetime & Range Cleanup (non-mines) ---
@@ -481,8 +563,7 @@ public class DefaultGameLogic implements GameLogic {
                     ammo,
                     wep,
                     playerBrawler.getOrDefault(p.getId(), "sniper"),
-                    playerNames.getOrDefault(p.getId(), "Player"),
-                    playerCoins.getOrDefault(pid, 0)
+                    playerNames.getOrDefault(p.getId(), "Player")
             );
         }).collect(Collectors.toList());
 
@@ -502,8 +583,16 @@ public class DefaultGameLogic implements GameLogic {
         msg.setCrates(crateStates);
 
 
+        if (zoneActive) {
+            long elapsed = System.currentTimeMillis() - zoneStartTimeMs;
+            long left = Math.max(0, zoneDurationMs - elapsed);
+            msg.setZoneState(new ZoneState(zoneCenter, zoneRadius, left));
+        }
+        msg.setNpcs(new ArrayList<>(npcs));
         return msg;
     }
+
+
 
     @Override
     public List<Projectile> getProjectiles() {
@@ -514,9 +603,6 @@ public class DefaultGameLogic implements GameLogic {
     public Position getPlayerPosition(String playerId) {
         return players.get(playerId).getPosition();
     }
-
-
-
 
     // Hilfsfunktion
     private int getMaxAmmoForType(ProjectileType type) {

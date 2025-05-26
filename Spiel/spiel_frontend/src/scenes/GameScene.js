@@ -4,16 +4,27 @@ export default class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
 
-        this.isFiring          = false;
-        this.fireEvent         = null;
+        this.isFiring         = false;
+        this.fireEvent        = null;
+        this.victoryText      = null;
+        this.hasWon           = false;
+        this.exitButtonGame   = null;
+        this.defeatShown      = false;
+
+        // zone overlay
+        this.zoneState        = null;
+        this.graphicsZone      = null;
+        this.textZoneTimer     = null;
     }
 
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
         this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
-        const regWeapon = this.registry.get('weapon');
-        this.selectedWeapon    = data.chosenWeapon || regWeapon || 'RIFLE_BULLET';
+        this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 'RIFLE_BULLET';
+        this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
+        this.playerName        = this.registry.get('playerName') || 'Player';
+
         this.latestState       = null;
         this.playerSprites     = {};
         this.crateSprites      = {};
@@ -21,20 +32,23 @@ export default class GameScene extends Phaser.Scene {
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
-        this.maxCrateHealth    = 100; // oder was im Backend verwendet wird
-        this.coinText = null;
-        this.lastCoinCount = 0;
-        this.coinFloatingTexts = this.add.group();
 
     }
 
     preload() {
         // Player & projectiles
-        this.load.image('player', '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
+
+        // brawlers
+        this.load.image('brawler_sniper', '/assets/PNG/Hitman_1/hitman1_gun.png');
+        this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
+        this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
+        this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
+        this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -49,7 +63,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
         this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
-
     }
 
     create() {
@@ -57,6 +70,8 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#222222');
 
         this.tileSize = 64;
+=========
+>>>>>>>>> Temporary merge branch 2
 
         // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
@@ -79,30 +94,35 @@ export default class GameScene extends Phaser.Scene {
         this.physics.world.setBounds(0, 0, width, height);
         this.cameras.main.setBounds(0, 0, width, height);
 
-        // Zoom auf ganze Karte
-        const fitZoom = Math.min(this.cameras.main.width / width, this.cameras.main.height / height);
-        this.cameras.main.setZoom(fitZoom);
-        this.cameras.main.centerOn(width/2, height/2);
+        // zoom to fit
+        const fitZoom = Math.min(
+            this.cameras.main.width  / width,
+            this.cameras.main.height / height
+        );
+        this.cameras.main.setZoom(fitZoom)
+            .centerOn(width/2, height/2);
+        this.input.topOnly = true;
 
-        // UI: Ammo-Bar
+        // ─── zone overlay setup ──────────────────────────────
+        // AFTER: no scrollFactor → it's in world‐space
+        this.graphicsZone = this.add.graphics();
+
+        this.textZoneTimer   = this.add.text(10, 50, '', {
+            fontFamily: 'Arial', fontSize: '24px',
+            color: '#ffffff', stroke: '#000000',
+            strokeThickness: 3
+        }).setScrollFactor(0);
+
+        // ammo UI
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
 
         // UI: Spielerzahl
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
-            fontFamily: 'Arial', fontSize: '24px', fontStyle: 'bold', color: '#ffffff', stroke: '#000000', strokeThickness: 3
+            fontFamily: 'Arial', fontSize: '24px',
+            fontStyle: 'bold', color: '#ffffff',
+            stroke: '#000000', strokeThickness: 3
         }).setScrollFactor(0);
-
-        // UI: Exit-Button
-        this.exitButton = this.add.text(16, 48, 'Exit', { fontSize: '18px', fill: '#ff0000' })
-            .setScrollFactor(0)
-            .setInteractive()
-            .setVisible(false)
-            .on('pointerdown', () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-                this.socket.disconnect();
-                this.scene.start('SplashScene');
-            });
 
 
         this.coinText = this.add.text(this.cameras.main.width - 160, 16, '0', {
@@ -151,10 +171,11 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerout',  ()      => this.stopFiring());
 
 
-        this.crateSprites = {};
         // Socket-Update
         this.socket.on('stateUpdate', state => {
+            this.npcs = state.npcs || [];
             this.latestState = state;
+            this.zoneState   = state.zoneState || null;
 
             // 🌿 Sichtbarkeits-Testausgabe
             console.log("📦 Spieler-Sichtbarkeit:");
@@ -167,6 +188,7 @@ export default class GameScene extends Phaser.Scene {
             playerId: this.playerId,
             projectileType: this.selectedWeapon
         });
+
     }
 
     startFiring(pointer) {
@@ -222,12 +244,47 @@ export default class GameScene extends Phaser.Scene {
             ease: 'power1',
             onComplete: () => text.destroy()
         });
+    getBrawlerSpriteName(brawlerId) {
+        switch (brawlerId) {
+            case 'tank':   return 'brawler_tank';
+            case 'mage':   return 'brawler_mage';
+            case 'healer': return 'brawler_healer';
+            default:       return 'brawler_sniper';
+        }
     }
 
     update() {
         if (!this.latestState) return;
 
-        // Explosion für verschwundene Mines
+        // ─── world‐space overlay ─────────────────────────────
+        // ─── world‐space safe‐zone outline ───────────────────────────
+        const cam = this.cameras.main;
+        this.graphicsZone.clear();
+
+        if (this.zoneState) {
+            const { center, radius, timeMsRemaining } = this.zoneState;
+
+            // Draw a green circle outline at the true world coords
+            this.graphicsZone
+                .lineStyle(4, 0x00aa00)          // 4px thick, green
+                .strokeCircle(center.x, center.y, radius);
+
+            // Update the timer text (screen‐locked)
+            const secs = Math.ceil(timeMsRemaining / 1000);
+            const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
+            const ss   = String(secs % 60).padStart(2, '0');
+            this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
+        } else {
+            this.textZoneTimer.setText('');
+        }
+
+// ───────────────────────────────────────────────────────
+
+
+        // if game won/lost, stop here
+        if (this.hasWon || this.defeatShown) return;
+
+        // ─── handle mines/explosions ────────────────────────
         const currIds = new Set(this.latestState.projectiles
             .filter(p => p.projectileType === 'MINE')
             .map(p => p.id));
@@ -252,15 +309,133 @@ export default class GameScene extends Phaser.Scene {
 
         // Bewegung senden
         if (me) {
-            const dirX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-            const dirY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
-            const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
-            const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+            const dirX = (this.keys.left.isDown ? -1 : 0)
+                + (this.keys.right.isDown ? 1 : 0);
+            const dirY = (this.keys.up.isDown    ? -1 : 0)
+                + (this.keys.down.isDown  ? 1 : 0);
+            const world = cam.getWorldPoint(
+                this.input.activePointer.x,
+                this.input.activePointer.y
+            );
+            const angle = Phaser.Math.Angle.Between(
+                me.position.x, me.position.y,
+                world.x, world.y
+            );
+            this.socket.emit('move', {
+                roomId:   this.roomId,
+                playerId: this.playerId,
+                dirX, dirY, angle
+            });
         }
+        // ── render NPCs ─────────────────────────────────────────
+        const aliveNpcIds = new Set();
 
-        // Spieler rendern & Health Bar
-        const connected = this.latestState.players.filter(p => p.currentHealth > 0).length;
+        this.npcs.forEach(npc => {
+            aliveNpcIds.add(npc.id);
+
+            // 1) Ensure we have three GameObjects for this NPC:
+            let spr = this.npcSprites[npc.id];
+            let bar = this.npcBars[npc.id];
+            let label = this.npcLabels[npc.id];
+
+            if (!spr) {
+                // a) main sprite
+                spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
+                    .setOrigin(0.5);
+                this.physics.add.collider(spr, this.obstacleLayer);
+
+                // b) health-bar graphic
+                bar = this.add.graphics().setDepth(11);
+
+                // c) name label
+                label = this.add.text(0, 0, 'NPC', {
+                    fontSize: '16px', fontFamily: 'Arial',
+                    color: '#ffffff', stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5).setDepth(12);
+
+                this.npcSprites[npc.id] = spr;
+                this.npcBars[npc.id]    = bar;
+                this.npcLabels[npc.id]  = label;
+            }
+
+            // 2) Update position & rotation
+            spr.setPosition(npc.position.x, npc.position.y)
+                .setRotation(npc.position.angle);
+
+            // 3) Redraw health bar above the sprite
+            const maxHp = 50; // or pull from npc.maxHealth if you have it
+            const pct   = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
+            const bw    = 40, bh = 6;
+            bar.clear()
+                .fillStyle(0x000000)
+                .fillRect(
+                    npc.position.x - bw/2 - 1,
+                    npc.position.y - spr.displayHeight/2 - bh - 8,
+                    bw + 2, bh + 2
+                )
+                .fillStyle(0x00ff00)
+                .fillRect(
+                    npc.position.x - bw/2,
+                    npc.position.y - spr.displayHeight/2 - bh - 7,
+                    bw * pct, bh
+                );
+
+            // 4) Position the “NPC” label just above the bar
+            label.setPosition(
+                npc.position.x,
+                npc.position.y - spr.displayHeight/2 - bh - 16
+            );
+
+            // 5) Hide if dead
+            const visible = npc.currentHealth > 0;
+            spr.setVisible(visible);
+            bar.setVisible(visible);
+            label.setVisible(visible);
+        });
+
+// 6) Cleanup any despawned NPCs
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
+
+// Cleanup despawned NPCs
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
+
+        // cleanup
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
+
+
+        // ─── render players & health ───────────────────────
+        const connected = this.latestState.players
+            .filter(p => p.currentHealth > 0).length;
         const total = this.latestState.players.length;
         this.playerCountText.setText(`${connected}/${total} players`);
 
@@ -268,9 +443,24 @@ export default class GameScene extends Phaser.Scene {
         this.latestState.players.forEach(p => {
             const isMe = p.playerId === this.playerId;
             let spr = this.playerSprites[p.playerId];
+            let spr   = this.playerSprites[p.playerId];
+
+            // spawn sprite if needed...
             if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
                 spr = this.physics.add.sprite(p.position.x, p.position.y, 'player').setOrigin(0.5);
+                const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
+                spr = this.physics.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5);
                 spr.healthBar = this.add.graphics();
+
+                // name label
+                spr.label = this.add.text(0,0,p.playerName||'Player', {
+                    fontSize: '20px', fontFamily:'Arial',
+                    color: isMe?'#ffffff':'#ff0000',
+                    stroke: '#000000', strokeThickness: 4,
+                    fontStyle:'bold'
+                }).setOrigin(0.5).setDepth(10);
+
                 this.playerSprites[p.playerId] = spr;
 
                 spr.outline = this.add.sprite(p.position.x, p.position.y, 'player')
@@ -294,9 +484,29 @@ export default class GameScene extends Phaser.Scene {
                     .setDepth(11)
                     .setVisible(false);
 
-
+                // outlines
+                spr.outline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
+                    .setDepth(10).setVisible(false);
+                spr.healOutline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
+                spr.poisonOutline = this.add.sprite(p.position.x,p.position.y,key)
+                    .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
 
                 if (isMe) {
+=========
+                if (p.playerId === this.playerId) {
+                    spr.label = this.add.text(0, 0, this.playerName, {
+                        fontSize: '20px',
+                        fontFamily: 'Arial',
+                        color: '#ffffff',
+                        stroke: '#000000',
+                        strokeThickness: 4,
+                        fontStyle: "bold"
+                    }).setOrigin(0.5).setDepth(10);
+>>>>>>>>> Temporary merge branch 2
                     cam.startFollow(spr);
                     cam.setZoom(this.initialZoom);
                 }
@@ -338,24 +548,30 @@ export default class GameScene extends Phaser.Scene {
                     });
 
 
+                    // draw health bar
+                    const pct = Phaser.Math.Clamp(p.currentHealth/this.maxHealth,0,1);
                     spr.healthBar.clear();
-
-                    const shouldShowHealthBar = p.visible || isMe;
-
-                    const barW = 40, barH = 6;
-                    const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
-                    if (shouldShowHealthBar) {
-                        spr.healthBar.clear()
-                            .fillStyle(0x000000)
-                            .fillRect(p.position.x - barW / 2 - 1, p.position.y - spr.height / 2 - barH - 9, barW + 2, barH + 2)
+                    if (p.visible || isMe) {
+                        const bw=40,bh=6;
+                        spr.healthBar.fillStyle(0x000000)
+                            .fillRect(p.position.x-bw/2-1,
+                                p.position.y-spr.height/2-bh-9,
+                                bw+2, bh+2)
                             .fillStyle(0x00ff00)
-                            .fillRect(p.position.x - barW / 2, p.position.y - spr.height / 2 - barH - 8, barW * pct, barH);
+                            .fillRect(p.position.x-bw/2,
+                                p.position.y-spr.height/2-bh-8,
+                                bw*pct, bh);
                     }
                 }
+
+                if (spr.label) {
+                    spr.label.setPosition(p.position.x, p.position.y - 50);
+                    spr.label.setVisible(p.visible);
+                }
             }
+
+
         });
-        // Exit anzeigen, wenn tot
-        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
 
         // Projektile rendern
         const alive = new Set();
@@ -401,10 +617,21 @@ export default class GameScene extends Phaser.Scene {
             if (newCount > this.lastCoinCount) {
                 const gain = newCount - this.lastCoinCount;
                 this.showFloatingCoinGain(gain, me.position.x, me.position.y);
+        // ─── victory / defeat ─────────────────────────────
+        if (!this.hasWon && this.latestState.players.filter(p=>p.currentHealth>0).length===1) {
+            const meAlive = this.latestState.players.find(p=>p.playerId===this.playerId);
+            if (meAlive && meAlive.currentHealth>0) {
+                this.showVictoryScreen();
+                this.hasWon = true;
             }
             this.lastCoinCount = newCount;
             this.coinText.setText(`${newCount}`);
         }
+        if (!this.hasWon && me && me.currentHealth<=0 && !this.defeatShown) {
+            this.showDefeatScreen();
+            this.defeatShown = true;
+        }
+    }
 
         // ========== KISTEN VERARBEITEN ==========
         if (this.latestState.crates) {
@@ -459,5 +686,61 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
+    createButton(x, y, text, onClick) {
+        const btn = this.add.text(x, y, text, {
+            fontSize: '32px', fontFamily: 'Arial',
+            color: '#ffffff', backgroundColor: '#333333',
+            padding: { x: 20, y: 10 }, align: 'center'
+        })
+            .setOrigin(0.5)
+            .setInteractive()
+            .setScrollFactor(0)
+            .on('pointerover', () => btn.setStyle({ backgroundColor: '#555555' }))
+            .on('pointerout',  () => btn.setStyle({ backgroundColor: '#333333' }))
+            .on('pointerdown', onClick);
+
+        return btn;
+    }
+
+    showVictoryScreen() {
+        const { width, height } = this.scale;
+        this.victoryText = this.add.text(
+            width/2, height/2-80,'YOU WON!',{
+                fontSize:'52px',fontFamily:'Arial',
+                color:'#00ff00',stroke:'#000000',
+                strokeThickness:6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(
+            width/2, height/2+70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
+    }
+
+    showDefeatScreen() {
+        const { width, height } = this.scale;
+        this.victoryText = this.add.text(
+            width/2, height/2-80,'YOU DIED',{
+                fontSize:'52px',fontFamily:'Arial',
+                color:'#ff0000',stroke:'#000000',
+                strokeThickness:6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(
+            width/2, height/2+70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
     }
 }

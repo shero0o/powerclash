@@ -1,12 +1,12 @@
 // GameMap.java
 package at.fhv.spiel_backend.server.map;
 
-import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.model.Position;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 public class GameMap {
     private final String id;
@@ -145,4 +145,22 @@ public class GameMap {
         return cratePositions.toArray(new Position[0]);
     }
 
+    public int getTileCountX() {
+        return width;
+    }
+
+    /** Number of tiles vertically */
+    public int getTileCountY() {
+        return height;
+    }
+
+    /** Total width in pixels */
+    public int getWidthInPixels() {
+        return width * tileWidth;
+    }
+
+    /** Total height in pixels */
+    public int getHeightInPixels() {
+        return height * tileHeight;
+    }
 }
