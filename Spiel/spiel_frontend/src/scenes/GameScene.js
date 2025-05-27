@@ -32,7 +32,10 @@ export default class GameScene extends Phaser.Scene {
         this.initialZoom       = 0.7;
         this.maxHealth         = 100;
         this.playerCountText   = null;
-
+        this.npcSprites = {};
+        this.npcBars    = {};
+        this.npcLabels  = {};
+        this.lastCoinCount = 0;
     }
 
     preload() {
@@ -70,8 +73,6 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setBackgroundColor('#222222');
 
         this.tileSize = 64;
-=========
->>>>>>>>> Temporary merge branch 2
 
         // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
@@ -124,6 +125,7 @@ export default class GameScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 3
         }).setScrollFactor(0);
 
+        this.coinFloatingTexts = this.add.group();
 
         this.coinText = this.add.text(this.cameras.main.width - 160, 16, '0', {
             fontFamily: 'Arial',
@@ -164,7 +166,16 @@ export default class GameScene extends Phaser.Scene {
 
 
         // Eingabe: WASD
-        this.keys = this.input.keyboard.addKeys({ up: 'W', down: 'S', left: 'A', right: 'D' });
+        this.keys = this.input.keyboard.addKeys({
+            up: Phaser.Input.Keyboard.KeyCodes.W,
+            down: Phaser.Input.Keyboard.KeyCodes.S,
+            left: Phaser.Input.Keyboard.KeyCodes.A,
+            right: Phaser.Input.Keyboard.KeyCodes.D
+        });
+
+        console.log("KEY OBJECTS", this.keys);
+
+
         // Eingabe: Schuss
         this.input.on('pointerdown', pointer => this.startFiring(pointer));
         this.input.on('pointerup',   ()      => this.stopFiring());
@@ -226,6 +237,15 @@ export default class GameScene extends Phaser.Scene {
         this.isFiring = false;
     }
 
+    getBrawlerSpriteName(brawlerId) {
+        switch (brawlerId) {
+            case 'tank':   return 'brawler_tank';
+            case 'mage':   return 'brawler_mage';
+            case 'healer': return 'brawler_healer';
+            default:       return 'brawler_sniper';
+        }
+    }
+
     showFloatingCoinGain(amount, x, y) {
         const text = this.add.text(x, y - 40, `+${amount}`, {
             font: 'bold 24px Arial',
@@ -244,503 +264,479 @@ export default class GameScene extends Phaser.Scene {
             ease: 'power1',
             onComplete: () => text.destroy()
         });
-    getBrawlerSpriteName(brawlerId) {
-        switch (brawlerId) {
-            case 'tank':   return 'brawler_tank';
-            case 'mage':   return 'brawler_mage';
-            case 'healer': return 'brawler_healer';
-            default:       return 'brawler_sniper';
-        }
     }
 
-    update() {
-        if (!this.latestState) return;
 
-        // ─── world‐space overlay ─────────────────────────────
-        // ─── world‐space safe‐zone outline ───────────────────────────
-        const cam = this.cameras.main;
-        this.graphicsZone.clear();
+        update() {
+            if (!this.latestState) return;
 
-        if (this.zoneState) {
-            const { center, radius, timeMsRemaining } = this.zoneState;
+            const cam = this.cameras.main;
+            this.graphicsZone.clear();
 
-            // Draw a green circle outline at the true world coords
-            this.graphicsZone
-                .lineStyle(4, 0x00aa00)          // 4px thick, green
-                .strokeCircle(center.x, center.y, radius);
+            if (this.zoneState) {
+                const {center, radius, timeMsRemaining} = this.zoneState;
 
-            // Update the timer text (screen‐locked)
-            const secs = Math.ceil(timeMsRemaining / 1000);
-            const mm   = String(Math.floor(secs / 60)).padStart(2, '0');
-            const ss   = String(secs % 60).padStart(2, '0');
-            this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
-        } else {
-            this.textZoneTimer.setText('');
-        }
+                // Draw a green circle outline at the true world coords
+                this.graphicsZone
+                    .lineStyle(4, 0x00aa00)          // 4px thick, green
+                    .strokeCircle(center.x, center.y, radius);
 
-// ───────────────────────────────────────────────────────
+                // Update the timer text (screen‐locked)
+                const secs = Math.ceil(timeMsRemaining / 1000);
+                const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+                const ss = String(secs % 60).padStart(2, '0');
+                this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
+            } else {
+                this.textZoneTimer.setText('');
+            }
 
 
-        // if game won/lost, stop here
-        if (this.hasWon || this.defeatShown) return;
+            // if game won/lost, stop here
+            if (this.hasWon || this.defeatShown) return;
 
-        // ─── handle mines/explosions ────────────────────────
-        const currIds = new Set(this.latestState.projectiles
-            .filter(p => p.projectileType === 'MINE')
-            .map(p => p.id));
-        this.prevProjectileIds.forEach(id => {
-            if (!currIds.has(id)) {
-                const pos = this.previousMinePositions[id];
-                if (pos) {
-                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
-                    expl.play('explode');
+            // ─── handle mines/explosions ────────────────────────
+            const currIds = new Set(this.latestState.projectiles
+                .filter(p => p.projectileType === 'MINE')
+                .map(p => p.id));
+            this.prevProjectileIds.forEach(id => {
+                if (!currIds.has(id)) {
+                    const pos = this.previousMinePositions[id];
+                    if (pos) {
+                        const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
+                        expl.play('explode');
+                    }
                 }
-            }
-        });
-        this.previousMinePositions = {};
-        this.latestState.projectiles.forEach(p => {
-            if (p.projectileType === 'MINE') {
-                this.previousMinePositions[p.id] = { x: p.position.x, y: p.position.y };
-            }
-        });
-        this.prevProjectileIds = currIds;
-
-        const me = this.latestState.players.find(p => p.playerId === this.playerId);
-
-        // Bewegung senden
-        if (me) {
-            const dirX = (this.keys.left.isDown ? -1 : 0)
-                + (this.keys.right.isDown ? 1 : 0);
-            const dirY = (this.keys.up.isDown    ? -1 : 0)
-                + (this.keys.down.isDown  ? 1 : 0);
-            const world = cam.getWorldPoint(
-                this.input.activePointer.x,
-                this.input.activePointer.y
-            );
-            const angle = Phaser.Math.Angle.Between(
-                me.position.x, me.position.y,
-                world.x, world.y
-            );
-            this.socket.emit('move', {
-                roomId:   this.roomId,
-                playerId: this.playerId,
-                dirX, dirY, angle
             });
-        }
-        // ── render NPCs ─────────────────────────────────────────
-        const aliveNpcIds = new Set();
+            this.previousMinePositions = {};
+            this.latestState.projectiles.forEach(p => {
+                if (p.projectileType === 'MINE') {
+                    this.previousMinePositions[p.id] = {x: p.position.x, y: p.position.y};
+                }
+            });
+            this.prevProjectileIds = currIds;
 
-        this.npcs.forEach(npc => {
-            aliveNpcIds.add(npc.id);
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
 
-            // 1) Ensure we have three GameObjects for this NPC:
-            let spr = this.npcSprites[npc.id];
-            let bar = this.npcBars[npc.id];
-            let label = this.npcLabels[npc.id];
-
-            if (!spr) {
-                // a) main sprite
-                spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
-                    .setOrigin(0.5);
-                this.physics.add.collider(spr, this.obstacleLayer);
-
-                // b) health-bar graphic
-                bar = this.add.graphics().setDepth(11);
-
-                // c) name label
-                label = this.add.text(0, 0, 'NPC', {
-                    fontSize: '16px', fontFamily: 'Arial',
-                    color: '#ffffff', stroke: '#000000',
-                    strokeThickness: 2
-                }).setOrigin(0.5).setDepth(12);
-
-                this.npcSprites[npc.id] = spr;
-                this.npcBars[npc.id]    = bar;
-                this.npcLabels[npc.id]  = label;
+            // Bewegung senden
+            if (me) {
+                const dirX = (this.keys.left.isDown ? -1 : 0)
+                    + (this.keys.right.isDown ? 1 : 0);
+                const dirY = (this.keys.up.isDown ? -1 : 0)
+                    + (this.keys.down.isDown ? 1 : 0);
+                const world = cam.getWorldPoint(
+                    this.input.activePointer.x,
+                    this.input.activePointer.y
+                );
+                const angle = Phaser.Math.Angle.Between(
+                    me.position.x, me.position.y,
+                    world.x, world.y
+                );
+                this.socket.emit('move', {
+                    roomId: this.roomId,
+                    playerId: this.playerId,
+                    dirX, dirY, angle
+                });
             }
 
-            // 2) Update position & rotation
-            spr.setPosition(npc.position.x, npc.position.y)
-                .setRotation(npc.position.angle);
+            // ── render NPCs ─────────────────────────────────────────
+            const aliveNpcIds = new Set();
 
-            // 3) Redraw health bar above the sprite
-            const maxHp = 50; // or pull from npc.maxHealth if you have it
-            const pct   = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
-            const bw    = 40, bh = 6;
-            bar.clear()
-                .fillStyle(0x000000)
-                .fillRect(
-                    npc.position.x - bw/2 - 1,
-                    npc.position.y - spr.displayHeight/2 - bh - 8,
-                    bw + 2, bh + 2
-                )
-                .fillStyle(0x00ff00)
-                .fillRect(
-                    npc.position.x - bw/2,
-                    npc.position.y - spr.displayHeight/2 - bh - 7,
-                    bw * pct, bh
+            this.npcs.forEach(npc => {
+                aliveNpcIds.add(npc.id);
+
+                // 1) Ensure we have three GameObjects for this NPC:
+                let spr = this.npcSprites[npc.id];
+                let bar = this.npcBars[npc.id];
+                let label = this.npcLabels[npc.id];
+
+                if (!spr) {
+                    // a) main sprite
+                    spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
+                        .setOrigin(0.5);
+                    this.physics.add.collider(spr, this.obstacleLayer);
+
+                    // b) health-bar graphic
+                    bar = this.add.graphics().setDepth(11);
+
+                    // c) name label
+                    label = this.add.text(0, 0, 'NPC', {
+                        fontSize: '16px', fontFamily: 'Arial',
+                        color: '#ffffff', stroke: '#000000',
+                        strokeThickness: 2
+                    }).setOrigin(0.5).setDepth(12);
+
+                    this.npcSprites[npc.id] = spr;
+                    this.npcBars[npc.id] = bar;
+                    this.npcLabels[npc.id] = label;
+                }
+
+                // 2) Update position & rotation
+                spr.setPosition(npc.position.x, npc.position.y)
+                    .setRotation(npc.position.angle);
+
+                // 3) Redraw health bar above the sprite
+                const maxHp = 50; // or pull from npc.maxHealth if you have it
+                const pct = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
+                const bw = 40, bh = 6;
+                bar.clear()
+                    .fillStyle(0x000000)
+                    .fillRect(
+                        npc.position.x - bw / 2 - 1,
+                        npc.position.y - spr.displayHeight / 2 - bh - 8,
+                        bw + 2, bh + 2
+                    )
+                    .fillStyle(0x00ff00)
+                    .fillRect(
+                        npc.position.x - bw / 2,
+                        npc.position.y - spr.displayHeight / 2 - bh - 7,
+                        bw * pct, bh
+                    );
+
+                // 4) Position the “NPC” label just above the bar
+                label.setPosition(
+                    npc.position.x,
+                    npc.position.y - spr.displayHeight / 2 - bh - 16
                 );
 
-            // 4) Position the “NPC” label just above the bar
-            label.setPosition(
-                npc.position.x,
-                npc.position.y - spr.displayHeight/2 - bh - 16
-            );
-
-            // 5) Hide if dead
-            const visible = npc.currentHealth > 0;
-            spr.setVisible(visible);
-            bar.setVisible(visible);
-            label.setVisible(visible);
-        });
+                // 5) Hide if dead
+                const visible = npc.currentHealth > 0;
+                spr.setVisible(visible);
+                bar.setVisible(visible);
+                label.setVisible(visible);
+            });
 
 // 6) Cleanup any despawned NPCs
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
+            Object.keys(this.npcSprites).forEach(id => {
+                if (!aliveNpcIds.has(id)) {
+                    this.npcSprites[id].destroy();
+                    this.npcBars[id].destroy();
+                    this.npcLabels[id].destroy();
+                    delete this.npcSprites[id];
+                    delete this.npcBars[id];
+                    delete this.npcLabels[id];
+                }
+            });
 
 
 // Cleanup despawned NPCs
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
+            Object.keys(this.npcSprites).forEach(id => {
+                if (!aliveNpcIds.has(id)) {
+                    this.npcSprites[id].destroy();
+                    this.npcBars[id].destroy();
+                    this.npcLabels[id].destroy();
+                    delete this.npcSprites[id];
+                    delete this.npcBars[id];
+                    delete this.npcLabels[id];
+                }
+            });
 
 
-        // cleanup
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
+            // cleanup
+            Object.keys(this.npcSprites).forEach(id => {
+                if (!aliveNpcIds.has(id)) {
+                    this.npcSprites[id].destroy();
+                    this.npcBars[id].destroy();
+                    this.npcLabels[id].destroy();
+                    delete this.npcSprites[id];
+                    delete this.npcBars[id];
+                    delete this.npcLabels[id];
+                }
+            });
 
 
-        // ─── render players & health ───────────────────────
-        const connected = this.latestState.players
-            .filter(p => p.currentHealth > 0).length;
-        const total = this.latestState.players.length;
-        this.playerCountText.setText(`${connected}/${total} players`);
+            // ─── render players & health ───────────────────────
+            const connected = this.latestState.players
+                .filter(p => p.currentHealth > 0).length;
+            const total = this.latestState.players.length;
+            this.playerCountText.setText(`${connected}/${total} players`);
 
-        const cam = this.cameras.main;
-        this.latestState.players.forEach(p => {
-            const isMe = p.playerId === this.playerId;
-            let spr = this.playerSprites[p.playerId];
-            let spr   = this.playerSprites[p.playerId];
+            this.latestState.players.forEach(p => {
+                const isMe = p.playerId === this.playerId;
+                let spr = this.playerSprites[p.playerId];
 
-            // spawn sprite if needed...
-            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
-                spr = this.physics.add.sprite(p.position.x, p.position.y, 'player').setOrigin(0.5);
-                const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
-                spr = this.physics.add.sprite(p.position.x, p.position.y, key)
-                    .setOrigin(0.5);
-                spr.healthBar = this.add.graphics();
+                // 🟢 Spawn: nur wenn noch kein Sprite vorhanden
+                if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
+                    const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
+                    spr = this.physics.add.sprite(p.position.x, p.position.y, key)
+                        .setOrigin(0.5);
 
-                // name label
-                spr.label = this.add.text(0,0,p.playerName||'Player', {
-                    fontSize: '20px', fontFamily:'Arial',
-                    color: isMe?'#ffffff':'#ff0000',
-                    stroke: '#000000', strokeThickness: 4,
-                    fontStyle:'bold'
-                }).setOrigin(0.5).setDepth(10);
+                    // 🟡 OUTLINE-SPRITES ERZEUGEN
+                    spr.outline = this.add.sprite(p.position.x, p.position.y, key)
+                        .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
+                        .setDepth(10).setVisible(false);
 
-                this.playerSprites[p.playerId] = spr;
+                    spr.healOutline = this.add.sprite(p.position.x, p.position.y, key)
+                        .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
+                        .setDepth(11).setVisible(false);
 
-                spr.outline = this.add.sprite(p.position.x, p.position.y, 'player')
-                    .setOrigin(0.5)
-                    .setTint(0x00ffff)     // zyanfarben
-                    .setAlpha(0.4)         // halbtransparent
-                    .setDepth(10)          // liegt über anderem Zeug
-                    .setVisible(false);    // zunächst nicht sichtbar
+                    spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, key)
+                        .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
+                        .setDepth(11).setVisible(false);
 
-                spr.healOutline = this.add.sprite(p.position.x, p.position.y, 'player')
-                    .setOrigin(0.5)
-                    .setTint(0x00ff00)
-                    .setAlpha(0.4)
-                    .setDepth(11)
-                    .setVisible(false);
 
-                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, 'player')
-                    .setOrigin(0.5)
-                    .setTint(0xff0000)
-                    .setAlpha(0.4)
-                    .setDepth(11)
-                    .setVisible(false);
-
-                // outlines
-                spr.outline = this.add.sprite(p.position.x,p.position.y,key)
-                    .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
-                    .setDepth(10).setVisible(false);
-                spr.healOutline = this.add.sprite(p.position.x,p.position.y,key)
-                    .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
-                    .setDepth(11).setVisible(false);
-                spr.poisonOutline = this.add.sprite(p.position.x,p.position.y,key)
-                    .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
-                    .setDepth(11).setVisible(false);
-
-                if (isMe) {
-=========
-                if (p.playerId === this.playerId) {
-                    spr.label = this.add.text(0, 0, this.playerName, {
-                        fontSize: '20px',
-                        fontFamily: 'Arial',
-                        color: '#ffffff',
-                        stroke: '#000000',
-                        strokeThickness: 4,
-                        fontStyle: "bold"
+                    spr.healthBar = this.add.graphics();
+                    spr.label = this.add.text(0, 0, p.playerName || 'Player', {
+                        fontSize: '20px', fontFamily: 'Arial',
+                        color: isMe ? '#ffffff' : '#ff0000',
+                        stroke: '#000000', strokeThickness: 4,
+                        fontStyle: 'bold'
                     }).setOrigin(0.5).setDepth(10);
->>>>>>>>> Temporary merge branch 2
-                    cam.startFollow(spr);
-                    cam.setZoom(this.initialZoom);
+
+                    this.playerSprites[p.playerId] = spr;
                 }
 
-                this.physics.add.collider(spr, this.obstacleLayer);
-            }
-            if (spr) {
-                if (p.currentHealth <= 0) {
-                    spr.healthBar.destroy();
-                    spr.outline.destroy();
-                    spr.healOutline?.destroy();
-                    spr.poisonOutline?.destroy();
-                    spr.destroy();
-                    delete this.playerSprites[p.playerId];
+                // 🟨 HIER: immer updaten, wenn Sprite existiert
+                if (spr) {
+                    if (p.currentHealth <= 0) {
+                        spr.healthBar?.destroy();
+                        spr.label?.destroy();
+                        spr.outline?.destroy();
+                        spr.healOutline?.destroy();
+                        spr.poisonOutline?.destroy();
+                        spr.destroy();
+                        delete this.playerSprites[p.playerId];
+                    } else {
+                        spr.setPosition(p.position.x, p.position.y);
+                        spr.setRotation(p.position.angle);
+                        spr.setVisible(p.visible);
+
+                        const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
+                        const bw = 40, bh = 6;
+                        spr.healthBar.clear();
+                        if (p.visible || isMe) {
+                            spr.healthBar.fillStyle(0x000000)
+                                .fillRect(p.position.x - bw / 2 - 1, p.position.y - spr.height / 2 - bh - 9, bw + 2, bh + 2)
+                                .fillStyle(0x00ff00)
+                                .fillRect(p.position.x - bw / 2, p.position.y - spr.height / 2 - bh - 8, bw * pct, bh);
+                        }
+
+                        if (spr.label) {
+                            spr.label.setPosition(p.position.x, p.position.y - 50);
+                            spr.label.setVisible(p.visible);
+                        }
+
+                        let gid = -1;
+                        if (isMe && this.map) {
+                            const tileX = Math.floor(p.position.x / this.tileSize);
+                            const tileY = Math.floor(p.position.y / this.tileSize);
+                            const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
+                            gid = tile?.index ?? -1;
+                        }
+
+                        const showOutline = isMe && !p.visible;
+                        const showHealOutline = isMe && [19, 20].includes(gid);
+                        const showPoisonOutline = isMe && gid === 186;
+
+                        spr.outline?.setVisible(showOutline);
+                        spr.healOutline?.setVisible(showHealOutline);
+                        spr.poisonOutline?.setVisible(showPoisonOutline);
+
+                        [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
+                            o?.setPosition(p.position.x, p.position.y);
+                            o?.setRotation(p.position.angle);
+                        });
+                    }
+                }
+            });
+
+
+            // Projektile rendern
+            const alive = new Set();
+            this.latestState.projectiles.forEach(p => {
+                const key = p.projectileType === 'SNIPER' ? 'sniper'
+                    : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
+                        : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
+                            : 'mine';
+                alive.add(p.id);
+                let spr = this.projectileSprites[p.id];
+                if (!spr) {
+                    spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
+
+
+                    if (p.projectileType === 'MINE') spr.setScale(0.3);
+                    this.projectileSprites[p.id] = spr;
                 } else {
                     spr.setPosition(p.position.x, p.position.y);
-                    spr.setRotation(p.position.angle);
-                    spr.setVisible(p.visible);
-
-                    let gid = -1;
-                    if (isMe && this.map) {
-                        const tileX = Math.floor(p.position.x / this.tileSize);
-                        const tileY = Math.floor(p.position.y / this.tileSize);
-                        const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
-                        gid = tile?.index ?? -1;
-                    }
-
-                    const showOutline        = isMe && !p.visible;
-                    const showHealOutline    = isMe && [19, 20].includes(gid);
-                    const showPoisonOutline  = isMe && gid === 186;
-
-                    spr.outline.setVisible(showOutline);
-                    spr.healOutline.setVisible(showHealOutline);
-                    spr.poisonOutline.setVisible(showPoisonOutline);
-
-                    [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
-                        o.setPosition(p.position.x, p.position.y);
-                        o.setRotation(p.position.angle);
-                    });
-
-
-                    // draw health bar
-                    const pct = Phaser.Math.Clamp(p.currentHealth/this.maxHealth,0,1);
-                    spr.healthBar.clear();
-                    if (p.visible || isMe) {
-                        const bw=40,bh=6;
-                        spr.healthBar.fillStyle(0x000000)
-                            .fillRect(p.position.x-bw/2-1,
-                                p.position.y-spr.height/2-bh-9,
-                                bw+2, bh+2)
-                            .fillStyle(0x00ff00)
-                            .fillRect(p.position.x-bw/2,
-                                p.position.y-spr.height/2-bh-8,
-                                bw*pct, bh);
-                    }
-                }
-
-                if (spr.label) {
-                    spr.label.setPosition(p.position.x, p.position.y - 50);
-                    spr.label.setVisible(p.visible);
-                }
-            }
-
-
-        });
-
-        // Projektile rendern
-        const alive = new Set();
-        this.latestState.projectiles.forEach(p => {
-            const key = p.projectileType === 'SNIPER' ? 'sniper'
-                : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
-                    : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
-                        : 'mine';
-            alive.add(p.id);
-            let spr = this.projectileSprites[p.id];
-            if (!spr) {
-                spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
-                if (p.projectileType === 'MINE') spr.setScale(0.3);
-                this.projectileSprites[p.id] = spr;
-            } else {
-                spr.setPosition(p.position.x, p.position.y);
-            }
-        });
-        // Entfernen
-        Object.keys(this.projectileSprites).forEach(id => {
-            if (!alive.has(id)) {
-                this.projectileSprites[id].destroy();
-                delete this.projectileSprites[id];
-            }
-        });
-
-        // Ammo-Bar
-        if (me) {
-            const weapon = me.currentWeapon;
-            const ammo= me?.ammo ?? 0;
-            const max    = weapon === 'RIFLE_BULLET' ? 15
-                : weapon === 'SHOTGUN_PELLET' ? 3
-                    : weapon === 'SNIPER' ? 1
-                        : 1;
-            const barX = 10, barY = 10, barW = 100, barH = 10;
-            this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
-            this.ammoBarFill.clear().fillStyle(0xffffff, 1)
-                .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
-        }
-
-        if (me && this.coinText) {
-            const newCount = me.coinCount ?? 0;
-            if (newCount > this.lastCoinCount) {
-                const gain = newCount - this.lastCoinCount;
-                this.showFloatingCoinGain(gain, me.position.x, me.position.y);
-        // ─── victory / defeat ─────────────────────────────
-        if (!this.hasWon && this.latestState.players.filter(p=>p.currentHealth>0).length===1) {
-            const meAlive = this.latestState.players.find(p=>p.playerId===this.playerId);
-            if (meAlive && meAlive.currentHealth>0) {
-                this.showVictoryScreen();
-                this.hasWon = true;
-            }
-            this.lastCoinCount = newCount;
-            this.coinText.setText(`${newCount}`);
-        }
-        if (!this.hasWon && me && me.currentHealth<=0 && !this.defeatShown) {
-            this.showDefeatScreen();
-            this.defeatShown = true;
-        }
-    }
-
-        // ========== KISTEN VERARBEITEN ==========
-        if (this.latestState.crates) {
-            const currentCrateIds = new Set();
-
-            this.latestState.crates.forEach(crate => {
-                currentCrateIds.add(crate.crateId);
-                let spr = this.crateSprites[crate.crateId];
-
-                if (!spr) {
-                    spr = this.add.sprite(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32, 'crateTexture').setOrigin(0.5);
-                    spr.healthBar = this.add.graphics();
-                    this.crateSprites[crate.crateId] = spr;
-                }
-
-                spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
-
-                // Healthbar anzeigen
-                spr.healthBar.clear();
-                if (crate.crateHp < this.maxCrateHealth) {
-                    const pct = Phaser.Math.Clamp(crate.crateHp / this.maxCrateHealth, 0, 1);
-                    const barW = 40, barH = 6;
-                    spr.healthBar
-                        .fillStyle(0x000000)
-                        .fillRect(spr.x - barW / 2 - 1, spr.y - 40, barW + 2, barH + 2)
-                        .fillStyle(0xff0000)
-                        .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
                 }
             });
 
-            // Entferne verschwundene Crates
-            Object.keys(this.crateSprites).forEach(crateId => {
-                if (!currentCrateIds.has(crateId)) {
-                    const spr = this.crateSprites[crateId];
-                    spr.healthBar?.destroy();
-                    spr.destroy();
-                    delete this.crateSprites[crateId];
-
-// 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
-                    const tileX = Math.floor(spr.x / this.tileSize);
-                    const tileY = Math.floor(spr.y / this.tileSize);
-                    this.crateLayer.putTileAt(401, tileX, tileY);
-
+            // Entfernen
+            Object.keys(this.projectileSprites).forEach(id => {
+                if (!alive.has(id)) {
+                    this.projectileSprites[id].destroy();
+                    delete this.projectileSprites[id];
                 }
             });
-        }
 
-        if (this.latestState && this.latestState.players) {
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            // Ammo-Bar
+            if (me) {
+                const weapon = me.currentWeapon;
+                const ammo = me?.ammo ?? 0;
+                const max = weapon === 'RIFLE_BULLET' ? 15
+                    : weapon === 'SHOTGUN_PELLET' ? 3
+                        : weapon === 'SNIPER' ? 1
+                            : 1;
+                const barX = 10, barY = 10, barW = 100, barH = 10;
+                this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
+                this.ammoBarFill.clear().fillStyle(0xffffff, 1)
+                    .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+            }
+
             if (me && this.coinText) {
-                this.coinText.setText(`Coins: ${me.coinCount}`);
+                const newCount = me.coinCount ?? 0;
+                if (newCount > this.lastCoinCount) {
+                    const gain = newCount - this.lastCoinCount;
+                    this.showFloatingCoinGain(gain, me.position.x, me.position.y);
+
+                }
+                this.lastCoinCount = newCount;
+            }
+
+
+            // ========== KISTEN VERARBEITEN ==========
+            if (this.latestState.crates) {
+                const currentCrateIds = new Set();
+
+                this.latestState.crates.forEach(crate => {
+                    currentCrateIds.add(crate.crateId);
+                    let spr = this.crateSprites[crate.crateId];
+
+                    if (!spr) {
+                        spr = this.add.sprite(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32, 'crateTexture').setOrigin(0.5);
+                        spr.healthBar = this.add.graphics();
+                        this.crateSprites[crate.crateId] = spr;
+                    }
+
+                    spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
+
+                    // Healthbar anzeigen
+                    spr.healthBar.clear();
+                    if (crate.crateHp < 100) {
+                        const pct = Phaser.Math.Clamp(crate.crateHp / 100, 0, 1);
+                        const barW = 40, barH = 6;
+                        spr.healthBar
+                            .fillStyle(0x000000)
+                            .fillRect(spr.x - barW / 2 - 1, spr.y - 40, barW + 2, barH + 2)
+                            .fillStyle(0xff0000)
+                            .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
+                    }
+                });
+
+                // Entferne verschwundene Crates
+                Object.keys(this.crateSprites).forEach(crateId => {
+                    if (!currentCrateIds.has(crateId)) {
+                        const spr = this.crateSprites[crateId];
+                        spr.healthBar?.destroy();
+                        spr.destroy();
+                        delete this.crateSprites[crateId];
+
+                    // 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
+                        const tileX = Math.floor(spr.x / this.tileSize);
+                        const tileY = Math.floor(spr.y / this.tileSize);
+                        this.crateLayer.putTileAt(401, tileX, tileY);
+
+                    }
+                });
+            }
+
+            if (this.latestState && this.latestState.players) {
+                const me = this.latestState.players.find(p => p.playerId === this.playerId);
+                if (me && this.coinText) {
+                    this.coinText.setText(`Coins: ${me.coinCount}`);
+                }
+            }
+
+            // ─── victory / defeat ─────────────────────────────
+            if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
+                const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
+                if (meAlive && meAlive.currentHealth > 0) {
+                    this.showVictoryScreen();
+                    this.hasWon = true;
+                }
+                const newCount = me.coinCount ?? 0;
+                this.lastCoinCount = newCount;
+                this.coinText.setText(`${newCount}`);
+            }
+            if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
+                this.showDefeatScreen();
+                this.defeatShown = true;
+            }
+
+            console.log("KEYS:", {
+                W: this.keys.up.isDown,
+                A: this.keys.left.isDown,
+                S: this.keys.down.isDown,
+                D: this.keys.right.isDown
+            });
+
+            if (me && this.playerSprites[this.playerId]) {
+                const meSprite = this.playerSprites[this.playerId];
+
+                if (this.cameras.main._follow !== meSprite) {
+                    this.cameras.main.startFollow(meSprite);
+                    this.cameras.main.setZoom(this.initialZoom);
+                }
+            }
+
+
+        }
+
+        createButton(x, y, text, onClick) {
+                const btn = this.add.text(x, y, text, {
+                    fontSize: '32px', fontFamily: 'Arial',
+                    color: '#ffffff', backgroundColor: '#333333',
+                    padding: {x: 20, y: 10}, align: 'center'
+                })
+                    .setOrigin(0.5)
+                    .setInteractive()
+                    .setScrollFactor(0)
+                    .on('pointerover', () => btn.setStyle({backgroundColor: '#555555'}))
+                    .on('pointerout', () => btn.setStyle({backgroundColor: '#333333'}))
+                    .on('pointerdown', onClick);
+
+                return btn;
+        }
+
+            showVictoryScreen() {
+                const {width, height} = this.scale;
+                this.victoryText = this.add.text(
+                    width / 2, height / 2 - 80, 'YOU WON!', {
+                        fontSize: '52px', fontFamily: 'Arial',
+                        color: '#00ff00', stroke: '#000000',
+                        strokeThickness: 6
+                    }
+                ).setOrigin(0.5).setScrollFactor(0);
+
+                this.exitButtonGame = this.createButton(
+                    width / 2, height / 2 + 70, 'Exit', () => {
+                        this.socket.emit('leaveRoom', {
+                            roomId: this.roomId, playerId: this.playerId
+                        });
+                        this.socket.disconnect();
+                        window.location.reload();
+                    }
+                );
+            }
+
+            showDefeatScreen() {
+                const {width, height} = this.scale;
+                this.victoryText = this.add.text(
+                    width / 2, height / 2 - 80, 'YOU DIED', {
+                        fontSize: '52px', fontFamily: 'Arial',
+                        color: '#ff0000', stroke: '#000000',
+                        strokeThickness: 6
+                    }
+                ).setOrigin(0.5).setScrollFactor(0);
+
+                this.exitButtonGame = this.createButton(
+                    width / 2, height / 2 + 70, 'Exit', () => {
+                        this.socket.emit('leaveRoom', {
+                            roomId: this.roomId, playerId: this.playerId
+                        });
+                        this.socket.disconnect();
+                        window.location.reload();
+                    }
+                );
             }
         }
 
-    createButton(x, y, text, onClick) {
-        const btn = this.add.text(x, y, text, {
-            fontSize: '32px', fontFamily: 'Arial',
-            color: '#ffffff', backgroundColor: '#333333',
-            padding: { x: 20, y: 10 }, align: 'center'
-        })
-            .setOrigin(0.5)
-            .setInteractive()
-            .setScrollFactor(0)
-            .on('pointerover', () => btn.setStyle({ backgroundColor: '#555555' }))
-            .on('pointerout',  () => btn.setStyle({ backgroundColor: '#333333' }))
-            .on('pointerdown', onClick);
-
-        return btn;
-    }
-
-    showVictoryScreen() {
-        const { width, height } = this.scale;
-        this.victoryText = this.add.text(
-            width/2, height/2-80,'YOU WON!',{
-                fontSize:'52px',fontFamily:'Arial',
-                color:'#00ff00',stroke:'#000000',
-                strokeThickness:6
-            }
-        ).setOrigin(0.5).setScrollFactor(0);
-
-        this.exitButtonGame = this.createButton(
-            width/2, height/2+70, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        );
-    }
-
-    showDefeatScreen() {
-        const { width, height } = this.scale;
-        this.victoryText = this.add.text(
-            width/2, height/2-80,'YOU DIED',{
-                fontSize:'52px',fontFamily:'Arial',
-                color:'#ff0000',stroke:'#000000',
-                strokeThickness:6
-            }
-        ).setOrigin(0.5).setScrollFactor(0);
-
-        this.exitButtonGame = this.createButton(
-            width/2, height/2+70, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        );
-    }
-}

@@ -1,12 +1,12 @@
 // GameMap.java
 package at.fhv.spiel_backend.server.map;
 
+import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.model.Position;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class GameMap {
     private final String id;
