@@ -182,6 +182,8 @@ public class SocketIOConfig {
             // Gemeinsames Starten von Cooldown & Use-Zähler
             g.setTimeRemaining(10_000L);                        // 10 Sekunden Buff-Laufzeit
             g.setRemainingUses(g.getRemainingUses() - 1);      // Use reduzieren
+            System.out.println("Gadget "+ g.getType() +" used for " + data.getPlayerId());
+            System.out.println("Remaining uses: " + g.getRemainingUses());
 
             ack.sendAckData("ok");
         });

@@ -172,9 +172,9 @@ public class DefaultGameLogic implements GameLogic {
                     });
 
             if (!gameMap.isWallAt(tileX, tileY) && !crateBlocks) {
-                System.out.println("Move to " + tileX + "," + tileY +
-                        " – wall: " + gameMap.isWallAt(tileX, tileY) +
-                        ", crate: " + crateBlocks);
+//                System.out.println("Move to " + tileX + "," + tileY +
+//                        " – wall: " + gameMap.isWallAt(tileX, tileY) +
+//                        ", crate: " + crateBlocks);
 
                 p.setPosition(new Position(x, y, angle));
 

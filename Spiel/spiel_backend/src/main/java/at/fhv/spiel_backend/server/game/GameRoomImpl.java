@@ -210,7 +210,7 @@ public class GameRoomImpl implements IGameRoom {
                     float ny  = len > 0 ? in.dirY / len : 0;
 
                     Gadget gadget = gameLogic.getGadget(pid);
-                    float speedFactor = (gadget != null && gadget.getTimeRemaining() > 0)
+                    float speedFactor = (gadget != null && gadget.getTimeRemaining() > 0 && gadget.getType() == GadgetType.SPEED_BOOST)
                             ? 2
                             : 1;
 
@@ -248,7 +248,7 @@ public class GameRoomImpl implements IGameRoom {
                     }
 
                     // Runterzählen des Gadget-Timers (pro Tick einmal TICK_DT*1000 ms)
-                    if (gadget != null && gadget.getTimeRemaining() > 0) {
+                    if (gadget != null && gadget.getTimeRemaining() > 0 && gadget.getType() == GadgetType.SPEED_BOOST) {
                         long updated = gadget.getTimeRemaining() - (long)(TICK_DT * 1000);
                         gadget.setTimeRemaining(Math.max(0, updated));
                     }
