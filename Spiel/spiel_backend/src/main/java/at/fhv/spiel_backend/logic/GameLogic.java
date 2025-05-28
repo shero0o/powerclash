@@ -54,6 +54,8 @@ public interface GameLogic {
      */
     Player getPlayer(String playerId);
 
+    Gadget getGadget(String playerId);
+
     /**
      * Simple attack (legacy) for Bullet-based systems
      */
@@ -67,7 +69,7 @@ public interface GameLogic {
     /**
      * Update existing projectiles (movement, lifetime, collisions)
      */
-    void updateProjectiles();
+    void updateProjectiles(float delta);
 
     /**
      * Get raw player position (used for camera follow)
@@ -83,6 +85,8 @@ public interface GameLogic {
      * Change the current weapon & reset ammo
      */
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
+
+    void setPlayerGadget(String playerId, GadgetType chosenGadget);
 
     void applyEnvironmentalEffects();
 

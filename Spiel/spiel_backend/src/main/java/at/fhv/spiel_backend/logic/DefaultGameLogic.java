@@ -41,6 +41,9 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, String> playerBrawler = new ConcurrentHashMap<>();
     private final Map<String, String> playerNames = new ConcurrentHashMap<>();
 
+    // --- Gadget ---
+    private final Map<String, Gadget> playerGadget = new ConcurrentHashMap<>();
+
     // -------------------------------------------------------------------------
     private final Map<String, Crate> crates = new ConcurrentHashMap<>();
     private final Map<String, Integer> playerCoins = new ConcurrentHashMap<>();
@@ -62,6 +65,11 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public Player getPlayer(String playerId) {
         return players.get(playerId);
+    }
+
+    @Override
+    public Gadget getGadget(String playerId){
+        return playerGadget.get(playerId);
     }
 
     @Override
@@ -189,137 +197,142 @@ public class DefaultGameLogic implements GameLogic {
             lastRefill.put(playerId, System.currentTimeMillis());
         }
 
-        @Override
-        public void applyEnvironmentalEffects () {
-            long now = System.currentTimeMillis();
-            float deltaSec = (now - lastFrameTimeMs) / 1000f;
-            lastFrameTimeMs = now;
+    @Override
+    public void setPlayerGadget(String playerId, GadgetType type) {
+        playerGadget.put(playerId, new Gadget(type, playerId));
+    }
 
+
+    @Override
+    public void applyEnvironmentalEffects () {
+        long now = System.currentTimeMillis();
+        float deltaSec = (now - lastFrameTimeMs) / 1000f;
+        lastFrameTimeMs = now;
+
+        for (Player p : players.values()) {
+            if (p.getCurrentHealth() <= 0) continue;
+
+            Position pos = p.getPosition();
+            int tileX = (int) (pos.getX() / gameMap.getTileWidth());
+            int tileY = (int) (pos.getY() / gameMap.getTileHeight());
+            Position tilePos = new Position(tileX, tileY);
+
+            if (gameMap.isPoisonTile(tilePos)) {
+                long last = p.getLastPoisonTime();
+                if (now - last >= 1000) {
+                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - 15));
+                    p.setLastPoisonTime(now);
+
+
+                    if (p.getCurrentHealth() <= 0) {
+                        p.setVisible(false); // Optional: unsichtbar wenn tot
+                    }
+                }
+            } else {
+                // Nicht in Giftfeld → Reset poison timer
+                p.setLastPoisonTime(0);
+            }
+
+            if (gameMap.isHealTile(tilePos)) {
+                long lastHeal = p.getLastHealTime();
+                if (now - lastHeal >= 1000) {
+                    int newHP = Math.min(p.getMaxHealth(), p.getCurrentHealth() + 15);
+                    p.setCurrentHealth(newHP);
+                    p.setLastHealTime(now);
+
+                }
+            } else {
+                p.setLastHealTime(0);
+            }
+        }
+
+        // zone shrink & damage outside
+        if (zoneActive) {
+            zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
             for (Player p : players.values()) {
                 if (p.getCurrentHealth() <= 0) continue;
-
-                Position pos = p.getPosition();
-                int tileX = (int) (pos.getX() / gameMap.getTileWidth());
-                int tileY = (int) (pos.getY() / gameMap.getTileHeight());
-                Position tilePos = new Position(tileX, tileY);
-
-                if (gameMap.isPoisonTile(tilePos)) {
-                    long last = p.getLastPoisonTime();
-                    if (now - last >= 1000) {
-                        p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - 15));
-                        p.setLastPoisonTime(now);
-
-
-                        if (p.getCurrentHealth() <= 0) {
-                            p.setVisible(false); // Optional: unsichtbar wenn tot
-                        }
-                    }
-                } else {
-                    // Nicht in Giftfeld → Reset poison timer
-                    p.setLastPoisonTime(0);
-                }
-
-                if (gameMap.isHealTile(tilePos)) {
-                    long lastHeal = p.getLastHealTime();
-                    if (now - lastHeal >= 1000) {
-                        int newHP = Math.min(p.getMaxHealth(), p.getCurrentHealth() + 15);
-                        p.setCurrentHealth(newHP);
-                        p.setLastHealTime(now);
-
-                    }
-                } else {
-                    p.setLastHealTime(0);
-                }
-            }
-
-            // zone shrink & damage outside
-            if (zoneActive) {
-                zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
-                for (Player p : players.values()) {
-                    if (p.getCurrentHealth() <= 0) continue;
-                    float dx = p.getPosition().getX() - zoneCenter.getX();
-                    float dy = p.getPosition().getY() - zoneCenter.getY();
-                    if (Math.hypot(dx, dy) > zoneRadius) {
-                        int dmg = (int) Math.ceil(0.05f * deltaSec);
-                        p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - dmg));
-                    }
-                }
-            }
-
-            // ── NPC AI: chase & melee ───────────────────────────────
-            for (NPC npc : npcs) {
-                // 1) find nearest alive player
-                Player target = null;
-                float minDist = Float.MAX_VALUE;
-                for (Player p : players.values()) {
-                    if (p.getCurrentHealth() <= 0) continue;
-                    float dx = p.getPosition().getX() - npc.getPosition().getX();
-                    float dy = p.getPosition().getY() - npc.getPosition().getY();
-                    float d = (float) Math.hypot(dx, dy);
-                    if (d < minDist) {
-                        minDist = d;
-                        target = p;
-                    }
-                }
-                if (target == null) continue;
-
-                // 2) compute facing angle once
-                float dx = target.getPosition().getX() - npc.getPosition().getX();
-                float dy = target.getPosition().getY() - npc.getPosition().getY();
-                float angle = (float) Math.atan2(dy, dx);
-
-                // 3) move toward if outside attack radius
-                if (minDist > npc.getAttackRadius()) {
-                    float len = (float) Math.hypot(dx, dy);
-                    if (len > 0) {
-                        float nx = dx / len, ny = dy / len;
-                        float newX = npc.getPosition().getX() + nx * npc.getSpeed() * deltaSec;
-                        float newY = npc.getPosition().getY() + ny * npc.getSpeed() * deltaSec;
-                        int tx = (int) (newX / gameMap.getTileWidth());
-                        int ty = (int) (newY / gameMap.getTileHeight());
-                        if (!gameMap.isWallAt(tx, ty)) {
-                            npc.setPosition(new Position(newX, newY, angle));
-                        } else {
-                            // can't walk through wall, but still update facing
-                            npc.setPosition(new Position(npc.getPosition().getX(),
-                                    npc.getPosition().getY(),
-                                    angle));
-                        }
-                    }
-                } else {
-                    // inside melee range: just update facing
-                    npc.setPosition(new Position(npc.getPosition().getX(),
-                            npc.getPosition().getY(),
-                            angle));
-                }
-
-                // 4) melee attack if in range & cooldown passed
-                if (minDist <= npc.getAttackRadius()
-                        && now - npc.getLastAttackTime() >= npc.getAttackCooldownMs()) {
-                    int newHp = Math.max(0, target.getCurrentHealth() - npc.getDamage());
-                    target.setCurrentHealth(newHp);
-                    if (newHp == 0) target.setVisible(false);
-                    npc.setLastAttackTime(now);
+                float dx = p.getPosition().getX() - zoneCenter.getX();
+                float dy = p.getPosition().getY() - zoneCenter.getY();
+                if (Math.hypot(dx, dy) > zoneRadius) {
+                    int dmg = (int) Math.ceil(0.05f * deltaSec);
+                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - dmg));
                 }
             }
         }
 
-        @Override
-        public List<Crate> getCrates () {
-            return new ArrayList<>(crates.values());
-        }
-
-
-        @Override
-        public void spawnProjectile (String playerId,
-                Position position,
-                Position direction,
-                ProjectileType type){
-            // Nur erlaubte Waffe
-            if (playerWeapon.getOrDefault(playerId, RIFLE_BULLET) != type) {
-                return;
+        // ── NPC AI: chase & melee ───────────────────────────────
+        for (NPC npc : npcs) {
+            // 1) find nearest alive player
+            Player target = null;
+            float minDist = Float.MAX_VALUE;
+            for (Player p : players.values()) {
+                if (p.getCurrentHealth() <= 0) continue;
+                float dx = p.getPosition().getX() - npc.getPosition().getX();
+                float dy = p.getPosition().getY() - npc.getPosition().getY();
+                float d = (float) Math.hypot(dx, dy);
+                if (d < minDist) {
+                    minDist = d;
+                    target = p;
+                }
             }
-            long now = System.currentTimeMillis();
+            if (target == null) continue;
+
+            // 2) compute facing angle once
+            float dx = target.getPosition().getX() - npc.getPosition().getX();
+            float dy = target.getPosition().getY() - npc.getPosition().getY();
+            float angle = (float) Math.atan2(dy, dx);
+
+            // 3) move toward if outside attack radius
+            if (minDist > npc.getAttackRadius()) {
+                float len = (float) Math.hypot(dx, dy);
+                if (len > 0) {
+                    float nx = dx / len, ny = dy / len;
+                    float newX = npc.getPosition().getX() + nx * npc.getSpeed() * deltaSec;
+                    float newY = npc.getPosition().getY() + ny * npc.getSpeed() * deltaSec;
+                    int tx = (int) (newX / gameMap.getTileWidth());
+                    int ty = (int) (newY / gameMap.getTileHeight());
+                    if (!gameMap.isWallAt(tx, ty)) {
+                        npc.setPosition(new Position(newX, newY, angle));
+                    } else {
+                        // can't walk through wall, but still update facing
+                        npc.setPosition(new Position(npc.getPosition().getX(),
+                                npc.getPosition().getY(),
+                                angle));
+                    }
+                }
+            } else {
+                // inside melee range: just update facing
+                npc.setPosition(new Position(npc.getPosition().getX(),
+                        npc.getPosition().getY(),
+                        angle));
+            }
+
+            // 4) melee attack if in range & cooldown passed
+            if (minDist <= npc.getAttackRadius()
+                    && now - npc.getLastAttackTime() >= npc.getAttackCooldownMs()) {
+                int newHp = Math.max(0, target.getCurrentHealth() - npc.getDamage());
+                target.setCurrentHealth(newHp);
+                if (newHp == 0) target.setVisible(false);
+                npc.setLastAttackTime(now);
+            }
+        }
+    }
+
+    @Override
+    public List<Crate> getCrates () {
+        return new ArrayList<>(crates.values());
+    }
+
+    @Override
+    public void spawnProjectile(String playerId,
+                                Position position,
+                                Position direction,
+                                ProjectileType type) {
+        // Nur erlaubte Waffe
+        if (playerWeapon.getOrDefault(playerId, ProjectileType.RIFLE_BULLET) != type) {
+            return;
+        }
+        long now = System.currentTimeMillis();
 
             // --- Ammo-Verbrauch ---
             if (type == RIFLE_BULLET) {
@@ -413,24 +426,43 @@ public class DefaultGameLogic implements GameLogic {
         }
 
         @Override
-        public void updateProjectiles () {
+        public void updateProjectiles (float delta) {
             long now = System.currentTimeMillis();
-            float delta = 0.016f; // ~60 FPS
 
-            Iterator<Projectile> it = projectiles.values().iterator();
+
+            java.util.function.Function<String, Float> getSpeedFactor = shooterId -> {
+            Player shooter = getPlayer(shooterId);
+            if (shooter != null
+                        && shooter.isSpeedBoostActive()
+                        && now <= shooter.getSpeedBoostEndTime()) {
+                    return 2f;
+                }
+            return 1f;
+            };Iterator<Projectile> it = projectiles.values().iterator();
             while (it.hasNext()) {
                 Projectile p = it.next();
 
                 // --- Bewegung & Travelled ---
                 if (p.getProjectileType() != MINE) {
-                    p.getPosition().setX(p.getPosition().getX()
-                            + p.getDirection().getX() * p.getSpeed() * delta);
-                    p.getPosition().setY(p.getPosition().getY()
-                            + p.getDirection().getY() * p.getSpeed() * delta);
+                    // 1) Normierung
+                float dxDir = p.getDirection().getX();
+                            float dyDir = p.getDirection().getY();
+                float len   = (float)Math.hypot(dxDir, dyDir);
+                float nx    = len > 0 ? dxDir / len : 0;
+                float ny    = len > 0 ? dyDir / len : 0;
+
+                // 2) Geschwindigkeit inklusive Boost‐Faktor
+                float speedFactor = getSpeedFactor.apply(p.getPlayerId());
+                float v = p.getSpeed() * delta * speedFactor;
+                float dx = nx * v;
+                float dy = ny * v;
+
+                // 3) Position & Travelled updaten
+                    p.getPosition().setX(p.getPosition().getX() + dx);
+                            p.getPosition().setY(p.getPosition().getY() + dy);
                     p.setTravelled(p.getTravelled()
                             + (float) Math.hypot(
-                            p.getDirection().getX() * p.getSpeed() * delta,
-                            p.getDirection().getY() * p.getSpeed() * delta
+                            dx, dy
                     ));
                 } else {
                     // Mine rollt bis zur MaxRange, dann armt sie
@@ -538,8 +570,13 @@ public class DefaultGameLogic implements GameLogic {
                     float dy = target.getPosition().getY() - p.getPosition().getY();
                     float radius = 32f;
                     if (Math.hypot(dx, dy) <= radius) {
-                        target.setCurrentHealth(
-                                Math.max(0, target.getCurrentHealth() - p.getDamage())
+                        Player shooter = players.get(p.getPlayerId());
+                    int damage = p.getDamage();
+                    if (shooter.isDamageBoostActive()
+                            && System.currentTimeMillis() <= shooter.getDamageBoostEndTime()) {
+                        damage *= Player.DAMAGE_MULTIPLIER;
+                    }target.setCurrentHealth(
+                                Math.max(0, target.getCurrentHealth() - damage)
                         );
                         if (target.getCurrentHealth() <= 0) {
                             target.setVisible(false);
@@ -584,27 +621,29 @@ public class DefaultGameLogic implements GameLogic {
 
         }
 
-        @Override
-        public StateUpdateMessage buildStateUpdate () {
-            // Spieler-Status mit aktuellem Ammo & Weapon
-            List<PlayerState> ps = players.values().stream().map(p -> {
-                String pid = p.getId();
-                ProjectileType wep = playerWeapon.getOrDefault(pid, RIFLE_BULLET);
-                int ammo = (wep == RIFLE_BULLET)
-                        ? rifleAmmoMap.getOrDefault(pid, RIFLE_MAX_AMMO)
-                        : ammoMap.getOrDefault(pid, getMaxAmmoForType(wep));
-                return new PlayerState(
-                        pid,
-                        p.getPosition(),
-                        p.getCurrentHealth(),
-                        p.isVisible(),
-                        ammo,
-                        wep,
-                        playerBrawler.getOrDefault(p.getId(), "sniper"),
-                        playerNames.getOrDefault(p.getId(), "Player"),
-                        playerCoins.getOrDefault(pid, 0)
-                );
-            }).collect(Collectors.toList());
+    @Override
+    public StateUpdateMessage buildStateUpdate() {
+        // Spieler-Status mit aktuellem Ammo & Weapon
+        List<PlayerState> ps = players.values().stream().map(p -> {
+            String pid = p.getId();
+            ProjectileType wep = playerWeapon.getOrDefault(pid, ProjectileType.RIFLE_BULLET);
+            int ammo = (wep == ProjectileType.RIFLE_BULLET)
+                    ? rifleAmmoMap.getOrDefault(pid, RIFLE_MAX_AMMO)
+                    : ammoMap.getOrDefault(pid, getMaxAmmoForType(wep));
+            return new PlayerState(
+                    pid,
+                    p.getPosition(),
+                    p.getCurrentHealth(),
+                    p.isVisible(),
+                    ammo,
+                    wep,
+                    playerBrawler.getOrDefault(p.getId(), "sniper"),
+                    playerNames.getOrDefault(p.getId(), "Player"),
+                    playerCoins.getOrDefault(pid, 0),
+                    p.getMaxHealth()
+
+            );
+        }).collect(Collectors.toList());
 
             StateUpdateMessage msg = new StateUpdateMessage();
             msg.setPlayers(ps);

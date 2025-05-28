@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
 
 export default class GameScene extends Phaser.Scene {
+    gadgetType;
+    cooldownExpireTime;
+    gadgetText;
+
     constructor() {
         super({ key: 'GameScene' });
 
-        this.isFiring         = false;
-        this.fireEvent        = null;
+        this.isFiring          = false;
+        this.fireEvent         = null;
         this.victoryText      = null;
         this.hasWon           = false;
         this.exitButtonGame   = null;
@@ -15,6 +19,10 @@ export default class GameScene extends Phaser.Scene {
         this.zoneState        = null;
         this.graphicsZone      = null;
         this.textZoneTimer     = null;
+        this.boostActive       = false;
+        this.boostEndTime      = 0;
+        this.boostMultiplier   = 2;
+        this.gadgetMaxUses     = 3;
     }
 
     init(data) {
@@ -30,7 +38,6 @@ export default class GameScene extends Phaser.Scene {
         this.crateSprites      = {};
         this.projectileSprites = {};
         this.initialZoom       = 0.7;
-        this.maxHealth         = 100;
         this.playerCountText   = null;
         this.npcSprites = {};
         this.npcBars    = {};
@@ -40,6 +47,7 @@ export default class GameScene extends Phaser.Scene {
 
     preload() {
         // Player & projectiles
+        this.load.image('player',         '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
@@ -80,13 +88,11 @@ export default class GameScene extends Phaser.Scene {
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
         if (this.mapKey === 'level1') {
             map.createLayer('Boden', tileset, 0, 0);
-            map.createLayer('Wand', tileset, 0, 0);
-        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
+            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
-            map.createLayer('Wand', tileset, 0, 0);
-        }
+            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        }
 
 
         // Physik-Welt & Kamera
@@ -117,6 +123,11 @@ export default class GameScene extends Phaser.Scene {
         // ammo UI
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
+
+        // UI: Gadget-Cooldown
+        this.cooldownBarBg   = this.add.graphics().setScrollFactor(0);
+        this.cooldownBarFill = this.add.graphics().setScrollFactor(0);
+
 
         // UI: Spielerzahl
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
@@ -181,7 +192,12 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
 
-
+// Eingabe: Q -> Gadget
+        this.input.keyboard.on('keydown-Q', () => {
+            console.log('keydown-Q ausgelöst → useGadget() wird aufgerufen');
+            this.gadgetMaxUses-=1;
+            this.useGadget();
+        });
         // Socket-Update
         this.socket.on('stateUpdate', state => {
             this.npcs = state.npcs || [];
@@ -200,6 +216,12 @@ export default class GameScene extends Phaser.Scene {
             projectileType: this.selectedWeapon
         });
 
+        // Gadget-Anzeige initialisieren
+        this.gadgetType = this.registry.get('gadget');   // Typ aus JoinRequest
+        this.cooldownExpireTime = 0; // Timestamp in ms, wann Cooldown endet
+        this.gadgetText = this.add.text(16, 80, '', {
+            fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
+        }).setScrollFactor(0);
     }
 
     startFiring(pointer) {
@@ -266,11 +288,26 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
+    useGadget() {
+        this.socket.emit('useGadget', {
+            roomId:   this.roomId,
+            playerId: this.playerId
+        }, (response) => {
+            if (response === 'ok') {
+                // Cooldown lokal starten (10 000 ms ab jetzt)
+                this.cooldownExpireTime = this.time.now + 10_000;
+                this.boostActive = true;
+                this.boostEndTime = this.time.now + 2_000;
+                console.log(`Gadget ${this.gadgetType} used: cooldown started`);
+            } else {
+                console.warn('Gadget use failed:', response);
+            }
+        });
+    }
 
-        update() {
-            if (!this.latestState) return;
+    update() {
+        if (!this.latestState) return;
 
-            const cam = this.cameras.main;
             this.graphicsZone.clear();
 
             if (this.zoneState) {
@@ -315,28 +352,69 @@ export default class GameScene extends Phaser.Scene {
             });
             this.prevProjectileIds = currIds;
 
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
-
-            // Bewegung senden
-            if (me) {
-                const dirX = (this.keys.left.isDown ? -1 : 0)
-                    + (this.keys.right.isDown ? 1 : 0);
-                const dirY = (this.keys.up.isDown ? -1 : 0)
-                    + (this.keys.down.isDown ? 1 : 0);
-                const world = cam.getWorldPoint(
-                    this.input.activePointer.x,
-                    this.input.activePointer.y
-                );
-                const angle = Phaser.Math.Angle.Between(
-                    me.position.x, me.position.y,
-                    world.x, world.y
-                );
-                this.socket.emit('move', {
-                    roomId: this.roomId,
-                    playerId: this.playerId,
-                    dirX, dirY, angle
-                });
+        // Bewegung senden
+        const me = this.latestState.players.find(p => p.playerId === this.playerId);
+        if (me) {
+            // Boost-Ablauf prüfen
+            if (this.boostActive && this.time.now > this.boostEndTime) {
+                this.boostActive = false;
             }
+            const baseX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
+            const baseY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
+            const speedFactor = this.boostActive ? this.boostMultiplier : 1;
+            const dirX = baseX * speedFactor;
+            const dirY = baseY * speedFactor;
+            const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
+            const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
+            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+
+            const remMs = Math.max(0, this.cooldownExpireTime - this.time.now);
+
+            if (remMs > 0) {
+                // Noch im Cooldown
+                const cdSec = `${Math.ceil(remMs / 1000)}s`;
+                this.gadgetText
+                    .setText(`Cooldown: ${cdSec}`)
+                    .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+            } else {
+                if (this.gadgetMaxUses <= 0){
+                    // nicht Bereit
+                    this.gadgetText
+                        .setText(`No Gadget uses left: ${this.gadgetType}`)
+                        .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+                }
+                else{
+                    // Bereit
+                    this.gadgetText
+                        .setText(`Gadget Ready: ${this.gadgetType}`)
+                        .setStyle({ fill: '#00ff00', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+                }
+            }
+
+
+
+        const cdBarX = 10, cdBarY = 65, cdBarW = 100, cdBarH = 10;
+        const now    = this.time.now;
+        const remCd  = Math.max(0, this.cooldownExpireTime - now);
+        const ratio  = remCd > 0 ? (remCd / 10_000) : 1;
+
+        // Hintergrund
+        this.cooldownBarBg
+            .clear()
+            .fillStyle(0x000000, 0.5)
+            .fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
+
+        // Füllung
+        this.cooldownBarFill
+            .clear()
+            .fillStyle(0xffffff, 1)
+            .fillRect(
+                cdBarX + 2,
+                cdBarY + 2,
+                Math.floor((cdBarW - 4) * ratio),
+                cdBarH - 4
+            );
+        }
 
             // ── render NPCs ─────────────────────────────────────────
             const aliveNpcIds = new Set();
@@ -484,61 +562,89 @@ export default class GameScene extends Phaser.Scene {
 
                     this.playerSprites[p.playerId] = spr;
                 }
+                // Kollision gegen Wände
+                this.physics.add.collider(spr, this.obstacleLayer);
 
-                // 🟨 HIER: immer updaten, wenn Sprite existiert
-                if (spr) {
-                    if (p.currentHealth <= 0) {
-                        spr.healthBar?.destroy();
-                        spr.label?.destroy();
-                        spr.outline?.destroy();
-                        spr.healOutline?.destroy();
-                        spr.poisonOutline?.destroy();
-                        spr.destroy();
-                        delete this.playerSprites[p.playerId];
-                    } else {
-                        spr.setPosition(p.position.x, p.position.y);
-                        spr.setRotation(p.position.angle);
-                        spr.setVisible(p.visible);
+            if (spr) {
+                if (p.currentHealth <= 0) {
+                    spr.healthBar.destroy();
+                    spr.label?.destroy();
+                    spr.outline?.destroy();
+                    spr.healOutline?.destroy();
+                    spr.poisonOutline?.destroy();
+                    spr.destroy();
+                    delete this.playerSprites[p.playerId];
+                } else {
+                    spr.setPosition(p.position.x, p.position.y);
+                    spr.setRotation(p.position.angle);
+                    spr.setVisible(p.visible);
+                    // Health Bar zeichnen
+                    const barW       = 40;
+                    const barH       = 6;
+                    const pct        = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
 
-                        const pct = Phaser.Math.Clamp(p.currentHealth / this.maxHealth, 0, 1);
-                        const bw = 40, bh = 6;
-                        spr.healthBar.clear();
-                        if (p.visible || isMe) {
-                            spr.healthBar.fillStyle(0x000000)
-                                .fillRect(p.position.x - bw / 2 - 1, p.position.y - spr.height / 2 - bh - 9, bw + 2, bh + 2)
-                                .fillStyle(0x00ff00)
-                                .fillRect(p.position.x - bw / 2, p.position.y - spr.height / 2 - bh - 8, bw * pct, bh);
-                        }
+// Segment-Größe in HP und Abstand in px lassen sich hier anpassen:
+                    const segmentHP  = 20;     // jedes Segment entspricht 20 HP
+                    const gap        = 1;      // Abstand zwischen Segmenten in px
 
-                        if (spr.label) {
-                            spr.label.setPosition(p.position.x, p.position.y - 50);
-                            spr.label.setVisible(p.visible);
-                        }
+// Anzahl der Segmente ergibt sich aus der Max-HP des Brawlers:
+                    const segments   = Math.ceil(p.maxHealth / segmentHP);
+                    const segW       = barW / segments;
+                    const fillPixels = barW * pct;
 
-                        let gid = -1;
-                        if (isMe && this.map) {
-                            const tileX = Math.floor(p.position.x / this.tileSize);
-                            const tileY = Math.floor(p.position.y / this.tileSize);
-                            const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
-                            gid = tile?.index ?? -1;
-                        }
+                    spr.healthBar.clear();
 
-                        const showOutline = isMe && !p.visible;
-                        const showHealOutline = isMe && [19, 20].includes(gid);
-                        const showPoisonOutline = isMe && gid === 186;
+// 1) Äußerer Rahmen (2px schwarz)
+                    const bgX = p.position.x - barW/2 - 1;
+                    const bgY = p.position.y - spr.height/2 - barH - 9;
+                    spr.healthBar
+                        .lineStyle(2, 0x000000)
+                        .strokeRect(bgX, bgY, barW + 2, barH + 2);
 
-                        spr.outline?.setVisible(showOutline);
-                        spr.healOutline?.setVisible(showHealOutline);
-                        spr.poisonOutline?.setVisible(showPoisonOutline);
+// 2) Schwarzer Hintergrund innen
+                    spr.healthBar
+                        .fillStyle(0x000000)
+                        .fillRect(bgX + 1, bgY + 1, barW, barH);
 
-                        [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
-                            o?.setPosition(p.position.x, p.position.y);
-                            o?.setRotation(p.position.angle);
-                        });
+// 3) Grüne Segmente entsprechend gefüllter HP
+                    spr.healthBar.fillStyle(0x00ff00);
+                    for (let i = 0; i < segments; i++) {
+                        const x      = bgX + 1 + i * segW;
+                        const remain = fillPixels - i * segW;
+                        if (remain <= 0) break;
+                        const w      = Math.min(segW - gap, remain);
+                        spr.healthBar.fillRect(x, bgY + 1, w, barH);
                     }
-                }
-            });
+                    if (spr.label) {
+                        spr.label.setPosition(p.position.x, p.position.y - 50);
+                        spr.label.setVisible(p.visible);
+                    }
 
+                    let gid = -1;
+                    if (isMe && this.map) {
+                        const tileX = Math.floor(p.position.x / this.tileSize);
+                        const tileY = Math.floor(p.position.y / this.tileSize);
+                        const tile = this.map.getTileAt(tileX, tileY, true, 'Gebüsch, Giftzone, Energiezone');
+                        gid = tile?.index ?? -1;
+                    }
+
+                    const showOutline = isMe && !p.visible;
+                    const showHealOutline = isMe && [19, 20].includes(gid);
+                    const showPoisonOutline = isMe && gid === 186;
+
+                    spr.outline?.setVisible(showOutline);
+                    spr.healOutline?.setVisible(showHealOutline);
+                    spr.poisonOutline?.setVisible(showPoisonOutline);
+
+                    [spr.outline, spr.healOutline, spr.poisonOutline].forEach(o => {
+                        o?.setPosition(p.position.x, p.position.y);
+                        o?.setRotation(p.position.angle);
+                    });
+                }
+            }
+        });
+        // Exit anzeigen, wenn tot
+        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
 
             // Projektile rendern
             const alive = new Set();
@@ -568,175 +674,174 @@ export default class GameScene extends Phaser.Scene {
                 }
             });
 
-            // Ammo-Bar
-            if (me) {
-                const weapon = me.currentWeapon;
-                const ammo = me?.ammo ?? 0;
-                const max = weapon === 'RIFLE_BULLET' ? 15
-                    : weapon === 'SHOTGUN_PELLET' ? 3
-                        : weapon === 'SNIPER' ? 1
-                            : 1;
-                const barX = 10, barY = 10, barW = 100, barH = 10;
-                this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
-                this.ammoBarFill.clear().fillStyle(0xffffff, 1)
-                    .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+        // Ammo-Bar
+        if (me) {
+            const weapon = me.currentWeapon;
+            const ammo = me?.ammo ?? 0;
+            const max = weapon === 'RIFLE_BULLET' ? 15
+                : weapon === 'SHOTGUN_PELLET' ? 3
+                    : weapon === 'SNIPER' ? 1
+                        : 1;
+            const barX = 10, barY = 10, barW = 100, barH = 10;
+            this.ammoBarBg.clear().fillStyle(0x000000, 0.5).fillRect(barX, barY, barW, barH);
+            this.ammoBarFill.clear().fillStyle(0xffffff, 1)
+                .fillRect(barX + 2, barY + 2, Math.floor((barW - 4) * (ammo / max)), barH - 4);
+        }
+
+        if (me && this.coinText) {
+            const newCount = me.coinCount ?? 0;
+            if (newCount > this.lastCoinCount) {
+                const gain = newCount - this.lastCoinCount;
+                this.showFloatingCoinGain(gain, me.position.x, me.position.y);
+
             }
+            this.lastCoinCount = newCount;
+        }
 
-            if (me && this.coinText) {
-                const newCount = me.coinCount ?? 0;
-                if (newCount > this.lastCoinCount) {
-                    const gain = newCount - this.lastCoinCount;
-                    this.showFloatingCoinGain(gain, me.position.x, me.position.y);
 
+        // ========== KISTEN VERARBEITEN ==========
+        if (this.latestState.crates) {
+            const currentCrateIds = new Set();
+
+            this.latestState.crates.forEach(crate => {
+                currentCrateIds.add(crate.crateId);
+                let spr = this.crateSprites[crate.crateId];
+
+                if (!spr) {
+                    spr = this.add.sprite(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32, 'crateTexture').setOrigin(0.5);
+                    spr.healthBar = this.add.graphics();
+                    this.crateSprites[crate.crateId] = spr;
                 }
-                this.lastCoinCount = newCount;
-            }
 
+                spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
 
-            // ========== KISTEN VERARBEITEN ==========
-            if (this.latestState.crates) {
-                const currentCrateIds = new Set();
-
-                this.latestState.crates.forEach(crate => {
-                    currentCrateIds.add(crate.crateId);
-                    let spr = this.crateSprites[crate.crateId];
-
-                    if (!spr) {
-                        spr = this.add.sprite(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32, 'crateTexture').setOrigin(0.5);
-                        spr.healthBar = this.add.graphics();
-                        this.crateSprites[crate.crateId] = spr;
-                    }
-
-                    spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
-
-                    // Healthbar anzeigen
-                    spr.healthBar.clear();
-                    if (crate.crateHp < 100) {
-                        const pct = Phaser.Math.Clamp(crate.crateHp / 100, 0, 1);
-                        const barW = 40, barH = 6;
-                        spr.healthBar
-                            .fillStyle(0x000000)
-                            .fillRect(spr.x - barW / 2 - 1, spr.y - 40, barW + 2, barH + 2)
-                            .fillStyle(0xff0000)
-                            .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
-                    }
-                });
-
-                // Entferne verschwundene Crates
-                Object.keys(this.crateSprites).forEach(crateId => {
-                    if (!currentCrateIds.has(crateId)) {
-                        const spr = this.crateSprites[crateId];
-                        spr.healthBar?.destroy();
-                        spr.destroy();
-                        delete this.crateSprites[crateId];
-
-                    // 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
-                        const tileX = Math.floor(spr.x / this.tileSize);
-                        const tileY = Math.floor(spr.y / this.tileSize);
-                        this.crateLayer.putTileAt(401, tileX, tileY);
-
-                    }
-                });
-            }
-
-            if (this.latestState && this.latestState.players) {
-                const me = this.latestState.players.find(p => p.playerId === this.playerId);
-                if (me && this.coinText) {
-                    this.coinText.setText(`Coins: ${me.coinCount}`);
+                // Healthbar anzeigen
+                spr.healthBar.clear();
+                if (crate.crateHp < 100) {
+                    const pct = Phaser.Math.Clamp(crate.crateHp / 100, 0, 1);
+                    const barW = 40, barH = 6;
+                    spr.healthBar
+                        .fillStyle(0x000000)
+                        .fillRect(spr.x - barW / 2 - 1, spr.y - 40, barW + 2, barH + 2)
+                        .fillStyle(0xff0000)
+                        .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
                 }
-            }
-
-            // ─── victory / defeat ─────────────────────────────
-            if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
-                const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
-                if (meAlive && meAlive.currentHealth > 0) {
-                    this.showVictoryScreen();
-                    this.hasWon = true;
-                }
-                const newCount = me.coinCount ?? 0;
-                this.lastCoinCount = newCount;
-                this.coinText.setText(`${newCount}`);
-            }
-            if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-                this.showDefeatScreen();
-                this.defeatShown = true;
-            }
-
-            console.log("KEYS:", {
-                W: this.keys.up.isDown,
-                A: this.keys.left.isDown,
-                S: this.keys.down.isDown,
-                D: this.keys.right.isDown
             });
 
-            if (me && this.playerSprites[this.playerId]) {
-                const meSprite = this.playerSprites[this.playerId];
+            // Entferne verschwundene Crates
+            Object.keys(this.crateSprites).forEach(crateId => {
+                if (!currentCrateIds.has(crateId)) {
+                    const spr = this.crateSprites[crateId];
+                    spr.healthBar?.destroy();
+                    spr.destroy();
+                    delete this.crateSprites[crateId];
 
-                if (this.cameras.main._follow !== meSprite) {
-                    this.cameras.main.startFollow(meSprite);
-                    this.cameras.main.setZoom(this.initialZoom);
+                    // 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
+                    const tileX = Math.floor(spr.x / this.tileSize);
+                    const tileY = Math.floor(spr.y / this.tileSize);
+                    this.crateLayer.putTileAt(401, tileX, tileY);
+
                 }
-            }
-
-
+            });
         }
 
-        createButton(x, y, text, onClick) {
-                const btn = this.add.text(x, y, text, {
-                    fontSize: '32px', fontFamily: 'Arial',
-                    color: '#ffffff', backgroundColor: '#333333',
-                    padding: {x: 20, y: 10}, align: 'center'
-                })
-                    .setOrigin(0.5)
-                    .setInteractive()
-                    .setScrollFactor(0)
-                    .on('pointerover', () => btn.setStyle({backgroundColor: '#555555'}))
-                    .on('pointerout', () => btn.setStyle({backgroundColor: '#333333'}))
-                    .on('pointerdown', onClick);
-
-                return btn;
-        }
-
-            showVictoryScreen() {
-                const {width, height} = this.scale;
-                this.victoryText = this.add.text(
-                    width / 2, height / 2 - 80, 'YOU WON!', {
-                        fontSize: '52px', fontFamily: 'Arial',
-                        color: '#00ff00', stroke: '#000000',
-                        strokeThickness: 6
-                    }
-                ).setOrigin(0.5).setScrollFactor(0);
-
-                this.exitButtonGame = this.createButton(
-                    width / 2, height / 2 + 70, 'Exit', () => {
-                        this.socket.emit('leaveRoom', {
-                            roomId: this.roomId, playerId: this.playerId
-                        });
-                        this.socket.disconnect();
-                        window.location.reload();
-                    }
-                );
-            }
-
-            showDefeatScreen() {
-                const {width, height} = this.scale;
-                this.victoryText = this.add.text(
-                    width / 2, height / 2 - 80, 'YOU DIED', {
-                        fontSize: '52px', fontFamily: 'Arial',
-                        color: '#ff0000', stroke: '#000000',
-                        strokeThickness: 6
-                    }
-                ).setOrigin(0.5).setScrollFactor(0);
-
-                this.exitButtonGame = this.createButton(
-                    width / 2, height / 2 + 70, 'Exit', () => {
-                        this.socket.emit('leaveRoom', {
-                            roomId: this.roomId, playerId: this.playerId
-                        });
-                        this.socket.disconnect();
-                        window.location.reload();
-                    }
-                );
+        if (this.latestState && this.latestState.players) {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (me && this.coinText) {
+                this.coinText.setText(`Coins: ${me.coinCount}`);
             }
         }
 
+        // ─── victory / defeat ─────────────────────────────
+        if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
+            const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (meAlive && meAlive.currentHealth > 0) {
+                this.showVictoryScreen();
+                this.hasWon = true;
+            }
+            const newCount = me.coinCount ?? 0;
+            this.lastCoinCount = newCount;
+            this.coinText.setText(`${newCount}`);
+        }
+        if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
+            this.showDefeatScreen();
+            this.defeatShown = true;
+        }
+
+        console.log("KEYS:", {
+            W: this.keys.up.isDown,
+            A: this.keys.left.isDown,
+            S: this.keys.down.isDown,
+            D: this.keys.right.isDown
+        });
+
+        if (me && this.playerSprites[this.playerId]) {
+            const meSprite = this.playerSprites[this.playerId];
+
+            if (this.cameras.main._follow !== meSprite) {
+                this.cameras.main.startFollow(meSprite);
+                this.cameras.main.setZoom(this.initialZoom);
+            }
+        }
+
+
+    }
+
+    createButton(x, y, text, onClick) {
+        const btn = this.add.text(x, y, text, {
+            fontSize: '32px', fontFamily: 'Arial',
+            color: '#ffffff', backgroundColor: '#333333',
+            padding: {x: 20, y: 10}, align: 'center'
+        })
+            .setOrigin(0.5)
+            .setInteractive()
+            .setScrollFactor(0)
+            .on('pointerover', () => btn.setStyle({backgroundColor: '#555555'}))
+            .on('pointerout', () => btn.setStyle({backgroundColor: '#333333'}))
+            .on('pointerdown', onClick);
+
+        return btn;
+    }
+
+    showVictoryScreen() {
+        const {width, height} = this.scale;
+        this.victoryText = this.add.text(
+            width / 2, height / 2 - 80, 'YOU WON!', {
+                fontSize: '52px', fontFamily: 'Arial',
+                color: '#00ff00', stroke: '#000000',
+                strokeThickness: 6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(
+            width / 2, height / 2 + 70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
+    }
+
+    showDefeatScreen() {
+        const {width, height} = this.scale;
+        this.victoryText = this.add.text(
+            width / 2, height / 2 - 80, 'YOU DIED', {
+                fontSize: '52px', fontFamily: 'Arial',
+                color: '#ff0000', stroke: '#000000',
+                strokeThickness: 6
+            }
+        ).setOrigin(0.5).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(
+            width / 2, height / 2 + 70, 'Exit', () => {
+                this.socket.emit('leaveRoom', {
+                    roomId: this.roomId, playerId: this.playerId
+                });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        );
+    }
+}

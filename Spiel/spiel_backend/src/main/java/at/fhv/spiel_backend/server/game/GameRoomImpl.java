@@ -3,6 +3,8 @@ package at.fhv.spiel_backend.server.game;
 import at.fhv.spiel_backend.logic.DefaultGameLogic;
 import at.fhv.spiel_backend.logic.GameLogic;
 import at.fhv.spiel_backend.model.Crate;
+import at.fhv.spiel_backend.model.Gadget;
+import at.fhv.spiel_backend.model.GadgetType;
 import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.server.EventPublisher;
@@ -206,18 +208,54 @@ public class GameRoomImpl implements IGameRoom {
                     float len = (float) Math.hypot(in.dirX, in.dirY);
                     float nx  = len > 0 ? in.dirX / len : 0;
                     float ny  = len > 0 ? in.dirY / len : 0;
-                    float newX = pos.getX() + nx * MAX_SPEED * TICK_DT;
-                    float newY = pos.getY() + ny * MAX_SPEED * TICK_DT;
+
+                    Gadget gadget = gameLogic.getGadget(pid);
+                    float speedFactor = (gadget != null && gadget.getTimeRemaining() > 0)
+                            ? 2
+                            : 1;
+
+                    if (gadget != null && gadget.getTimeRemaining() > 0) {
+                        // HP-Boost starten
+                        if (gadget.getType() == GadgetType.HP_BOOST) {
+                            p.setHpBoostActive(true);
+                        }
+                        // Damage-Boost starten
+                        if (gadget.getType() == GadgetType.DAMAGE_BOOST) {
+                            p.setDamageBoostActive(true);
+                        }
+                    } else if (gadget != null && gadget.getTimeRemaining() == 0) {
+                        // Buffs ablaufen lassen
+                        if (p.isHpBoostActive()) {
+                            p.setHpBoostActive(false);
+                            // MaxHP zurücksetzen
+                            p.setMaxHealth(p.getMaxHealth() - Player.HP_BOOST_AMOUNT);
+                            if (p.getCurrentHealth() > p.getMaxHealth()) {
+                                p.setCurrentHealth(p.getMaxHealth());
+                            }
+                        }
+                        if (p.isDamageBoostActive()) {
+                            p.setDamageBoostActive(false);
+                        }
+                    }
+
+                    float newX = pos.getX() + nx * MAX_SPEED * speedFactor * TICK_DT;
+                    float newY = pos.getY() + ny * MAX_SPEED * speedFactor * TICK_DT;
 
                     int tx = (int)(newX / gameMap.getTileWidth());
                     int ty = (int)(newY / gameMap.getTileHeight());
                     if (!gameMap.isWallAt(tx, ty)) {
                         gameLogic.movePlayer(pid, newX, newY, in.angle);
                     }
+
+                    // Runterzählen des Gadget-Timers (pro Tick einmal TICK_DT*1000 ms)
+                    if (gadget != null && gadget.getTimeRemaining() > 0) {
+                        long updated = gadget.getTimeRemaining() - (long)(TICK_DT * 1000);
+                        gadget.setTimeRemaining(Math.max(0, updated));
+                    }
                 }
 
                 // 2) update projectiles & apply environmental effects (including NPC AI)
-                gameLogic.updateProjectiles();
+                gameLogic.updateProjectiles(TICK_DT);
                 gameLogic.applyEnvironmentalEffects();
 
                 // 3) broadcast the new state to all clients in this room

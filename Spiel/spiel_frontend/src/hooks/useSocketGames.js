@@ -8,7 +8,7 @@ export default function useSocketStatus(roomId, playerId) {
     useEffect(() => {
         if (!roomId) return;
 
-        const socket = io('http://localhost:8081', {
+        const socket = io('http://localhost:9090', {
             transports: ['polling', 'websocket'],
             query: { roomId, playerId }
         });

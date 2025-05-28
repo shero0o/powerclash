@@ -1,12 +1,9 @@
 package at.fhv.spiel_backend.config;
 
-import at.fhv.spiel_backend.DTO.ChangeWeaponDTO;
-import at.fhv.spiel_backend.DTO.JoinRequestDTO;
-import at.fhv.spiel_backend.DTO.JoinResponseDTO;
-import at.fhv.spiel_backend.DTO.MoveRequestDTO;
-import at.fhv.spiel_backend.DTO.ShootProjectileDTO;
-import at.fhv.spiel_backend.DTO.WaitingReadyDTO;
+import at.fhv.spiel_backend.DTO.*;
 import at.fhv.spiel_backend.logic.DefaultGameLogic;
+import at.fhv.spiel_backend.model.Gadget;
+import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.server.room.IRoomManager;
@@ -24,7 +21,7 @@ public class SocketIOConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SocketIOConfig.class);
 
-    @Bean
+    @Bean(destroyMethod = "stop")
     public SocketIOServer socketIOServer(@Lazy IRoomManager roomManager) {
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         config.setHostname("localhost");
@@ -47,6 +44,12 @@ public class SocketIOConfig {
                          data.getPlayerId(),
                          data.getChosenWeapon());
             }
+            if (data.getChosenGadget() != null) {
+                room.getGameLogic().setPlayerGadget(
+                        data.getPlayerId(),
+                        data.getChosenGadget());
+            }
+
 
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
@@ -88,7 +91,7 @@ public class SocketIOConfig {
                         ack.sendAckData("error: room_not_found");
                         return;
                     }
-                    if (((DefaultGameLogic)room.getGameLogic()).getPlayer(data.getPlayerId()).getCurrentHealth() <= 0) {
+                    if (room.getGameLogic().getPlayer(data.getPlayerId()).getCurrentHealth() <= 0) {
                         ack.sendAckData("dead");
                         return;
                     }
@@ -138,6 +141,50 @@ public class SocketIOConfig {
         });
 
 
+        // Gadget-event
+        server.addEventListener("useGadget", UseGadgetDTO.class, (client, data, ack) -> {
+            System.out.println("[INFO] Gadget used for " + data.getPlayerId());
+            GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+            DefaultGameLogic logic = (DefaultGameLogic) room.getGameLogic();
+            Player p = logic.getPlayer(data.getPlayerId());
+            Gadget g = room.getGameLogic().getGadget(data.getPlayerId());
+            if (g == null) {
+                ack.sendAckData("error:no_gadget");
+                return;
+            }
+            if (g.getRemainingUses() <= 0) {
+                ack.sendAckData("error:no_uses_left");
+                return;
+            }
+            if (g.getTimeRemaining() > 0) {
+                ack.sendAckData("error:cooldown");
+                return;
+            }
+            long now = System.currentTimeMillis();
+            switch (g.getType()) {
+                case SPEED_BOOST:
+                    p.setSpeedBoostActive(true);
+                    break;
+
+                case HP_BOOST:
+                    p.setMaxHealth(p.getMaxHealth() + Player.HP_BOOST_AMOUNT);
+                    p.setCurrentHealth(
+                            Math.min(p.getMaxHealth(),
+                                    p.getCurrentHealth() + Player.HP_BOOST_AMOUNT)
+                    );
+                    break;
+
+                case DAMAGE_BOOST:
+                    p.setDamageBoostEndTime(now + 10_000);
+                    break;
+            }
+
+            // Gemeinsames Starten von Cooldown & Use-Zähler
+            g.setTimeRemaining(10_000L);                        // 10 Sekunden Buff-Laufzeit
+            g.setRemainingUses(g.getRemainingUses() - 1);      // Use reduzieren
+
+            ack.sendAckData("ok");
+        });
         server.start();
         return server;
     }
