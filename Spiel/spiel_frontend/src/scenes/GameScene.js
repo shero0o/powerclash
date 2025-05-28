@@ -222,6 +222,19 @@ export default class GameScene extends Phaser.Scene {
         this.gadgetText = this.add.text(16, 80, '', {
             fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
         }).setScrollFactor(0);
+
+        this.exitButtonGame = this.createButton(
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2 + 70,
+            'Exit',
+            () => {
+                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+                this.socket.disconnect();
+                window.location.reload();
+            }
+        )
+            .setScrollFactor(0)
+            .setVisible(false);
     }
 
     startFiring(pointer) {
@@ -644,7 +657,7 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         // Exit anzeigen, wenn tot
-        if (me && me.currentHealth <= 0) this.exitButton.setVisible(true);
+        if (me && me.currentHealth <= 0) this.exitButtonGame.setVisible(true);
 
             // Projektile rendern
             const alive = new Set();
