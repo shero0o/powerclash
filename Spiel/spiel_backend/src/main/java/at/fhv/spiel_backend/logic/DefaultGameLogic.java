@@ -659,6 +659,8 @@ public class DefaultGameLogic implements GameLogic {
                     ))
                     .collect(Collectors.toList());
             msg.setCrates(crateStates);
+        List<Gadget> gadgets = getAllGadgets();  // oder wie immer Dein Logic das hält
+        msg.setGadgets(gadgets);
 
 
             if (zoneActive) {
@@ -670,8 +672,12 @@ public class DefaultGameLogic implements GameLogic {
             return msg;
         }
 
+    public List<Gadget> getAllGadgets() {
+        return new ArrayList<>(this.playerGadget.values());
+    }
 
-        @Override
+
+    @Override
         public List<Projectile> getProjectiles () {
             return new ArrayList<>(projectiles.values());
         }

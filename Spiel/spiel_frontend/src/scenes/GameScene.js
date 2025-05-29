@@ -114,7 +114,7 @@ export default class GameScene extends Phaser.Scene {
         // AFTER: no scrollFactor → it's in world‐space
         this.graphicsZone = this.add.graphics();
 
-        this.textZoneTimer   = this.add.text(10, 50, '', {
+        this.textZoneTimer   = this.add.text(15, 120, '', {
             fontFamily: 'Arial', fontSize: '24px',
             color: '#ffffff', stroke: '#000000',
             strokeThickness: 3
@@ -194,8 +194,16 @@ export default class GameScene extends Phaser.Scene {
 
 // Eingabe: Q -> Gadget
         this.input.keyboard.on('keydown-Q', () => {
+            const now = this.time.now;
+            if (this.gadgetMaxUses <= 0) {
+                console.log('Kein Gadget-Einsatz mehr möglich');
+                return;
+            }
+            if (now < this.cooldownExpireTime) {
+                console.log('Gadget im Cooldown');
+                return;
+            }
             console.log('keydown-Q ausgelöst → useGadget() wird aufgerufen');
-            this.gadgetMaxUses-=1;
             this.useGadget();
         });
         // Socket-Update
@@ -203,6 +211,11 @@ export default class GameScene extends Phaser.Scene {
             this.npcs = state.npcs || [];
             this.latestState = state;
             this.zoneState   = state.zoneState || null;
+            const myGadget = state.gadgets.find(g => g.playerId === this.playerId);
+            if (myGadget) {
+                this.gadgetMaxUses      = myGadget.remainingUses;
+                this.cooldownExpireTime = this.time.now + myGadget.timeRemaining;
+            }
 
             // 🌿 Sichtbarkeits-Testausgabe
             console.log("📦 Spieler-Sichtbarkeit:");
@@ -591,6 +604,8 @@ export default class GameScene extends Phaser.Scene {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
                     spr.setVisible(p.visible);
+
+
                     // Health Bar zeichnen
                     const barW       = 40;
                     const barH       = 6;
@@ -628,6 +643,7 @@ export default class GameScene extends Phaser.Scene {
                         const w      = Math.min(segW - gap, remain);
                         spr.healthBar.fillRect(x, bgY + 1, w, barH);
                     }
+                    spr.healthBar.setVisible(p.visible);
                     if (spr.label) {
                         spr.label.setPosition(p.position.x, p.position.y - 50);
                         spr.label.setVisible(p.visible);

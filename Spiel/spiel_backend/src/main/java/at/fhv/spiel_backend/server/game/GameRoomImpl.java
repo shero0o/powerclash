@@ -248,7 +248,7 @@ public class GameRoomImpl implements IGameRoom {
                     }
 
                     // Runterzählen des Gadget-Timers (pro Tick einmal TICK_DT*1000 ms)
-                    if (gadget != null && gadget.getTimeRemaining() > 0 && gadget.getType() == GadgetType.SPEED_BOOST) {
+                    if (gadget != null && gadget.getTimeRemaining() > 0) {
                         long updated = gadget.getTimeRemaining() - (long)(TICK_DT * 1000);
                         gadget.setTimeRemaining(Math.max(0, updated));
                     }
