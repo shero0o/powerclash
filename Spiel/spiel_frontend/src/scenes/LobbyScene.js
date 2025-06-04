@@ -45,6 +45,7 @@ export default class LobbyScene extends Phaser.Scene {
 
         // Statt "icon_currency" laden wir nur das Coin-Symbol selbst
         this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 100, height: 100 });
+        this.load.svg("btn-settings", "/assets/svg/btn-settings.svg", { width: 200, height: 100 });
 
         // 2) Avatar-PNG laden
         this.load.image('avatar', '/assets/PNG/avatar/avatar.png');
@@ -86,6 +87,11 @@ export default class LobbyScene extends Phaser.Scene {
             .setDisplaySize(200, 80)
             .setInteractive({ useHandCursor: true });
         btnShop.on('pointerdown', () => console.log('Shop öffnen'));
+
+        this.add.image(1400, height / 2 - 330, 'btn-settings')
+            .setOrigin(0.5)
+            .setDisplaySize(140, 70)
+            .setInteractive({ useHandCursor: true });
 
         // --- Brawlers-Button (links darunter) ---
         const btnBrawlers = this.add.image(90, height / 2, 'icon_brawlers')

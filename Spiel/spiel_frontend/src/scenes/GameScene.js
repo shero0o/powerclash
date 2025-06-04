@@ -60,6 +60,8 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
         this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
 
+        this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -77,6 +79,22 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+
+        this.exitButtonSvg = this.add.image(
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2 + 70,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true })
+            .setVisible(false)   // zunächst wegstecken
+            .on('pointerdown', () => {
+                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+                this.socket.disconnect();
+                window.location.reload();
+            });
+
         // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
@@ -226,18 +244,6 @@ export default class GameScene extends Phaser.Scene {
             fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
         }).setScrollFactor(0);
 
-        this.exitButtonGame = this.createButton(
-            this.cameras.main.width / 2,
-            this.cameras.main.height / 2 + 70,
-            'Exit',
-            () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        )
-            .setScrollFactor(0)
-            .setVisible(false);
     }
 
     startFiring(pointer) {
@@ -663,7 +669,7 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         // Exit anzeigen, wenn tot
-        if (me && me.currentHealth <= 0) this.exitButtonGame.setVisible(true);
+        if (me && me.currentHealth <= 0) this.exitButtonSvg.setVisible(true);
 
             // Projektile rendern
             const alive = new Set();
@@ -844,21 +850,6 @@ export default class GameScene extends Phaser.Scene {
 
     }
 
-    createButton(x, y, text, onClick) {
-        const btn = this.add.text(x, y, text, {
-            fontSize: '32px', fontFamily: 'Arial',
-            color: '#ffffff', backgroundColor: '#333333',
-            padding: {x: 20, y: 10}, align: 'center'
-        })
-            .setOrigin(0.5)
-            .setInteractive()
-            .setScrollFactor(0)
-            .on('pointerover', () => btn.setStyle({backgroundColor: '#555555'}))
-            .on('pointerout', () => btn.setStyle({backgroundColor: '#333333'}))
-            .on('pointerdown', onClick);
-
-        return btn;
-    }
 
     showVictoryScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
@@ -925,15 +916,33 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0);
 
-        this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 150, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        );
+
+        const exitBtn = this.add.image(
+            width / 2,
+            height / 2 + 180,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true });
+
+        exitBtn.on('pointerover', () => {
+            exitBtn.setScale(1.1);
+        });
+        exitBtn.on('pointerout', () => {
+            exitBtn.setScale(1.0);
+        });
+
+        exitBtn.on('pointerdown', () => {
+            this.socket.emit('leaveRoom', {
+                roomId: this.roomId,
+                playerId: this.playerId
+            });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+
+
     }
 
     showDefeatScreen(place, baseCoins, bonus, totalCoins) {
@@ -1001,15 +1010,30 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0);
 
+        const exitBtn = this.add.image(
+            width / 2,
+            height / 2 + 180,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true });
 
-        this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 150, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        );
+        exitBtn.on('pointerover', () => {
+            exitBtn.setScale(1.1);
+        });
+        exitBtn.on('pointerout', () => {
+            exitBtn.setScale(1.0);
+        });
+
+        exitBtn.on('pointerdown', () => {
+            this.socket.emit('leaveRoom', {
+                roomId: this.roomId,
+                playerId: this.playerId
+            });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+
     }
 }
