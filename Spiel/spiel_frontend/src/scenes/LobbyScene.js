@@ -49,6 +49,8 @@ export default class LobbyScene extends Phaser.Scene {
 
         // 2) Avatar-PNG laden
         this.load.image('avatar', '/assets/PNG/avatar/avatar.png');
+
+        this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
     }
 
     create() {
@@ -88,10 +90,14 @@ export default class LobbyScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
         btnShop.on('pointerdown', () => console.log('Shop öffnen'));
 
-        this.add.image(1400, height / 2 - 330, 'btn-settings')
+        const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({ useHandCursor: true }).setDepth(500);
+
+        settingsBtn.on('pointerdown', () => {
+            this.openSettingsWindow();
+        });
 
         // --- Brawlers-Button (links darunter) ---
         const btnBrawlers = this.add.image(90, height / 2, 'icon_brawlers')
@@ -134,6 +140,22 @@ export default class LobbyScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(0.8)
             .setInteractive({ useHandCursor: true });
+
+        this.playButton.on('pointerover', () => {
+            // Mit tint abdunkeln (z.B. 0x999999 ist ein dunkleres Grau)
+            this.playButton.setTint(0x999999);
+            // ODER: stattdessen alpha ändern
+            // this.playButton.setAlpha(0.8);
+        });
+
+// Wenn Maus wieder weg: Ursprungszustand zurücksetzen
+        this.playButton.on('pointerout', () => {
+            // Entfernt den Tint, Original-Farbe wird wiederhergestellt
+            this.playButton.clearTint();
+            // ODER: wenn alpha verwendet wurde:
+            // this.playButton.setAlpha(1);
+        });
+
         // Klick auf PLAY = Daten an Server senden + Wechsel zu WaitingScene
         this.playButton.on('pointerdown', () => this.onPlayClicked());
 
@@ -244,7 +266,8 @@ export default class LobbyScene extends Phaser.Scene {
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 0, stroke: false, fill: false },
             resolution: 2
         };
-        this.levelLabel = this.add.text(levelBtnX, levelBtnY, `Level: ${this.selectedLevel}`, labelStyle)
+        const numberOnly = this.selectedLevel.replace(/^level/, '');
+        this.levelLabel = this.add.text(levelBtnX, levelBtnY, `Level: ${numberOnly}`, labelStyle)
             .setOrigin(0.5);
 
         // c) Unsichtbare Hitbox über dem Label
@@ -324,7 +347,8 @@ export default class LobbyScene extends Phaser.Scene {
      */
     selectLevel(levelId) {
         this.selectedLevel = levelId;
-        this.levelLabel.setText(`Level: ${levelId}`);
+        const numberOnly = levelId.replace(/^level/, '');
+        this.levelLabel.setText(`Level: ${numberOnly}`);
         this.levelDropdown.setVisible(false);
     }
 
@@ -415,5 +439,101 @@ export default class LobbyScene extends Phaser.Scene {
         // 4) Text horizontal neu zentrieren
         const newTextX = this.rectX + desiredWidth / 2;
         this.coinText.setX(newTextX);
+    }
+
+
+    openSettingsWindow() {
+        const vw = this.scale.width;
+        const vh = this.scale.height;
+
+        // a) Schwarzes halbtransparentes Overlay, das den ganzen Viewport abdeckt
+        const overlay = this.add.rectangle(
+            vw / 2,    // in der Mitte des Viewports
+            vh / 2,
+            vw,        // volle Breite des Viewports
+            vh,        // volle Höhe des Viewports
+            0x000000   // Farbe: Schwarz
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setAlpha(0.8)     // 80% Opazität → leicht durchsichtig
+            .setDepth(1000);   // sehr hoher Depth, damit alles darunter verdeckt ist
+
+        // b) Schwarzes Rechteck in der Mitte für den Settings‐Dialog
+        //    Beispiel: halbe Breite, halbe Höhe, zentriert
+        const winWidth  = vw * 0.6;
+        const winHeight = vh * 0.6;
+        const dialogBg = this.add.rectangle(
+            vw / 2, vh / 2,
+            winWidth, winHeight,
+            0x111111   // dunkles Grau/Schwarz
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1001)    // eine Stufe über dem Overlay
+
+        // Optional: Rahmen um das Dialogfeld (weiß oder helle Farbe)
+        const border = this.add.graphics()
+            .lineStyle(4, 0xffffff)  // 4px weißer Rahmen
+            .strokeRect(
+                (vw - winWidth) / 2,
+                (vh - winHeight) / 2,
+                winWidth,
+                winHeight
+            )
+            .setScrollFactor(0)
+            .setDepth(1002);         // noch eine Stufe höher, damit es über dialogBg liegt
+
+        // c) Titel „Settings“ oben im Dialog
+        const title = this.add.text(
+            vw / 2,
+            (vh - winHeight) / 2 + 30,
+            'Settings',
+            {
+                fontSize: '36px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 6
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1003);
+
+        // d) Beispiel‐Checkbox oder Textfeld im Dialog
+        //    Du kannst hier beliebige Phaser‐UI‐Elemente oder Textfelder hinzufügen.
+        const exampleText = this.add.text(
+            vw / 2,
+            vh / 2 - 20,
+            'Sound:',
+            {
+                fontSize: '24px',
+                fontFamily: 'Arial',
+                color: '#ffffff'
+            }
+        )
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0)
+            .setDepth(1003);
+
+        // Beispiel‐Button „Close“, um das Fenster zu schließen
+        const closeBtn = this.add.image(
+            vw / 2,
+            (vh + winHeight) / 2 - 30, "exitButtonSvg"
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1003)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                // Beim Klick alle erzeugten Objekte löschen
+                overlay.destroy();
+                dialogBg.destroy();
+                border.destroy();
+                title.destroy();
+                exampleText.destroy();
+                closeBtn.destroy();
+            });
     }
 }

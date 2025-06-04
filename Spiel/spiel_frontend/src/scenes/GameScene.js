@@ -65,6 +65,11 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("controller", "assets/svg/controller.svg", { width: 350, height: 150 })
         this.load.svg("brawler-stats", "assets/svg/brawler-stats.svg", { width: 250, height: 125 })
 
+        this.load.svg("victory", "assets/svg/victory.svg", { width: 600, height: 300 })
+        this.load.svg("defeat", "assets/svg/defeat.svg", { width: 600, height: 300 })
+
+        this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 100, height: 100 });
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -973,9 +978,10 @@ export default class GameScene extends Phaser.Scene {
     showVictoryScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
 
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000)
+        this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0)
+            .setAlpha(0.8).setDepth(1000);
 
 
         this.victoryText = this.add.text(
@@ -984,8 +990,10 @@ export default class GameScene extends Phaser.Scene {
                 color: '#00ff00', stroke: '#000000',
                 strokeThickness: 6
             }
-        ).setOrigin(0.5).setScrollFactor(0);
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
+
+        this.add.image(width/2 - 50, height / 2 -200, "victory").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
         this.add.text(
             width / 2,
@@ -1000,7 +1008,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
         // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
@@ -1017,7 +1025,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
         // 4) Gesamt-Coins
         this.add.text(
@@ -1033,7 +1041,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
 
         const exitBtn = this.add.image(
@@ -1043,13 +1051,13 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({ useHandCursor: true }).setDepth(1001);
 
         exitBtn.on('pointerover', () => {
             exitBtn.setScale(1.1);
         });
         exitBtn.on('pointerout', () => {
-            exitBtn.setScale(1.0);
+            exitBtn.setScale(1.0).setDepth(1001);
         });
 
         exitBtn.on('pointerdown', () => {
@@ -1067,9 +1075,9 @@ export default class GameScene extends Phaser.Scene {
     showDefeatScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
 
-        this.add.rectangle(width / 2, height / 2, width, height, 0x000000)
+        this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setAlpha(0.8).setDepth(1000);
 
         this.victoryText = this.add.text(
             width / 2, height / 2 - 80,  `You placed: ${place}!`, {
@@ -1077,8 +1085,10 @@ export default class GameScene extends Phaser.Scene {
                 color: '#ff0000', stroke: '#000000',
                 strokeThickness: 6
             }
-        ).setOrigin(0.5).setScrollFactor(0);
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
+
+        this.add.image(width/2 - 50, height / 2 -200, "defeat").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
         // 2) Coins im Spiel
         this.add.text(
@@ -1094,7 +1104,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
         // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
@@ -1111,7 +1121,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
         // 4) Gesamt-Coins
         this.add.text(
@@ -1127,7 +1137,7 @@ export default class GameScene extends Phaser.Scene {
             }
         )
             .setOrigin(0.5)
-            .setScrollFactor(0);
+            .setScrollFactor(0).setDepth(1001);
 
         const exitBtn = this.add.image(
             width / 2,
@@ -1136,13 +1146,13 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({ useHandCursor: true }).setDepth(1001);
 
         exitBtn.on('pointerover', () => {
-            exitBtn.setScale(1.1);
+            exitBtn.setScale(1.1).setDepth(1001);
         });
         exitBtn.on('pointerout', () => {
-            exitBtn.setScale(1.0);
+            exitBtn.setScale(1.0).setDepth(1001);
         });
 
         exitBtn.on('pointerdown', () => {
