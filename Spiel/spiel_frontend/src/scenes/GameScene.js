@@ -138,16 +138,6 @@ export default class GameScene extends Phaser.Scene {
 
         this.coinFloatingTexts = this.add.group();
 
-        this.coinText = this.add.text(this.cameras.main.width - 160, 16, '0', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0, 0)
-            .setScrollFactor(0)
-            .setDepth(1000);
 
 
         this.coinText = this.add.text(this.cameras.main.width - 160, 16, 'Coins: 0', {
@@ -781,19 +771,55 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-        // ─── victory / defeat ─────────────────────────────
-        if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
+
+        const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
+
+        // 1) Wenn nur noch ein Spieler übrig ist (Sieg-Bedingung)
+        if (!this.hasWon && alivePlayers === 1) {
             const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
             if (meAlive && meAlive.currentHealth > 0) {
-                this.showVictoryScreen();
+                const place = 1; // Sieger ist automatisch Platz 1
+                const baseCoins = meAlive.coinCount ?? 0;
+                // Bonus-Regeln: Platz 1 +10, Platz 2 +5, Platz 3 +0, Platz 4 -10
+                const bonus = 10; // Platz 1 immer +10
+                const totalCoins = baseCoins + bonus;
+                this.showVictoryScreen(place, baseCoins, bonus, totalCoins);
                 this.hasWon = true;
             }
             const newCount = me.coinCount ?? 0;
             this.lastCoinCount = newCount;
             this.coinText.setText(`${newCount}`);
         }
+
+        // 2) Wenn man selbst gerade gestorben ist
         if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-            this.showDefeatScreen();
+            // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
+            // Platz des Verstorbenen = alivePlayers + 1
+            const place = alivePlayers + 1;
+
+            const baseCoins = me.coinCount ?? 0;
+
+            // Bonus-/Malus-Berechnung nach Platz
+            let bonus = 0;
+            switch (place) {
+                case 1:
+                    bonus = 10;
+                    break;
+                case 2:
+                    bonus = 5;
+                    break;
+                case 3:
+                    bonus = 0;
+                    break;
+                case 4:
+                    bonus = -10;
+                    break;
+                default:
+                    bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
+            }
+            const totalCoins = baseCoins + bonus;
+
+            this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
             this.defeatShown = true;
         }
 
@@ -814,6 +840,8 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
+
+
     }
 
     createButton(x, y, text, onClick) {
@@ -832,18 +860,73 @@ export default class GameScene extends Phaser.Scene {
         return btn;
     }
 
-    showVictoryScreen() {
+    showVictoryScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
+
+        this.add.rectangle(width / 2, height / 2, width, height, 0x000000)
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80, 'YOU WON!', {
+            width / 2, height / 2 - 80, `You placed ${place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#00ff00', stroke: '#000000',
                 strokeThickness: 6
             }
         ).setOrigin(0.5).setScrollFactor(0);
 
+
+        this.add.text(
+            width / 2,
+            height / 2 - 30,
+            `In game won coins: ${baseCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+        // 3) Bonus/Malus
+        const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
+        this.add.text(
+            width / 2,
+            height / 2 + 20,
+            bonusText,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: bonus >= 0 ? '#00ff00' : '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+        // 4) Gesamt-Coins
+        this.add.text(
+            width / 2,
+            height / 2 + 70,
+            `Gesamt-Coins: ${totalCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffd700', // Gold-Farbton
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
         this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 70, 'Exit', () => {
+            width / 2, height / 2 + 150, 'Exit', () => {
                 this.socket.emit('leaveRoom', {
                     roomId: this.roomId, playerId: this.playerId
                 });
@@ -853,18 +936,74 @@ export default class GameScene extends Phaser.Scene {
         );
     }
 
-    showDefeatScreen() {
+    showDefeatScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
+
+        this.add.rectangle(width / 2, height / 2, width, height, 0x000000)
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80, 'YOU DIED', {
+            width / 2, height / 2 - 80,  `You placed: ${place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#ff0000', stroke: '#000000',
                 strokeThickness: 6
             }
         ).setOrigin(0.5).setScrollFactor(0);
 
+
+        // 2) Coins im Spiel
+        this.add.text(
+            width / 2,
+            height / 2 - 30,
+            `In game won coins: ${baseCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+        // 3) Bonus/Malus
+        const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
+        this.add.text(
+            width / 2,
+            height / 2 + 20,
+            bonusText,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: bonus >= 0 ? '#00ff00' : '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+        // 4) Gesamt-Coins
+        this.add.text(
+            width / 2,
+            height / 2 + 70,
+            `Gesamt-Coins: ${totalCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffd700',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0);
+
+
         this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 70, 'Exit', () => {
+            width / 2, height / 2 + 150, 'Exit', () => {
                 this.socket.emit('leaveRoom', {
                     roomId: this.roomId, playerId: this.playerId
                 });

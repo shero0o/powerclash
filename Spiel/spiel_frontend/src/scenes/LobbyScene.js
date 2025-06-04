@@ -12,6 +12,7 @@ export default class LobbyScene extends Phaser.Scene {
         this.levelDropdown = null;
         this.selectedLevel = 'level1'; // Default Level
 
+        this.selectedGadget = 'DAMAGE_BOOST'
         // Default-Werte für Waffe und Brawler (wie in SelectionScene)
         this.selectedWeapon  = 'RIFLE_BULLET';
         this.selectedBrawler = 'sniper';
@@ -350,9 +351,10 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('levelId', levelToSend);
         this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
+        this.registry.set("gadget", this.selectedGadget);
 
         //6) Wenn du einen Socket‐Emit brauchst (wie in SelectionScene), z.B.:
-           this.socket.emit('joinRoom', { playerId, brawlerId: this.selectedBrawler, levelId: levelToSend, chosenWeapon: this.selectedWeapon, playerName: enteredName }, (response) => {
+           this.socket.emit('joinRoom', { playerId, brawlerId: this.selectedBrawler, levelId: levelToSend, chosenWeapon: this.selectedWeapon, playerName: enteredName, chosenGadget: this.selectedGadget }, (response) => {
                this.registry.set('roomId', response.roomId);
                this.scene.start('WaitingScene');
            });
@@ -365,7 +367,8 @@ export default class LobbyScene extends Phaser.Scene {
             playerName: enteredName,
             brawlerId: this.selectedBrawler,
             levelId: levelToSend,
-            chosenWeapon: this.selectedWeapon
+            chosenWeapon: this.selectedWeapon,
+            chosenGadget: this.selectedGadget
         });
 
         // 7) HTML-Input entfernen
