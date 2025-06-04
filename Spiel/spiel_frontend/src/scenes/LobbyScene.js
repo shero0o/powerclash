@@ -236,7 +236,7 @@ export default class LobbyScene extends Phaser.Scene {
 
         // b) Text „Level: X“ (startet mit Default 'level1' → Anzeige "Level: level1")
         const labelStyle = {
-            fontFamily: 'Arial',
+            fontFamily: 'Arial Black',
             fontSize: '20px',
             color: '#ffffff',
             stroke: '#000000',

@@ -62,6 +62,9 @@ export default class GameScene extends Phaser.Scene {
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
 
+        this.load.svg("controller", "assets/svg/controller.svg", { width: 350, height: 150 })
+        this.load.svg("brawler-stats", "assets/svg/brawler-stats.svg", { width: 250, height: 125 })
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -79,6 +82,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        const cam = this.cameras.main;
+        const vw = this.scale.width;   // Breite des Viewports in Pixeln
+        const vh = this.scale.height;  // Höhe des Viewports in Pixeln
+           // fest am Bildschirm haften
+
+
 
         this.exitButtonSvg = this.add.image(
             this.cameras.main.width / 2,
@@ -111,6 +120,114 @@ export default class GameScene extends Phaser.Scene {
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        }
+
+
+        const controllerIcon = this.add.image(
+            vw / 130,    // horizontal zentriert
+            vh + 10,  // 50px oberhalb der unteren Bildschirmkante
+            'controller'
+        )
+            .setOrigin(0.5)
+            .setScale(0.8)
+            .setScrollFactor(0).setAlpha(0.5)       // 0.0 = komplett durchsichtig, 1.0 = voll sichtbar
+            .setDepth(1000);
+
+        const offset = 80;
+        this.add.text(
+            controllerIcon.x,
+            controllerIcon.y - offset,
+            'W',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "S" unterhalb
+        this.add.text(
+            controllerIcon.x,
+            controllerIcon.y + offset,
+            'S',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "A" links
+        this.add.text(
+            controllerIcon.x - offset,
+            controllerIcon.y,
+            'A',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "D" rechts
+        this.add.text(
+            controllerIcon.x + offset,
+            controllerIcon.y,
+            'D',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        this.healthIcon = this.add.image(
+            vw / 2,
+            vh + 10,
+            'brawler-stats'
+        )
+            .setOrigin(0.5)
+            .setScale(0.8)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        this.healthValueText = this.add.text(
+            vw / 2 + 44,
+            this.healthIcon.y + 25,
+            '0', // Startwert; wird in update() überschrieben
+            {
+                fontSize: '28px',
+                fontFamily: 'Arial Black',
+                color: '#ffffff',       // weiße Schrift
+                stroke: '#000000',      // schwarzer Rand
+                strokeThickness: 4,
+                align: 'center'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+
 
 
         // Physik-Welt & Kamera
@@ -376,7 +493,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
-        if (me) {
+        if (me && this.healthValueText) {
+            this.healthValueText.setText(`${me.currentHealth} / ${me.maxHealth}`);
+
             // Boost-Ablauf prüfen
             if (this.boostActive && this.time.now > this.boostEndTime) {
                 this.boostActive = false;
