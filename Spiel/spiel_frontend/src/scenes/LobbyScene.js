@@ -351,11 +351,11 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
 
-        // 6) Wenn du einen Socket‐Emit brauchst (wie in SelectionScene), z.B.:
-        //    this.socket.emit('joinRoom', { playerId, brawlerId: this.selectedBrawler, levelId: levelToSend, chosenWeapon: this.selectedWeapon, playerName: enteredName }, (response) => {
-        //        this.registry.set('roomId', response.roomId);
-        //        this.scene.start('WaitingScene');
-        //    });
+        //6) Wenn du einen Socket‐Emit brauchst (wie in SelectionScene), z.B.:
+           this.socket.emit('joinRoom', { playerId, brawlerId: this.selectedBrawler, levelId: levelToSend, chosenWeapon: this.selectedWeapon, playerName: enteredName }, (response) => {
+               this.registry.set('roomId', response.roomId);
+               this.scene.start('WaitingScene');
+           });
         //
         //    Falls du das Socket-Protokoll genauso wie vorher möchtest, dekodiere es hier.
         //    Für dieses Beispiel starten wir jedoch direkt WaitingScene:
