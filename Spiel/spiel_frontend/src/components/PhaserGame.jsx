@@ -5,7 +5,7 @@ import io from 'socket.io-client';
 
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
-import SelectionScene from '../scenes/SelectionScene';
+import LobbyScene from "../scenes/LobbyScene.js";
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -31,7 +31,7 @@ export default function PhaserGame() {
         window.addEventListener('beforeunload', beforeUnloadHandler);
 
         const scenes = [
-            new SelectionScene(),
+            new LobbyScene(),
             new WaitingScene(),
             new GameScene()
         ];
