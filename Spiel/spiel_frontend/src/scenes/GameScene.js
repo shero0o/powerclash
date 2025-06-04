@@ -68,7 +68,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("victory", "assets/svg/victory.svg", { width: 600, height: 300 })
         this.load.svg("defeat", "assets/svg/defeat.svg", { width: 600, height: 300 })
 
-        this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 100, height: 100 });
+        this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 250, height: 200 });
 
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
@@ -280,15 +280,31 @@ export default class GameScene extends Phaser.Scene {
 
 
 
-        this.coinText = this.add.text(this.cameras.main.width - 160, 16, 'Coins: 0', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 3
-        })
-            .setOrigin(0, 0)
+        const coinX = vw - 200;
+        const coinY = 16;
+
+        // 1) Erstelle das Coin‐Icon
+        this.coinIcon = this.add.image(coinX, coinY, 'icon_coin')
+            .setOrigin(0, 0)      // links‐oben am Icon
+            .setScrollFactor(0)   // bleibt fest am HUD
+            .setDisplaySize(60, 60) // skaliere auf 32×32px (oder so, wie es optisch passt)
+            .setDepth(1000);
+
+
+        this.coinText = this.add.text(
+            coinX + 90,  // 36px nach rechts, damit Text hinter dem 32px‐Icon beginnt + 4px Abstand
+            coinY + 25,   // 8px nach unten, sodass Text mittig zum Icon sitzt
+            '0',         // Startwert; wird in update() überschrieben
+            {
+                fontSize: '28px',
+                fontFamily: 'Arial Black',
+                color: '#ffff00',       // Gelb
+                stroke: '#000000',      // Schwarzer Rand
+                strokeThickness: 3,
+                align: 'left'
+            }
+        )
+            .setOrigin(0.5)   // linke Mitte des Texts
             .setScrollFactor(0)
             .setDepth(1000);
 
@@ -897,7 +913,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.latestState && this.latestState.players) {
             const me = this.latestState.players.find(p => p.playerId === this.playerId);
             if (me && this.coinText) {
-                this.coinText.setText(`Coins: ${me.coinCount}`);
+                this.coinText.setText(`${me.coinCount}`);
             }
         }
 
