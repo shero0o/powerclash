@@ -40,8 +40,8 @@ export default function PhaserGame() {
         const config = {
             type: Phaser.AUTO,
             parent: containerRef.current,
-            width: 1280,
-            height: 720,
+            width: window.innerWidth,
+            height: window.innerHeight,
             scale: {
                 mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
