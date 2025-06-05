@@ -70,6 +70,10 @@ export default class GameScene extends Phaser.Scene {
 
         this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 250, height: 200 });
 
+        this.load.svg("healthGadget", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
+        this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
+        this.load.svg("damageGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -375,12 +379,61 @@ export default class GameScene extends Phaser.Scene {
             projectileType: this.selectedWeapon
         });
 
+
+        //Gadget:
+        this.gadgetType = this.registry.get('gadget') || 'HEALTH_BOOST';
+        //    In Lobby hast du offenbar mit Werten wie 'DAMAGE_BOOST' o. Ä. gearbeitet.
+        //    Wir definieren nun eine Hilfsfunktion, die daraus den passenden Texture-Key macht:
+
+        const getGadgetKey = (gadgetTypeString) => {
+            switch (gadgetTypeString) {
+                case 'DAMAGE_BOOST': return 'damageGadget';
+                case 'SPEED_BOOST':  return 'speedGadget';
+                case 'HEALTH_BOOST':
+                default:             return 'healthGadget';
+            }
+        };
+
+        // 2) Wähle den korrekten Texture-Key
+        const currentGadgetKey = getGadgetKey(this.gadgetType);
+
+        // 3) Gadget-Icon an gewünschter HUD-Position platzieren (z. B. links oben neben den Coins)
+        //    Wir legen es z. B. knapp unterhalb des Coin-Icons ab (y=90). Passe bei Bedarf an!
+        this.gadgetIcon = this.add.image(
+            vw / 2 + 800,   // 100px links neben Münz-HUD (oder wo du es haben willst)
+            vh + 10,    // zentriert zur HUD-Leiste
+            currentGadgetKey
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDisplaySize(160, 80)  // skaliere so, dass es zum HUD passt
+            .setDepth(1000);
+
+        // ─── (optional) Wenn du dennoch einen Gadget-Text (z.B. für Cooldown) brauchst,
+        //       kannst du ihn hier anlegen und später in update() aktualisieren:
+        this.gadgetText = this.add.text(
+            this.gadgetIcon.x + 0,   // z. B. direkt unter dem Icon
+            this.gadgetIcon.y + 55,
+            '',
+            {
+                fontFamily: 'Arial',
+                fontSize: '18px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 3,
+                align: 'center'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
         // Gadget-Anzeige initialisieren
-        this.gadgetType = this.registry.get('gadget');   // Typ aus JoinRequest
-        this.cooldownExpireTime = 0; // Timestamp in ms, wann Cooldown endet
-        this.gadgetText = this.add.text(16, 80, '', {
-            fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
-        }).setScrollFactor(0);
+        // this.gadgetType = this.registry.get('gadget');   // Typ aus JoinRequest
+        // this.cooldownExpireTime = 0; // Timestamp in ms, wann Cooldown endet
+        // this.gadgetText = this.add.text(16, 80, '', {
+        //     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
+        // }).setScrollFactor(0);
 
     }
 
@@ -532,6 +585,9 @@ export default class GameScene extends Phaser.Scene {
 
             const remMs = Math.max(0, this.cooldownExpireTime - this.time.now);
 
+
+
+
             if (remMs > 0) {
                 // Noch im Cooldown
                 const cdSec = `${Math.ceil(remMs / 1000)}s`;
@@ -542,14 +598,14 @@ export default class GameScene extends Phaser.Scene {
                 if (this.gadgetMaxUses <= 0){
                     // nicht Bereit
                     this.gadgetText
-                        .setText(`No Gadget uses left: ${this.gadgetType}`)
+                        .setText(`0 Uses: ${this.gadgetType}`)
                         .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
                 }
                 else{
                     // Bereit
                     this.gadgetText
-                        .setText(`Gadget Ready: ${this.gadgetType}`)
-                        .setStyle({ fill: '#00ff00', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+                        .setText("Q")
+                        .setStyle({ fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3 });
                 }
             }
 
