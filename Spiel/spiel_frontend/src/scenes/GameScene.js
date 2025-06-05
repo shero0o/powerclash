@@ -60,6 +60,16 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
         this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
 
+        this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
+
+        this.load.svg("controller", "assets/svg/controller.svg", { width: 350, height: 150 })
+        this.load.svg("brawler-stats", "assets/svg/brawler-stats.svg", { width: 250, height: 125 })
+
+        this.load.svg("victory", "assets/svg/victory.svg", { width: 600, height: 300 })
+        this.load.svg("defeat", "assets/svg/defeat.svg", { width: 600, height: 300 })
+
+        this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width: 250, height: 200 });
+
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
         }
@@ -77,6 +87,28 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
+        const cam = this.cameras.main;
+        const vw = this.scale.width;   // Breite des Viewports in Pixeln
+        const vh = this.scale.height;  // Höhe des Viewports in Pixeln
+           // fest am Bildschirm haften
+
+
+
+        this.exitButtonSvg = this.add.image(
+            this.cameras.main.width / 2,
+            this.cameras.main.height / 2 + 70,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true })
+            .setVisible(false)   // zunächst wegstecken
+            .on('pointerdown', () => {
+                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+                this.socket.disconnect();
+                window.location.reload();
+            });
+
         // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
@@ -93,6 +125,114 @@ export default class GameScene extends Phaser.Scene {
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        }
+
+
+        const controllerIcon = this.add.image(
+            vw / 130,    // horizontal zentriert
+            vh + 10,  // 50px oberhalb der unteren Bildschirmkante
+            'controller'
+        )
+            .setOrigin(0.5)
+            .setScale(0.8)
+            .setScrollFactor(0).setAlpha(0.5)       // 0.0 = komplett durchsichtig, 1.0 = voll sichtbar
+            .setDepth(1000);
+
+        const offset = 80;
+        this.add.text(
+            controllerIcon.x,
+            controllerIcon.y - offset,
+            'W',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "S" unterhalb
+        this.add.text(
+            controllerIcon.x,
+            controllerIcon.y + offset,
+            'S',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "A" links
+        this.add.text(
+            controllerIcon.x - offset,
+            controllerIcon.y,
+            'A',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        // "D" rechts
+        this.add.text(
+            controllerIcon.x + offset,
+            controllerIcon.y,
+            'D',
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        this.healthIcon = this.add.image(
+            vw / 2,
+            vh + 10,
+            'brawler-stats'
+        )
+            .setOrigin(0.5)
+            .setScale(0.8)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+        this.healthValueText = this.add.text(
+            vw / 2 + 44,
+            this.healthIcon.y + 25,
+            '0', // Startwert; wird in update() überschrieben
+            {
+                fontSize: '28px',
+                fontFamily: 'Arial Black',
+                color: '#ffffff',       // weiße Schrift
+                stroke: '#000000',      // schwarzer Rand
+                strokeThickness: 4,
+                align: 'center'
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+
 
 
         // Physik-Welt & Kamera
@@ -138,27 +278,33 @@ export default class GameScene extends Phaser.Scene {
 
         this.coinFloatingTexts = this.add.group();
 
-        this.coinText = this.add.text(this.cameras.main.width - 160, 16, '0', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 3
-        }).setOrigin(0, 0)
-            .setScrollFactor(0)
+
+
+        const coinX = vw - 200;
+        const coinY = 16;
+
+        // 1) Erstelle das Coin‐Icon
+        this.coinIcon = this.add.image(coinX, coinY, 'icon_coin')
+            .setOrigin(0, 0)      // links‐oben am Icon
+            .setScrollFactor(0)   // bleibt fest am HUD
+            .setDisplaySize(60, 60) // skaliere auf 32×32px (oder so, wie es optisch passt)
             .setDepth(1000);
 
 
-        this.coinText = this.add.text(this.cameras.main.width - 160, 16, 'Coins: 0', {
-            fontFamily: 'Arial',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ffff00',
-            stroke: '#000000',
-            strokeThickness: 3
-        })
-            .setOrigin(0, 0)
+        this.coinText = this.add.text(
+            coinX + 90,  // 36px nach rechts, damit Text hinter dem 32px‐Icon beginnt + 4px Abstand
+            coinY + 25,   // 8px nach unten, sodass Text mittig zum Icon sitzt
+            '0',         // Startwert; wird in update() überschrieben
+            {
+                fontSize: '28px',
+                fontFamily: 'Arial Black',
+                color: '#ffff00',       // Gelb
+                stroke: '#000000',      // Schwarzer Rand
+                strokeThickness: 3,
+                align: 'left'
+            }
+        )
+            .setOrigin(0.5)   // linke Mitte des Texts
             .setScrollFactor(0)
             .setDepth(1000);
 
@@ -236,18 +382,6 @@ export default class GameScene extends Phaser.Scene {
             fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
         }).setScrollFactor(0);
 
-        this.exitButtonGame = this.createButton(
-            this.cameras.main.width / 2,
-            this.cameras.main.height / 2 + 70,
-            'Exit',
-            () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
-                this.socket.disconnect();
-                window.location.reload();
-            }
-        )
-            .setScrollFactor(0)
-            .setVisible(false);
     }
 
     startFiring(pointer) {
@@ -380,7 +514,9 @@ export default class GameScene extends Phaser.Scene {
 
         // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
-        if (me) {
+        if (me && this.healthValueText) {
+            this.healthValueText.setText(`${me.currentHealth} / ${me.maxHealth}`);
+
             // Boost-Ablauf prüfen
             if (this.boostActive && this.time.now > this.boostEndTime) {
                 this.boostActive = false;
@@ -673,7 +809,7 @@ export default class GameScene extends Phaser.Scene {
             }
         });
         // Exit anzeigen, wenn tot
-        if (me && me.currentHealth <= 0) this.exitButtonGame.setVisible(true);
+        if (me && me.currentHealth <= 0) this.exitButtonSvg.setVisible(true);
 
             // Projektile rendern
             const alive = new Set();
@@ -777,23 +913,59 @@ export default class GameScene extends Phaser.Scene {
         if (this.latestState && this.latestState.players) {
             const me = this.latestState.players.find(p => p.playerId === this.playerId);
             if (me && this.coinText) {
-                this.coinText.setText(`Coins: ${me.coinCount}`);
+                this.coinText.setText(`${me.coinCount}`);
             }
         }
 
-        // ─── victory / defeat ─────────────────────────────
-        if (!this.hasWon && this.latestState.players.filter(p => p.currentHealth > 0).length === 1) {
+
+        const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
+
+        // 1) Wenn nur noch ein Spieler übrig ist (Sieg-Bedingung)
+        if (!this.hasWon && alivePlayers === 1) {
             const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
             if (meAlive && meAlive.currentHealth > 0) {
-                this.showVictoryScreen();
+                const place = 1; // Sieger ist automatisch Platz 1
+                const baseCoins = meAlive.coinCount ?? 0;
+                // Bonus-Regeln: Platz 1 +10, Platz 2 +5, Platz 3 +0, Platz 4 -10
+                const bonus = 10; // Platz 1 immer +10
+                const totalCoins = baseCoins + bonus;
+                this.showVictoryScreen(place, baseCoins, bonus, totalCoins);
                 this.hasWon = true;
             }
             const newCount = me.coinCount ?? 0;
             this.lastCoinCount = newCount;
             this.coinText.setText(`${newCount}`);
         }
+
+        // 2) Wenn man selbst gerade gestorben ist
         if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-            this.showDefeatScreen();
+            // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
+            // Platz des Verstorbenen = alivePlayers + 1
+            const place = alivePlayers + 1;
+
+            const baseCoins = me.coinCount ?? 0;
+
+            // Bonus-/Malus-Berechnung nach Platz
+            let bonus = 0;
+            switch (place) {
+                case 1:
+                    bonus = 10;
+                    break;
+                case 2:
+                    bonus = 5;
+                    break;
+                case 3:
+                    bonus = 0;
+                    break;
+                case 4:
+                    bonus = -10;
+                    break;
+                default:
+                    bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
+            }
+            const totalCoins = baseCoins + bonus;
+
+            this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
             this.defeatShown = true;
         }
 
@@ -814,63 +986,199 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
+
+
     }
 
-    createButton(x, y, text, onClick) {
-        const btn = this.add.text(x, y, text, {
-            fontSize: '32px', fontFamily: 'Arial',
-            color: '#ffffff', backgroundColor: '#333333',
-            padding: {x: 20, y: 10}, align: 'center'
-        })
-            .setOrigin(0.5)
-            .setInteractive()
-            .setScrollFactor(0)
-            .on('pointerover', () => btn.setStyle({backgroundColor: '#555555'}))
-            .on('pointerout', () => btn.setStyle({backgroundColor: '#333333'}))
-            .on('pointerdown', onClick);
 
-        return btn;
-    }
-
-    showVictoryScreen() {
+    showVictoryScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
+
+        this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setAlpha(0.8).setDepth(1000);
+
+
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80, 'YOU WON!', {
+            width / 2, height / 2 - 80, `You placed ${place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#00ff00', stroke: '#000000',
                 strokeThickness: 6
             }
-        ).setOrigin(0.5).setScrollFactor(0);
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-        this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 70, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
+
+        this.add.image(width/2 - 50, height / 2 -200, "victory").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        this.add.text(
+            width / 2,
+            height / 2 - 30,
+            `In game won coins: ${baseCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
             }
-        );
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+        // 3) Bonus/Malus
+        const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
+        this.add.text(
+            width / 2,
+            height / 2 + 20,
+            bonusText,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: bonus >= 0 ? '#00ff00' : '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+        // 4) Gesamt-Coins
+        this.add.text(
+            width / 2,
+            height / 2 + 70,
+            `Gesamt-Coins: ${totalCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffd700', // Gold-Farbton
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+
+        const exitBtn = this.add.image(
+            width / 2,
+            height / 2 + 180,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true }).setDepth(1001);
+
+        exitBtn.on('pointerover', () => {
+            exitBtn.setScale(1.1);
+        });
+        exitBtn.on('pointerout', () => {
+            exitBtn.setScale(1.0).setDepth(1001);
+        });
+
+        exitBtn.on('pointerdown', () => {
+            this.socket.emit('leaveRoom', {
+                roomId: this.roomId,
+                playerId: this.playerId
+            });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+
+
     }
 
-    showDefeatScreen() {
+    showDefeatScreen(place, baseCoins, bonus, totalCoins) {
         const {width, height} = this.scale;
+
+        this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
+            .setOrigin(0.5)
+            .setScrollFactor(0).setAlpha(0.8).setDepth(1000);
+
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80, 'YOU DIED', {
+            width / 2, height / 2 - 80,  `You placed: ${place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#ff0000', stroke: '#000000',
                 strokeThickness: 6
             }
-        ).setOrigin(0.5).setScrollFactor(0);
+        ).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-        this.exitButtonGame = this.createButton(
-            width / 2, height / 2 + 70, 'Exit', () => {
-                this.socket.emit('leaveRoom', {
-                    roomId: this.roomId, playerId: this.playerId
-                });
-                this.socket.disconnect();
-                window.location.reload();
+
+        this.add.image(width/2 - 50, height / 2 -200, "defeat").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+        // 2) Coins im Spiel
+        this.add.text(
+            width / 2,
+            height / 2 - 30,
+            `In game won coins: ${baseCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
             }
-        );
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+        // 3) Bonus/Malus
+        const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
+        this.add.text(
+            width / 2,
+            height / 2 + 20,
+            bonusText,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: bonus >= 0 ? '#00ff00' : '#ff0000',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+        // 4) Gesamt-Coins
+        this.add.text(
+            width / 2,
+            height / 2 + 70,
+            `Gesamt-Coins: ${totalCoins}`,
+            {
+                fontSize: '32px',
+                fontFamily: 'Arial',
+                color: '#ffd700',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0).setDepth(1001);
+
+        const exitBtn = this.add.image(
+            width / 2,
+            height / 2 + 180,
+            'exitButtonSvg'
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setInteractive({ useHandCursor: true }).setDepth(1001);
+
+        exitBtn.on('pointerover', () => {
+            exitBtn.setScale(1.1).setDepth(1001);
+        });
+        exitBtn.on('pointerout', () => {
+            exitBtn.setScale(1.0).setDepth(1001);
+        });
+
+        exitBtn.on('pointerdown', () => {
+            this.socket.emit('leaveRoom', {
+                roomId: this.roomId,
+                playerId: this.playerId
+            });
+            this.socket.disconnect();
+            window.location.reload();
+        });
+
     }
 }

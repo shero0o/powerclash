@@ -5,10 +5,16 @@ export default class WaitingScene extends Phaser.Scene {
         super({ key: 'WaitingScene' });
     }
 
+    preload(){
+        this.load.svg("brawlStarsLogo", "/assets/svg/brawl-stars-logo.svg", {width: 600, height: 300});
+    }
+
     create() {
         const { width, height } = this.scale;
+
+        this.add.image(width/2, height/2, "brawlStarsLogo").setOrigin(0.5)
         this.add
-            .text(width/2, height/2, 'Warte auf Mitspieler…', {
+            .text(width/2, height/2 + 200, 'Warte auf Mitspieler…', {
                 fontSize: '32px',
                 color: '#ffffff'
             })
