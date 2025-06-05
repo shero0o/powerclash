@@ -51,6 +51,10 @@ export default class LobbyScene extends Phaser.Scene {
         this.load.image('avatar', '/assets/PNG/avatar/avatar.png');
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
+
+        this.load.svg("healthGadget", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
+        this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
+        this.load.svg("damageGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
     }
 
     create() {
@@ -107,7 +111,14 @@ export default class LobbyScene extends Phaser.Scene {
         btnBrawlers.on('pointerdown', () => console.log('Brawlers öffnen'));
 
         // --- Name-Text + Weapon/Gadget-Box (mittig oben) ---
-        this.add.text(width / 2, 185, 'Player', {
+        let currentGadgetKey = 'damageGadget';
+        if (this.selectedGadget === "HEALTH_BOOST") {
+            currentGadgetKey = "healthGadget";
+        } else if (this.selectedGadget === "SPEED_BOOST") {
+            currentGadgetKey = "speedGadget";
+        }else{currentGadgetKey = "damageGadget"}
+
+        this.add.text(width / 2, 165, 'Player', {
             fontFamily: 'Arial',
             fontSize: '28px',
             color: '#ffffff',
@@ -117,7 +128,7 @@ export default class LobbyScene extends Phaser.Scene {
             resolution: 2
         }).setOrigin(0.5);
 
-        this.add.rectangle(width / 2 - 40, 220, 80, 30, 0x000000, 0.5)
+        this.add.rectangle(width / 2 - 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffffff)
             .setOrigin(0.5);
         this.add.text(width / 2 - 40, 220, 'Weapon', {
@@ -126,14 +137,10 @@ export default class LobbyScene extends Phaser.Scene {
             color: '#ffffff'
         }).setOrigin(0.5);
 
-        this.add.rectangle(width / 2 + 40, 220, 80, 30, 0x000000, 0.5)
+        this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.add.text(width / 2 + 40, 220, 'Gadget', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffff00'
-        }).setOrigin(0.5);
+        this.add.image(width / 2 + 40, 220, currentGadgetKey).setOrigin(0.5).setDisplaySize(100, 50);
 
         // --- Großer PLAY-Button unten rechts ---
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')
