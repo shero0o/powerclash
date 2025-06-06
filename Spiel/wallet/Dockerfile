@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/target/wallet-0.0.1-SNAPSHOT.jar ./wallet.jar
 
 # 2.2 Port, den Spring Boot verwendet
-EXPOSE 8080
+EXPOSE 8090
 
 # 2.3 Startbefehl für den Container
 ENTRYPOINT ["java", "-jar", "/app/wallet.jar"]

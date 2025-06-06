@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/shop_catalogue_db
+    url: jdbc:postgresql://localhost:5433/shop_catalogue_db
     username: shop_catalogue_user
     password: secret
   jpa:

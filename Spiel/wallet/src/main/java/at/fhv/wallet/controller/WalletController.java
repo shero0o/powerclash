@@ -36,6 +36,13 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllBrawlersNotOwnedByPlayer(playerId));
     }
 
+    @GetMapping("/brawlers/player/owns")
+    public ResponseEntity<Boolean> isBrawlerOwned(
+            @RequestParam Long playerId,
+            @RequestParam Long BrawlerId) {
+        return ResponseEntity.ok(walletService.isBrawlerOwnedByPlayer(playerId, BrawlerId));
+    }
+
     @PostMapping("/brawlers/buy")
     public ResponseEntity<String> buyBrawler(
             @RequestParam Long playerId,
@@ -61,6 +68,13 @@ public class WalletController {
     @GetMapping("/gadgets/player/notOwned")
     public ResponseEntity<List<Gadget>> getGadgetsNotOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllGadgetsNotOwnedByPlayer(playerId));
+    }
+
+    @GetMapping("/gadgets/player/owns")
+    public ResponseEntity<Boolean> isGadgetOwned(
+            @RequestParam Long playerId,
+            @RequestParam Long gadgetId) {
+        return ResponseEntity.ok(walletService.isBrawlerOwnedByPlayer(playerId, gadgetId));
     }
 
     @PostMapping("/gadgets/buy")

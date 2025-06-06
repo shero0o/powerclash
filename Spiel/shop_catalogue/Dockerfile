@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=build /app/target/shop_catalogue-0.0.1-SNAPSHOT.jar ./shop_catalogue.jar
 
 # 2.2 Port, den Spring Boot verwendet
-EXPOSE 8080
+EXPOSE 8091
 
 # 2.3 Startbefehl für den Container
 ENTRYPOINT ["java", "-jar", "/app/shop_catalogue.jar"]

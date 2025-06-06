@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: shop_catalogue_user
       POSTGRES_PASSWORD: secret
     ports:
-      - "5432:5432"
+      - "5433:5433"
     volumes:
       - shop_catalogue-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -27,13 +27,14 @@ services:
       shop_catalogue-db:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8091:8091"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://shop_catalogue-db:5432/shop_catalogue_db
       SPRING_DATASOURCE_USERNAME: shop_catalogue_user
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
+      SERVER_PORT: 8091
 
 volumes:
   shop_catalogue-db-data:
