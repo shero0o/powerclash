@@ -16,4 +16,7 @@ public class Gadget {
 
     @Column(nullable = false)
     private Integer cost;
+
+    @Column(nullable = false)
+    private String description;
 }

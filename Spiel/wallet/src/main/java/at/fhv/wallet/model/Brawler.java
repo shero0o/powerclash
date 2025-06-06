@@ -16,4 +16,28 @@ public class Brawler {
 
     @Column(nullable = false)
     private Integer cost;
+
+    @Column(nullable = false)
+    private Integer healthpoints;
+
+    @Column(nullable = false, unique = true)
+    private String weaponType;
+
+    @Column(nullable = false)
+    private Integer damage;
+
+    @Column(nullable = false)
+    private Integer projectileSpeed;
+
+    @Column(nullable = false)
+    private Integer range;
+
+    @Column(nullable = false)
+    private String weaponCooldown;
+
+    @Column(nullable = false)
+    private Integer magazineSize;
+
+    @Column(nullable = false)
+    private String description;
 }
