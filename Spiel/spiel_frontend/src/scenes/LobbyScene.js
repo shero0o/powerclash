@@ -48,13 +48,21 @@ export default class LobbyScene extends Phaser.Scene {
         this.load.svg("btn-settings", "/assets/svg/btn-settings.svg", { width: 200, height: 100 });
 
         // 2) Avatar-PNG laden
-        this.load.image('avatar', '/assets/PNG/avatar/avatar.png');
+        //this.load.image('avatar', '/assets/PNG/Characters/Character1.png');
+        this.load.image('avatar2', '/assets/PNG/Characters/Character2.png');
+        this.load.image('avatar3', '/assets/PNG/Characters/Character3.png');
+        this.load.image('avatar4', '/assets/PNG/Characters/Character4.png');
+        this.load.image('avatar5', '/assets/PNG/Characters/Character5.png');
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
 
         this.load.svg("healthGadget", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
         this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
         this.load.svg("damageGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
+
+        this.load.image("mashineGun", "assets/PNG/Weapons/Mashinegun.png")
+
+
     }
 
     create() {
@@ -66,18 +74,14 @@ export default class LobbyScene extends Phaser.Scene {
             .setDisplaySize(width, height);
 
         // --- Avatar + Kreis/Schatten ---
-        const avatarSprite = this.add.image(width / 2, height / 2 - 20, 'avatar')
+        this.add.image(width / 2, height / 2 + 140, 'avatar2')
             .setOrigin(0.5)
-            .setDisplaySize(200, 200);
+            .setDisplaySize(400, 600);
 
-        const kreisRadius = 110;
+
         // Schatten-Kreis (leicht weiches Schwarz hinter dem Avatar)
-        this.add.circle(avatarSprite.x, avatarSprite.y, kreisRadius, 0x000000, 0.2);
 
         // Haupt-Kreis (nur Kontur)
-        this.add.circle(avatarSprite.x, avatarSprite.y, kreisRadius)
-            .setFillStyle(0x000000, 0)
-            .setStrokeStyle(4, 0x000000);
 
         // --- Profil-Icon oben links ---
         this.add.image(60, 60, 'icon_profile')
@@ -131,11 +135,8 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.rectangle(width / 2 - 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffffff)
             .setOrigin(0.5);
-        this.add.text(width / 2 - 40, 220, 'Weapon', {
-            fontFamily: 'Arial',
-            fontSize: '20px',
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        this.add.image(width / 2 - 40, 220, "mashineGun"
+        ).setOrigin(0.5).setDisplaySize(60, 60);
 
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
