@@ -8,5 +8,4 @@ import java.util.List;
 public interface PlayerBrawlerRepository extends JpaRepository<PlayerBrawler, PlayerBrawlerId> {
     List<PlayerBrawler> findByPlayerId(Long playerId);
     boolean existsByPlayerIdAndBrawlerId(Long playerId, Long brawlerId);
-    void deleteByPlayerIdAndBrawlerId(Long playerId, Long brawlerId);
 }

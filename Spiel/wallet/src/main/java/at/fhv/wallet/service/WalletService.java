@@ -129,7 +129,6 @@ public class WalletService {
     public void addCoinsForPlayer(Long playerId, Integer amount) {
         PlayerCoins pc = coinsRepo.findById(playerId)
                 .orElseGet(() -> {
-                    // Wenn kein Eintrag existiert, neuen anlegen
                     PlayerCoins neu = new PlayerCoins(playerId, 0);
                     return neu;
                 });
@@ -141,16 +140,6 @@ public class WalletService {
         return coinsRepo.findById(playerId)
                 .map(PlayerCoins::getCoins)
                 .orElse(0);
-    }
-
-    public void payWithCoinsForPlayer(Long playerId, Integer amount) {
-        PlayerCoins pc = coinsRepo.findById(playerId)
-                .orElseThrow(() -> new IllegalArgumentException("Player nicht gefunden: " + playerId));
-        if (pc.getCoins() < amount) {
-            throw new IllegalStateException("Nicht genug Münzen verfügbar.");
-        }
-        pc.setCoins(pc.getCoins() - amount);
-        coinsRepo.save(pc);
     }
 
     public List<PlayerCoins> getAllCoins() {

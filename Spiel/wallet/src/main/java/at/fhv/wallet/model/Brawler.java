@@ -18,7 +18,7 @@ public class Brawler {
     private Integer cost;
 
     @Column(nullable = false)
-    private Integer healthpoints;
+    private Integer healthPoints;
 
     @Column(nullable = false, unique = true)
     private String weaponType;

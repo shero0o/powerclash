@@ -26,13 +26,13 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllBrawlers());
     }
 
-    @GetMapping("/brawlers/player/{playerId}")
-    public ResponseEntity<List<Brawler>> getBrawlersOwned(@PathVariable Long playerId) {
+    @GetMapping("/brawlers/player")
+    public ResponseEntity<List<Brawler>> getBrawlersOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllBrawlersOwnedByPlayer(playerId));
     }
 
-    @GetMapping("/brawlers/player/{playerId}/notowned")
-    public ResponseEntity<List<Brawler>> getBrawlersNotOwned(@PathVariable Long playerId) {
+    @GetMapping("/brawlers/player/notOwned")
+    public ResponseEntity<List<Brawler>> getBrawlersNotOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllBrawlersNotOwnedByPlayer(playerId));
     }
 
@@ -53,13 +53,13 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllGadgets());
     }
 
-    @GetMapping("/gadgets/player/{playerId}")
-    public ResponseEntity<List<Gadget>> getGadgetsOwned(@PathVariable Long playerId) {
+    @GetMapping("/gadgets/player/")
+    public ResponseEntity<List<Gadget>> getGadgetsOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllGadgetsOwnedByPlayer(playerId));
     }
 
-    @GetMapping("/gadgets/player/{playerId}/notowned")
-    public ResponseEntity<List<Gadget>> getGadgetsNotOwned(@PathVariable Long playerId) {
+    @GetMapping("/gadgets/player/notOwned")
+    public ResponseEntity<List<Gadget>> getGadgetsNotOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllGadgetsNotOwnedByPlayer(playerId));
     }
 
@@ -75,14 +75,14 @@ public class WalletController {
     // Coins-Endpunkte
     // -----------------------
 
-    @GetMapping("/coins/{playerId}")
-    public ResponseEntity<Integer> getCoinsByPlayer(@PathVariable Long playerId) {
+    @GetMapping("/coins/")
+    public ResponseEntity<Integer> getCoinsByPlayer(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getCoinsForPlayer(playerId));
     }
 
-    @PostMapping("/coins/{playerId}/add")
+    @PostMapping("/coins/add")
     public ResponseEntity<String> addCoins(
-            @PathVariable Long playerId,
+            @RequestParam Long playerId,
             @RequestParam Integer amount) {
         walletService.addCoinsForPlayer(playerId, amount);
         return ResponseEntity.ok("Coins hinzugefügt");

@@ -8,5 +8,4 @@ import java.util.List;
 public interface PlayerGadgetRepository extends JpaRepository<PlayerGadget, PlayerGadgetId> {
     List<PlayerGadget> findByPlayerId(Long playerId);
     boolean existsByPlayerIdAndGadgetId(Long playerId, Long gadgetId);
-    void deleteByPlayerIdAndGadgetId(Long playerId, Long gadgetId);
 }
