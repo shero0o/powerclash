@@ -1,6 +1,6 @@
-package at.fhv.wallet.repository;
+package at.fhv.shop_catalogue.repository;
 
-import at.fhv.wallet.model.Brawler;
+import at.fhv.shop_catalogue.model.Brawler;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 

@@ -1,7 +1,7 @@
-package at.fhv.wallet.service;
+package at.fhv.shop_catalogue.service;
 
-import at.fhv.wallet.model.*;
-import at.fhv.wallet.repository.*;
+import at.fhv.shop_catalogue.model.*;
+import at.fhv.shop_catalogue.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class WalletService {
+public class ShopCatalogueService {
 
     private final BrawlerRepository brawlerRepo;
     private final GadgetRepository gadgetRepo;
