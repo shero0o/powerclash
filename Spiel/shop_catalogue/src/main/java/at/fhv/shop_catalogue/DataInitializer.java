@@ -1,11 +1,9 @@
-package at.fhv.wallet;
+package at.fhv.shop_catalogue;
 
-import at.fhv.wallet.model.Brawler;
-import at.fhv.wallet.model.Gadget;
-import at.fhv.wallet.model.Weapon;
-import at.fhv.wallet.repository.BrawlerRepository;
-import at.fhv.wallet.repository.GadgetRepository;
-import at.fhv.wallet.repository.WeaponRepository;
+import at.fhv.shop_catalogue.model.Brawler;
+import at.fhv.shop_catalogue.model.Gadget;
+import at.fhv.shop_catalogue.repository.BrawlerRepository;
+import at.fhv.shop_catalogue.repository.GadgetRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -17,14 +15,11 @@ public class DataInitializer implements CommandLineRunner {
 
     private final BrawlerRepository brawlerRepository;
     private final GadgetRepository gadgetRepository;
-    private final WeaponRepository weaponRepository;
 
     public DataInitializer(BrawlerRepository brawlerRepository,
-                           GadgetRepository gadgetRepository,
-                           WeaponRepository weaponRepository) {
+                           GadgetRepository gadgetRepository) {
         this.brawlerRepository = brawlerRepository;
         this.gadgetRepository = gadgetRepository;
-        this.weaponRepository = weaponRepository;
     }
 
     @Override
@@ -80,51 +75,6 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Initialized default gadgets: " + defaultGadgets.size());
         } else {
             System.out.println("Gadgets already initialized (count = " + gadgetRepository.count() + ")");
-        }
-
-        if (weaponRepository.count() == 0) {
-            List<Weapon> defaultWeapons = Arrays.asList(
-                    new Weapon(
-                            null,
-                            "Rifle",    
-                            2,        
-                            1000,        
-                            700,          
-                            "100 ms",     
-                            15          
-                    ),
-                    new Weapon(
-                            null,
-                            "Sniper",    
-                            30,        
-                            1400,        
-                            2500,          
-                            "2000 ms",     
-                            1          
-                    ),
-                    new Weapon(
-                            null,
-                            "Shotgun",    
-                            5,        
-                            800,        
-                            700,          
-                            "2000 ms",     
-                            3          
-                    ),
-                    new Weapon(
-                            null,
-                            "Mine",    
-                            40,        
-                            750,        
-                            700,          
-                            "2000 ms",     
-                            1          
-                    )
-            );
-            weaponRepository.saveAll(defaultWeapons);
-            System.out.println("Initialized default weapons: " + defaultWeapons.size());
-        } else {
-            System.out.println("Weapons already initialized (count = " + weaponRepository.count() + ")");
         }
     }
 }

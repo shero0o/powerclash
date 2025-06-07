@@ -20,6 +20,4 @@ public class Brawler {
     @Column(nullable = false)
     private Integer healthPoints;
 
-    @Column(nullable = false)
-    private String description;
 }

@@ -29,6 +29,4 @@ public class Weapon {
     @Column(nullable = false)
     private Integer magazineSize;
 
-    @Column(nullable = false)
-    private String description;
 }
