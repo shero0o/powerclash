@@ -4,21 +4,30 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "brawler")
+@Table(name = "weapon")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
-public class Brawler {
+public class Weapon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name;
+    private String weaponType;
 
     @Column(nullable = false)
-    private Integer cost;
+    private Integer damage;
 
     @Column(nullable = false)
-    private Integer healthPoints;
+    private Integer projectileSpeed;
+
+    @Column(nullable = false)
+    private Integer range;
+
+    @Column(nullable = false)
+    private String weaponCooldown;
+
+    @Column(nullable = false)
+    private Integer magazineSize;
 
     @Column(nullable = false)
     private String description;

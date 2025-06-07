@@ -2,8 +2,10 @@ package at.fhv.wallet;
 
 import at.fhv.wallet.model.Brawler;
 import at.fhv.wallet.model.Gadget;
+import at.fhv.wallet.model.Weapon;
 import at.fhv.wallet.repository.BrawlerRepository;
 import at.fhv.wallet.repository.GadgetRepository;
+import at.fhv.wallet.repository.WeaponRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +17,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private final BrawlerRepository brawlerRepository;
     private final GadgetRepository gadgetRepository;
+    private final WeaponRepository weaponRepository;
 
     public DataInitializer(BrawlerRepository brawlerRepository,
-                           GadgetRepository gadgetRepository) {
+                           GadgetRepository gadgetRepository,
+                           WeaponRepository weaponRepository) {
         this.brawlerRepository = brawlerRepository;
         this.gadgetRepository = gadgetRepository;
+        this.weaponRepository = weaponRepository;
     }
 
     @Override
@@ -30,12 +35,6 @@ public class DataInitializer implements CommandLineRunner {
                             "Shelly",   // name
                             20,         // cost
                             100,        // healthPoints
-                            "Rifle",    // weapon type
-                            200,        // damage
-                            200,        // projectileSpeed
-                            7,          // range
-                            "1.2s",     // weaponCooldown
-                            6,          // magazineSize
                             "A powerful shotgun that deals heavy damage at close range."
                 )
             );
@@ -67,6 +66,25 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Initialized default gadgets: " + defaultGadgets.size());
         } else {
             System.out.println("Gadgets already initialized (count = " + gadgetRepository.count() + ")");
+        }
+
+        if (weaponRepository.count() == 0) {
+            List<Weapon> defaultWeapons = Arrays.asList(
+                    new Weapon(
+                            null,
+                            "Rifle",    // weapon type
+                            200,        // damage
+                            200,        // projectileSpeed
+                            7,          // range
+                            "1.2s",     // weaponCooldown
+                            6,          // magazineSize
+                            "A powerful shotgun that deals heavy damage at close range."
+                    )
+            );
+            weaponRepository.saveAll(defaultWeapons);
+            System.out.println("Initialized default weapons: " + defaultWeapons.size());
+        } else {
+            System.out.println("Weapons already initialized (count = " + weaponRepository.count() + ")");
         }
     }
 }
