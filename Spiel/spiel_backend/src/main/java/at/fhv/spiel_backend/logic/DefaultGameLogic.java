@@ -114,15 +114,31 @@ public class DefaultGameLogic implements GameLogic {
 
             // spawn-Logik wie gehabt …
             int index = players.size();
-            Position spawn = (index == 0)
-                    ? new Position(1200, 1200, 0)
-                    : new Position(6520, 1200, 0);
-            Brawler br = switch (brawlerId.toLowerCase()) {
-                case "tank" -> new Brawler(playerId, 1, 200, spawn);
-                case "mage" -> new Brawler(playerId, 1, 80, spawn);
-                case "healer" -> new Brawler(playerId, 1, 100, spawn);
-                default -> new Brawler(playerId, 1, 100, spawn);
-            };
+            Position spawn;
+            switch (index) {
+                case 0:
+                    // Spieler 1: oben links
+                    spawn = new Position(1200, 1200, 0);
+                    break;
+                case 1:
+                    // Spieler 2: oben rechts
+                    spawn = new Position(6520, 1200, 0);
+                    break;
+                case 2:
+                    // Spieler 3: unten links
+                    spawn = new Position(1200, 6480, 0);
+                    break;
+                case 3:
+                    // Spieler 4: unten rechts
+                    spawn = new Position(6520, 6480, 0);
+                    break;
+                default:
+                    // Falls mehr als 4 Spieler hinzukommen, z.B. zentriert spawnen:
+                    spawn = new Position(3860, 2700, 0);
+                    break;
+            }
+            Brawler br =  new Brawler(playerId, 1, 100, spawn);
+
             players.put(playerId,
                     new Player(br.getId(), br.getLevel(), br.getMaxHealth(), br.getPosition())
             );

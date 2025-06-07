@@ -37,7 +37,7 @@ public class GameRoomImpl implements IGameRoom {
     private final GameMap gameMap;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
-    private static final int MAX_PLAYERS = 2;
+    private static final int MAX_PLAYERS = 4;
     private static final float MAX_SPEED   = 300f;      // pixels/sec for movement
     private static final float TICK_DT     = 0.016f;   // ~60 ticks/sec
 
@@ -178,7 +178,7 @@ public class GameRoomImpl implements IGameRoom {
             float cy = gameMap.getHeightInPixels() / 2f;
 
             // spawn two NPCs at center: id, position, health, attackRadius, damage, speed, cooldown
-            logic.addNpc("zombie-1", new Position(1200, 1200, 0),
+            logic.addNpc("zombie-1", new Position(3200, 3200, 0),
                     /*health*/ 50,
                     /*attackRadius*/ 32f,
                     /*damage*/ 10,
