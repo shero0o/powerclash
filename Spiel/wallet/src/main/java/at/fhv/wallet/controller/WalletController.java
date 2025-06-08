@@ -4,6 +4,9 @@ import at.fhv.wallet.model.Brawler;
 import at.fhv.wallet.model.Gadget;
 import at.fhv.wallet.model.PlayerCoins;
 import at.fhv.wallet.service.WalletService;
+import at.fhv.wallet.model.Level;
+import at.fhv.wallet.model.Selected;
+import at.fhv.wallet.model.Weapon;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -106,4 +109,75 @@ public class WalletController {
     public ResponseEntity<List<PlayerCoins>> getAllCoins() {
         return ResponseEntity.ok(walletService.getAllCoins());
     }
+
+
+    // -----------------------
+    // Level-Endpunkte
+    // -----------------------
+
+    @GetMapping("/levels")
+    public ResponseEntity<List<Level>> getAllLevels() {
+        return ResponseEntity.ok(walletService.getAllLevels());
+    }
+
+    @GetMapping("/levels/player")
+    public ResponseEntity<List<Level>> getLevelsOwned(@RequestParam Long playerId) {
+        return ResponseEntity.ok(walletService.getAllLevelsOwnedByPlayer(playerId));
+    }
+
+    @GetMapping("/levels/player/notOwned")
+    public ResponseEntity<List<Level>> getLevelsNotOwned(@RequestParam Long playerId) {
+        return ResponseEntity.ok(walletService.getAllLevelsNotOwnedByPlayer(playerId));
+    }
+
+    @GetMapping("/levels/player/owns")
+    public ResponseEntity<Boolean> isLevelOwned(
+            @RequestParam Long playerId,
+            @RequestParam Long levelId) {
+        return ResponseEntity.ok(walletService.isLevelOwnedByPlayer(playerId, levelId));
+    }
+
+    @PostMapping("/levels/buy")
+    public ResponseEntity<String> buyLevel(
+            @RequestParam Long playerId,
+            @RequestParam Long levelId) {
+        walletService.buyLevel(playerId, levelId);
+        return ResponseEntity.ok("Level gekauft");
+    }
+
+    // -----------------------
+    // Selected-Endpunkte
+    // -----------------------
+
+    @PostMapping("/selected/weapon")
+    public ResponseEntity<String> selectWeapon(
+            @RequestParam Long playerId,
+            @RequestBody Weapon weapon) {
+        walletService.selectWeapon(playerId, weapon);
+        return ResponseEntity.ok("Auswahl aktualisiert: Brawler");
+    }
+
+    @PostMapping("/selected/gadget")
+    public ResponseEntity<String> selectGadget(
+            @RequestParam Long playerId,
+            @RequestBody Gadget gadget) {
+        walletService.selectGadget(playerId, gadget);
+        return ResponseEntity.ok("Auswahl aktualisiert: Gadget");
+    }
+
+    @PostMapping("/selected/level")
+    public ResponseEntity<String> selectLevel(
+            @RequestParam Long playerId,
+            @RequestBody Level level) {
+        walletService.selectLevel(playerId, level);
+        return ResponseEntity.ok("Auswahl aktualisiert: Level");
+    }
+
+    @GetMapping("/selected")
+    public ResponseEntity<Selected> getSelected(@RequestParam Long playerId) {
+        return walletService.getSelectedForPlayer(playerId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 }

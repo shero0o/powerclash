@@ -27,14 +27,14 @@ services:
       wallet-db:
         condition: service_healthy
     ports:
-      - "8090:8090"
+      - "8092:8092"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://wallet-db:5432/wallet_db
       SPRING_DATASOURCE_USERNAME: wallet_user
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
-      SERVER_PORT: 8090
+      SERVER_PORT: 8092
 
 volumes:
   wallet-db-data:

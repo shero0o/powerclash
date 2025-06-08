@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -16,9 +17,12 @@ public class WalletService {
 
     private final BrawlerRepository brawlerRepo;
     private final GadgetRepository gadgetRepo;
+    private final LevelRepository levelRepo;
+    private final PlayerLevelRepository playerLevelRepo;
     private final PlayerCoinsRepository coinsRepo;
     private final PlayerBrawlerRepository playerBrawlerRepo;
     private final PlayerGadgetRepository playerGadgetRepo;
+    private final SelectedRepository selectedRepo;
 
     // -----------------------
     // BRAWLER-FUNKTIONEN
@@ -144,5 +148,84 @@ public class WalletService {
 
     public List<PlayerCoins> getAllCoins() {
         return coinsRepo.findAll();
+    }
+
+    // -----------------------
+    // LEVEL-FUNKTIONEN
+    // -----------------------
+
+    public List<Level> getAllLevels() {
+        return levelRepo.findAll();
+    }
+
+    public List<Level> getAllLevelsOwnedByPlayer(Long playerId) {
+        List<PlayerLevel> owned = playerLevelRepo.findByPlayerId(playerId);
+        List<Long> ownedIds = owned.stream()
+                .map(PlayerLevel::getLevelId)
+                .collect(Collectors.toList());
+        return levelRepo.findAllById(ownedIds);
+    }
+
+    public boolean isLevelOwnedByPlayer(Long playerId, Long levelId) {
+        return playerLevelRepo.existsByPlayerIdAndLevelId(playerId, levelId);
+    }
+
+    public void buyLevel(Long playerId, Long levelId) {
+        PlayerCoins pc = coinsRepo.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Player nicht gefunden: " + playerId));
+        Level g = levelRepo.findById(levelId)
+                .orElseThrow(() -> new IllegalArgumentException("Level nicht gefunden: " + levelId));
+
+        if (pc.getCoins() < g.getCost()) {
+            throw new IllegalStateException("Nicht genug Münzen, um das Level zu kaufen.");
+        }
+
+        pc.setCoins(pc.getCoins() - g.getCost());
+        coinsRepo.save(pc);
+
+        if (!playerLevelRepo.existsByPlayerIdAndLevelId(playerId, levelId)) {
+            PlayerLevel pg = new PlayerLevel(playerId, levelId);
+            playerLevelRepo.save(pg);
+        }
+    }
+
+    public List<Level> getAllLevelsNotOwnedByPlayer(Long playerId) {
+        List<PlayerLevel> owned = playerLevelRepo.findByPlayerId(playerId);
+        List<Long> ownedIds = owned.stream()
+                .map(PlayerLevel::getLevelId)
+                .collect(Collectors.toList());
+        if (ownedIds.isEmpty()) {
+            return levelRepo.findAll();
+        } else {
+            return levelRepo.findByIdNotIn(ownedIds);
+        }
+    }
+    
+    // -----------------------
+    // SELECTED-FUNKTIONEN
+    // -----------------------
+
+    public void selectWeapon(Long playerId, Weapon weapon) {
+        Selected selected = selectedRepo.findById(playerId)
+                .orElse(new Selected(playerId, weapon.getId(), null, null));
+        selected.setBrawlerId(weapon.getId());
+        selectedRepo.save(selected);
+    }
+
+    public void selectGadget(Long playerId, Gadget gadget) {
+        Selected selected = selectedRepo.findById(playerId)
+                .orElse(new Selected(playerId, null, gadget.getId(), null));
+        selected.setGadgetId(gadget.getId());
+        selectedRepo.save(selected);
+    }
+
+    public void selectLevel(Long playerId, Level level) {
+        Selected selected = selectedRepo.findById(playerId)
+                .orElse(new Selected(playerId, null, null, level.getId()));
+        selected.setLevelId(level.getId());
+        selectedRepo.save(selected);
+    }
+    public Optional<Selected> getSelectedForPlayer(Long playerId) {
+        return selectedRepo.findById(playerId);
     }
 }

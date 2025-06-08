@@ -5,6 +5,8 @@ import at.fhv.wallet.model.Gadget;
 import at.fhv.wallet.model.Weapon;
 import at.fhv.wallet.repository.BrawlerRepository;
 import at.fhv.wallet.repository.GadgetRepository;
+import at.fhv.wallet.repository.LevelRepository;
+import at.fhv.wallet.model.Level;
 import at.fhv.wallet.repository.WeaponRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -18,13 +20,15 @@ public class DataInitializer implements CommandLineRunner {
     private final BrawlerRepository brawlerRepository;
     private final GadgetRepository gadgetRepository;
     private final WeaponRepository weaponRepository;
+    private final LevelRepository levelRepository;
 
     public DataInitializer(BrawlerRepository brawlerRepository,
                            GadgetRepository gadgetRepository,
-                           WeaponRepository weaponRepository) {
+                           WeaponRepository weaponRepository, LevelRepository levelRepository) {
         this.brawlerRepository = brawlerRepository;
         this.gadgetRepository = gadgetRepository;
         this.weaponRepository = weaponRepository;
+        this.levelRepository = levelRepository;
     }
 
     @Override
@@ -125,6 +129,18 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Initialized default weapons: " + defaultWeapons.size());
         } else {
             System.out.println("Weapons already initialized (count = " + weaponRepository.count() + ")");
+        }
+
+        if (levelRepository.count() == 0) {
+            List<Level> defaultLevels = Arrays.asList(
+                    new Level(null, "Level 1", 100),
+                    new Level(null, "Level 2", 200),
+                    new Level(null, "Level 3", 300)
+            );
+            levelRepository.saveAll(defaultLevels);
+            System.out.println("Initialized default levels: " + defaultLevels.size());
+        } else {
+            System.out.println("Levels already initialized (count = " + levelRepository.count() + ")");
         }
     }
 }
