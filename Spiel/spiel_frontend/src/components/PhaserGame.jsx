@@ -6,6 +6,7 @@ import io from 'socket.io-client';
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
 import LobbyScene from "../scenes/LobbyScene.js";
+import ShopScene from "../scenes/ShopScene.js";
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -33,7 +34,8 @@ export default function PhaserGame() {
         const scenes = [
             new LobbyScene(),
             new WaitingScene(),
-            new GameScene()
+            new GameScene(),
+            new ShopScene()
         ];
         scenes.forEach(s => s.socket = socket);
 

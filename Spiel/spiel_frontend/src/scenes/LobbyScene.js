@@ -96,7 +96,11 @@ export default class LobbyScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
             .setInteractive({ useHandCursor: true });
-        btnShop.on('pointerdown', () => console.log('Shop öffnen'));
+
+        btnShop.on('pointerdown', () => {
+            this.scene.start('ShopScene');
+        });
+
 
         const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
             .setOrigin(0.5)

@@ -6,17 +6,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // WebSocket-Proxy (falls du z.B. Live-Daten o.ä. via WS nutzt):
+      // WebSocket-Proxy (bleibt exakt so → für dein Spiel / Socket.io etc.)
       '/ws': {
         target: 'ws://localhost:8080',
         ws: true
       },
-      // HTTP-Proxy: Weiterleitung aller /api-Aufrufe zum Spring-Gateway auf Port 8080
+
+      // HTTP-Proxy für alle /api-Calls → geht an Gateway (Port 8090)
+      // → wichtig: alle deine /api/shop_catalogue/... und /api/wallet/... gehen über Gateway → so soll es sein
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8090',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: path => path.replace(/^\/api/, '/api') // optional, aber macht es stabil
       }
     }
   }
-})
+});
