@@ -45,4 +45,5 @@ public class AccountController {
         Player updated = accountService.updatePlayerName(id, name);
         return ResponseEntity.ok(updated);
     }
+
 }

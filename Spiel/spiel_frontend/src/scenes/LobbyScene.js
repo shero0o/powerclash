@@ -7,7 +7,7 @@ export default class LobbyScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LobbyScene' });
 
-        this.playerId = 2;
+        this.playerId = 4;
 
         // PLAY-Button
         this.playButton = null;
