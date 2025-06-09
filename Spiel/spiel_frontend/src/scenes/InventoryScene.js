@@ -61,19 +61,19 @@ export default class InventoryScene extends Phaser.Scene {
                 fetch(`${API_BASE}/brawlers`),
                 fetch(`${API_BASE}/gadgets`),
                 fetch(`${API_BASE}/levels`),
-                fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
+                //fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
             ]);
 
             this.coins    = await coinsRes.json();
             this.brawlers = await brawlersRes.json();
             this.gadgets  = await gadgetsRes.json();
             this.levels   = await levelsRes.json();
-            const sel     = await selectedRes.json();
+            //const sel     = await selectedRes.json();
 
-            this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
-            this.selectedGadget  = sel?.gadgetId  || this.gadgets[0]?.id;
-            this.selectedLevel   = sel?.levelId   || this.levels[0]?.id;
-            this.selectedWeapon  = sel?.weaponId  || this.brawlers.find(b => b.id === this.selectedBrawler)?.defaultWeapon;
+           // this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
+           // this.selectedGadget  = sel?.gadgetId  || this.gadgets[0]?.id;
+           // this.selectedLevel   = sel?.levelId   || this.levels[0]?.id;
+           // this.selectedWeapon  = sel?.weaponId  || this.brawlers.find(b => b.id === this.selectedBrawler)?.defaultWeapon;
             console.log('Loaded wallet data');
         } catch (err) {
             console.error('Fetch-Error:', err);
@@ -106,19 +106,14 @@ export default class InventoryScene extends Phaser.Scene {
         this._createCoinDisplay();
 
         // — Shop & Back to Lobby —
-        const shopX = 90, shopY = height/2 - 100;
-        this.add.image(shopX, shopY, 'icon_shop')
-            .setOrigin(0.5).setDisplaySize(200,80)
-            .setInteractive({ useHandCursor:true })
-            .on('pointerdown', ()=> console.log('Shop öffnen'));
-
-        this.add.text(shopX, shopY+100, 'Back to Lobby', {
-            fontFamily:'Arial', fontSize:'20px', color:'#fff',
-            backgroundColor:'#000', padding:{x:10,y:5}
-        })
+        const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor:true })
-            .on('pointerdown', ()=> this.finish());
+            .setDisplaySize(200, 80)
+            .setInteractive({ useHandCursor: true });
+
+        btnShop.on('pointerdown', () => {
+            this.scene.start('ShopScene');
+        });
 
         // — Tab-Leiste unter y=120 —
         const tabs = ['Weapons','Brawlers','Gadgets'];

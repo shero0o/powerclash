@@ -96,7 +96,11 @@ export default class LobbyScene extends Phaser.Scene {
         // --- Profil-Icon oben links ---
         this.add.image(60, 60, 'icon_profile')
             .setOrigin(0.5)
-            .setScale(0.8);
+            .setScale(0.8)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                this.scene.start('AccountScene');
+            });;
 
         // --- Münzanzeige (Coin-Symbol + Box + Zahl) oben mittig ---
         this._createCoinDisplay();
@@ -153,7 +157,19 @@ export default class LobbyScene extends Phaser.Scene {
         const weaponX = width / 2 - 40;
         const weaponY = 220;
 
-        this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey).setOrigin(0.5);
+        this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey)
+            .setOrigin(0.5)
+            .setDisplaySize(60, 60)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                    this.scene.pause();
+                this.scene.launch('InventoryScene', {
+                        weapon: this.selectedWeapon,
+                        brawler: this.selectedBrawler,
+                        gadget: this.selectedGadget
+                });
+            });
+            ;
 
         if (this.selectedWeapon === 'MINE') {
             this.weaponIcon.setDisplaySize(60, 60); // oder 90×90 je nach Bildgröße
@@ -164,7 +180,19 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.gadgetIcon = this.add.image(width/2 + 40, 220, this._mapGadgetKey()).setOrigin(0.5).setDisplaySize(100, 50);
+        this.gadgetIcon = this.add.image(width/2 + 40, 220, this._mapGadgetKey())
+            .setOrigin(0.5)
+            .setDisplaySize(100, 50)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                this.scene.pause();
+                this.scene.launch('InventoryScene', {
+                        weapon: this.selectedWeapon,
+                        brawler: this.selectedBrawler,
+                        gadget: this.selectedGadget
+                });
+            });    
+        ;
 
         // --- Großer PLAY-Button unten rechts ---
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')
@@ -258,54 +286,38 @@ export default class LobbyScene extends Phaser.Scene {
         }
     }
     async _createCoinDisplay() {
-        const {coinX, coinY, coinSize, rectHeight, cornerRadius, strokeWidth} = this;
+        const {coinX, coinY, coinSize, rectWidth, rectHeight, cornerRadius, strokeWidth} = this;
 
         // 1) Coin-Icon
         const coinImage = this.add.image(coinX, coinY, 'icon_coin')
             .setOrigin(0, 0.5)
             .setDisplaySize(coinSize, coinSize);
 
-        // 2) Schwarzes Rechteck daneben
+        // 2) Schwarzes Rechteck
         this.rectX = coinX + coinSize - 12;
         this.rectY = coinY - rectHeight / 2;
-
         this.graphics = this.add.graphics();
         this.graphics.fillStyle(0x000000, 1);
-        this.graphics.fillRoundedRect(
-            this.rectX,
-            this.rectY,
-            this.rectWidth,
-            this.rectHeight,
-            cornerRadius
-        );
+        this.graphics.fillRoundedRect(this.rectX, this.rectY, rectWidth, rectHeight, cornerRadius);
         this.graphics.lineStyle(strokeWidth, 0x000000, 1);
-        this.graphics.strokeRoundedRect(
-            this.rectX,
-            this.rectY,
-            this.rectWidth,
-            this.rectHeight,
-            cornerRadius
-        );
+        this.graphics.strokeRoundedRect(this.rectX, this.rectY, rectWidth, rectHeight, cornerRadius);
 
-        // 3) Text „596“ (Startwert)
-        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
-        this._createCoinDisplay(coins);
-        const textStyle = {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '28px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 4,
-            align: 'center',
-            resolution: 2
-        };
-        const textX = this.rectX + this.rectWidth / 2;
-        const textY = this.rectY + this.rectHeight / 2;
-        this.coinText = this.add.text(textX, textY, `${coins}`, textStyle)
-            .setOrigin(0.5);
+        // 3) Text mit initialem Münzwert
+        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`)
+            .then(r => r.json());
+        this.coinText = this.add.text(
+            this.rectX + rectWidth/2,
+            this.rectY + rectHeight/2,
+            `${coins}`,
+            { fontFamily: 'Arial', fontSize: '28px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }
+        ).setOrigin(0.5);
 
-        // 4) Container (optional), um all diese Elemente zusammenzuhalten
-        this.coinContainer = this.add.container(0, 0, [this.graphics, this.coinText, coinImage]);
+        // 4) Container mit allen Elementen
+        this.coinContainer = this.add.container(0, 0, [
+            this.graphics,
+            this.coinText,
+            coinImage
+        ]);
     }
 
     /**
