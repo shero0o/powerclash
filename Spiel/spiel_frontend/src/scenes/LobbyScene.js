@@ -112,7 +112,9 @@ export default class LobbyScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
             .setInteractive({ useHandCursor: true });
-        btnBrawlers.on('pointerdown', () => console.log('Brawlers öffnen'));
+        btnBrawlers.on('pointerdown', () => {
+            this.scene.start('DressingRoomScene');
+        });
 
         // --- Name-Text + Weapon/Gadget-Box (mittig oben) ---
         let currentGadgetKey = 'damageGadget';
@@ -132,16 +134,30 @@ export default class LobbyScene extends Phaser.Scene {
             resolution: 2
         }).setOrigin(0.5);
 
-        this.add.rectangle(width / 2 - 45, 220, 90, 55, 0x000000, 0.5)
+        const weaponBox = this.add.rectangle(width / 2 - 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffffff)
-            .setOrigin(0.5);
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
+        weaponBox.on('pointerdown', () => {
+            this.scene.start('DressingRoomScene');
+        });
+
         this.add.image(width / 2 - 40, 220, "mashineGun"
         ).setOrigin(0.5).setDisplaySize(60, 60);
 
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.add.image(width / 2 + 40, 220, currentGadgetKey).setOrigin(0.5).setDisplaySize(100, 50);
+
+        const gadgetBox = this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
+            .setStrokeStyle(2, 0xffff00)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
+        gadgetBox.on('pointerdown', () => {
+            this.scene.start('DressingRoomScene');
+        });
+        this.add.image(width / 2 + 40, 220, currentGadgetKey)
+            .setOrigin(0.5).setDisplaySize(100, 50);
 
         // --- Großer PLAY-Button unten rechts ---
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')

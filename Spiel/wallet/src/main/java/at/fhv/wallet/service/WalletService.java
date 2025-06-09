@@ -53,7 +53,7 @@ public class WalletService {
         if (pc.getCoins() < b.getCost()) {
             throw new IllegalStateException("Nicht genug Münzen, um den Brawler zu kaufen.");
         }
-
+        System.out.println("\n\n11111111111111111111111111111111111111111111111111111111111111111111111111111\n\n");
         pc.setCoins(pc.getCoins() - b.getCost());
         coinsRepo.save(pc);
 
@@ -205,24 +205,24 @@ public class WalletService {
     // SELECTED-FUNKTIONEN
     // -----------------------
 
-    public void selectWeapon(Long playerId, Weapon weapon) {
+    public void selectWeapon(Long playerId, Long weaponId) {
         Selected selected = selectedRepo.findById(playerId)
-                .orElse(new Selected(playerId, weapon.getId(), null, null));
-        selected.setBrawlerId(weapon.getId());
+                .orElse(new Selected(playerId, weaponId, null, null));
+        selected.setBrawlerId(weaponId);
         selectedRepo.save(selected);
     }
 
-    public void selectGadget(Long playerId, Gadget gadget) {
+    public void selectGadget(Long playerId, Long gadgetId) {
         Selected selected = selectedRepo.findById(playerId)
-                .orElse(new Selected(playerId, null, gadget.getId(), null));
-        selected.setGadgetId(gadget.getId());
+                .orElse(new Selected(playerId, null, gadgetId, null));
+        selected.setGadgetId(gadgetId);
         selectedRepo.save(selected);
     }
 
-    public void selectLevel(Long playerId, Level level) {
+    public void selectLevel(Long playerId, Long levelId) {
         Selected selected = selectedRepo.findById(playerId)
-                .orElse(new Selected(playerId, null, null, level.getId()));
-        selected.setLevelId(level.getId());
+                .orElse(new Selected(playerId, null, null, levelId));
+        selected.setLevelId(levelId);
         selectedRepo.save(selected);
     }
     public Optional<Selected> getSelectedForPlayer(Long playerId) {

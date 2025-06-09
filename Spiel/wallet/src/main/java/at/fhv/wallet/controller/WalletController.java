@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/api/wallet")
 @RequiredArgsConstructor
@@ -50,8 +51,12 @@ public class WalletController {
     public ResponseEntity<String> buyBrawler(
             @RequestParam Long playerId,
             @RequestParam Long brawlerId) {
-        walletService.buyBrawler(playerId, brawlerId);
-        return ResponseEntity.ok("Brawler gekauft");
+            try {
+                walletService.buyBrawler(playerId, brawlerId);
+                return ResponseEntity.ok("Brawler gekauft");
+            } catch (IllegalArgumentException | IllegalStateException e) {
+                return ResponseEntity.badRequest().body(e.getMessage());
+            }
     }
 
     // -----------------------
@@ -63,7 +68,7 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllGadgets());
     }
 
-    @GetMapping("/gadgets/player/")
+    @GetMapping("/gadgets/player")
     public ResponseEntity<List<Gadget>> getGadgetsOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllGadgetsOwnedByPlayer(playerId));
     }
@@ -92,7 +97,7 @@ public class WalletController {
     // Coins-Endpunkte
     // -----------------------
 
-    @GetMapping("/coins/")
+    @GetMapping("/coins")
     public ResponseEntity<Integer> getCoinsByPlayer(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getCoinsForPlayer(playerId));
     }
@@ -152,24 +157,24 @@ public class WalletController {
     @PostMapping("/selected/weapon")
     public ResponseEntity<String> selectWeapon(
             @RequestParam Long playerId,
-            @RequestBody Weapon weapon) {
-        walletService.selectWeapon(playerId, weapon);
+            @RequestParam Long weaponId) {
+        walletService.selectWeapon(playerId, weaponId);
         return ResponseEntity.ok("Auswahl aktualisiert: Brawler");
     }
 
     @PostMapping("/selected/gadget")
     public ResponseEntity<String> selectGadget(
             @RequestParam Long playerId,
-            @RequestBody Gadget gadget) {
-        walletService.selectGadget(playerId, gadget);
+            @RequestParam Long gadgetId) {
+        walletService.selectGadget(playerId, gadgetId);
         return ResponseEntity.ok("Auswahl aktualisiert: Gadget");
     }
 
     @PostMapping("/selected/level")
     public ResponseEntity<String> selectLevel(
             @RequestParam Long playerId,
-            @RequestBody Level level) {
-        walletService.selectLevel(playerId, level);
+            @RequestParam Long levelId) {
+        walletService.selectLevel(playerId, levelId);
         return ResponseEntity.ok("Auswahl aktualisiert: Level");
     }
 
