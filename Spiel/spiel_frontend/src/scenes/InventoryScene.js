@@ -19,7 +19,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.load.svg('btn-settings',  '/assets/svg/btn-settings.svg',{ width:200, height:100 });
         this.load.svg('icon_shop',     '/assets/svg/btn-shop.svg',    { width:200, height:80 });
         this.load.svg('icon_coin',     '/assets/svg/coin-icon.svg',   { width:100, height:100 });
-
+        this.load.svg('home', '/assets/svg/btn-navigation.svg',{width:130,height:115})
         // — Waffen-Assets —
         this.load.image('weapon_rifle',   '/assets/PNG/Weapons/Mashinegun.png');
         this.load.image('weapon_sniper',  '/assets/PNG/Weapons/Sniper.png');
@@ -72,13 +72,11 @@ export default class InventoryScene extends Phaser.Scene {
             .setInteractive({ useHandCursor:true })
             .on('pointerdown', ()=> console.log('Shop öffnen'));
 
-        this.add.text(shopX, shopY+100, 'Back to Lobby', {
-            fontFamily:'Arial', fontSize:'20px', color:'#fff',
-            backgroundColor:'#000', padding:{x:10,y:5}
-        })
+        this.add.image(shopX, shopY + 100, 'home')
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor:true })
-            .on('pointerdown', ()=> this.finish());
+            .setDisplaySize(100, 100)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.finish());
 
         // — Tab-Leiste unter y=120 —
         const tabs = ['Weapons','Brawlers','Gadgets'];

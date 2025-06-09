@@ -33,6 +33,8 @@ export default class LobbyScene extends Phaser.Scene {
         this.coinY        = 50;  // y-pos für Coin-Icon
         this.coinSize     = 60;  // Größe (60×60) für Coin-Icon
         this.coinContainer= null;
+        this.settingsOpen = false;
+
     }
 
     preload() {
@@ -107,7 +109,9 @@ export default class LobbyScene extends Phaser.Scene {
         const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
-            .setInteractive({ useHandCursor: true }).setDepth(500);
+            .setInteractive({ useHandCursor: true })
+            .setAlpha(0.8)
+            .setDepth(1000);
 
         settingsBtn.on('pointerdown', () => {
             this.openSettingsWindow();
@@ -532,6 +536,9 @@ export default class LobbyScene extends Phaser.Scene {
 
 
     openSettingsWindow() {
+        if (this.settingsOpen) return;
+        this.settingsOpen = true;
+
         const vw = this.scale.width;
         const vh = this.scale.height;
 
@@ -623,6 +630,7 @@ export default class LobbyScene extends Phaser.Scene {
                 title.destroy();
                 exampleText.destroy();
                 closeBtn.destroy();
+                this.settingsOpen = false;
 
             });
 
