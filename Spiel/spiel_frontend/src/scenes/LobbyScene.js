@@ -1,9 +1,13 @@
 // src/scenes/LobbyScene.js
 import Phaser from 'phaser';
 
+const API_BASE = 'http://localhost:8092/api/wallet';
+
 export default class LobbyScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LobbyScene' });
+
+        this.playerId = 2;
 
         // PLAY-Button
         this.playButton = null;
@@ -249,8 +253,8 @@ export default class LobbyScene extends Phaser.Scene {
             this.weaponIcon.setDisplaySize(60, 60);
         }
     }
-    _createCoinDisplay() {
-        const { coinX, coinY, coinSize, rectHeight, cornerRadius, strokeWidth } = this;
+    async _createCoinDisplay() {
+        const {coinX, coinY, coinSize, rectHeight, cornerRadius, strokeWidth} = this;
 
         // 1) Coin-Icon
         const coinImage = this.add.image(coinX, coinY, 'icon_coin')
@@ -258,7 +262,7 @@ export default class LobbyScene extends Phaser.Scene {
             .setDisplaySize(coinSize, coinSize);
 
         // 2) Schwarzes Rechteck daneben
-        this.rectX = coinX + coinSize -12;
+        this.rectX = coinX + coinSize - 12;
         this.rectY = coinY - rectHeight / 2;
 
         this.graphics = this.add.graphics();
@@ -280,7 +284,8 @@ export default class LobbyScene extends Phaser.Scene {
         );
 
         // 3) Text „596“ (Startwert)
-        const initialCoins = 596;
+        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
+        this._createCoinDisplay(coins);
         const textStyle = {
             fontFamily: 'Arial, sans-serif',
             fontSize: '28px',
@@ -292,11 +297,11 @@ export default class LobbyScene extends Phaser.Scene {
         };
         const textX = this.rectX + this.rectWidth / 2;
         const textY = this.rectY + this.rectHeight / 2;
-        this.coinText = this.add.text(textX, textY, `${initialCoins}`, textStyle)
+        this.coinText = this.add.text(textX, textY, `${coins}`, textStyle)
             .setOrigin(0.5);
 
         // 4) Container (optional), um all diese Elemente zusammenzuhalten
-        this.coinContainer = this.add.container(0, 0, [ this.graphics, this.coinText, coinImage ]);
+        this.coinContainer = this.add.container(0, 0, [this.graphics, this.coinText, coinImage]);
     }
 
     /**

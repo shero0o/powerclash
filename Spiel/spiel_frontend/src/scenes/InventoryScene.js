@@ -1,15 +1,28 @@
 // src/scenes/InventoryScene.js
 import Phaser from 'phaser';
 
+const API_BASE = 'http://localhost:8092/api/wallet';
+
+
 export default class InventoryScene extends Phaser.Scene {
     constructor() {
         super({ key: 'InventoryScene' });
+        this.playerId = 2;
+        this.coins = 0;
+        this.brawlers = [];
+        this.gadgets = [];
+        this.levels = [];
+        this.selectedWeapon = null;
+        this.selectedBrawler = null;
+        this.selectedGadget = null;
+        this.selectedLevel = null;
     }
 
     init(data) {
         this.selectedWeapon  = data.weapon;
         this.selectedBrawler = data.brawler;
         this.selectedGadget  = data.gadget;
+        //this.playerId = data.playerId || 1;
     }
 
     preload() {
@@ -38,9 +51,36 @@ export default class InventoryScene extends Phaser.Scene {
         this.load.svg('gadget_health', '/assets/svg/healthGadget.svg',{ width:400, height:200 });
     }
 
-    create() {
+    async create() {
         const { width, height } = this.scale;
 
+        // ─── Daten via GET laden ─────────────────────────────────────────
+        try {
+            const [coinsRes, brawlersRes, gadgetsRes, levelsRes, selectedRes] = await Promise.all([
+                fetch(`${API_BASE}/coins?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/brawlers`),
+                fetch(`${API_BASE}/gadgets`),
+                fetch(`${API_BASE}/levels`),
+                fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
+            ]);
+
+            this.coins    = await coinsRes.json();
+            this.brawlers = await brawlersRes.json();
+            this.gadgets  = await gadgetsRes.json();
+            this.levels   = await levelsRes.json();
+            const sel     = await selectedRes.json();
+
+            this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
+            this.selectedGadget  = sel?.gadgetId  || this.gadgets[0]?.id;
+            this.selectedLevel   = sel?.levelId   || this.levels[0]?.id;
+            this.selectedWeapon  = sel?.weaponId  || this.brawlers.find(b => b.id === this.selectedBrawler)?.defaultWeapon;
+            console.log('Loaded wallet data');
+        } catch (err) {
+            console.error('Fetch-Error:', err);
+            this.add.text(width/2, height/2, 'Daten konnten nicht geladen werden', {
+                fontSize: '20px', fill: '#ff4444'
+            }).setOrigin(0.5);
+        }
 
         // — Hintergrund & Header UI auf y=60 —
         this.add.image(width/2, height/2, 'lobby_bg')
@@ -195,7 +235,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.scene.stop();
         this.scene.resume('LobbyScene');
     }
-    _createCoinDisplay() {
+    async _createCoinDisplay() {
         const coinX = 1020;
         const coinY = 50;
         const coinSize = 60;
@@ -214,9 +254,11 @@ export default class InventoryScene extends Phaser.Scene {
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
 
         // Text
+        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
+
         const textX = rectX + rectWidth / 2;
         const textY = rectY + rectHeight / 2;
-        this.coinText = this.add.text(textX, textY, '596', {
+        this.coinText = this.add.text(textX, textY, `${coins}`, {
             fontFamily: 'Arial',
             fontSize: '28px',
             color: '#ffffff',
