@@ -72,7 +72,7 @@ export default class GameScene extends Phaser.Scene {
 
         this.load.svg("healthGadget", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
         this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
-        this.load.svg("damageGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
+        this.load.svg("speedGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
         for (let i = 0; i < 25; i++) {
             this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
@@ -385,7 +385,7 @@ export default class GameScene extends Phaser.Scene {
             switch (gadgetTypeString) {
                 case 'DAMAGE_BOOST': return 'damageGadget';
                 case 'SPEED_BOOST':  return 'speedGadget';
-                case 'HEALTH_BOOST':
+                case 'HEALTH_BOOST': return 'healthGadget';
                 default:             return 'healthGadget';
             }
         };

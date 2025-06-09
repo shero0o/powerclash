@@ -2,7 +2,6 @@ package at.fhv.spiel_backend.server.game;
 
 import at.fhv.spiel_backend.logic.DefaultGameLogic;
 import at.fhv.spiel_backend.logic.GameLogic;
-import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.model.Gadget;
 import at.fhv.spiel_backend.model.GadgetType;
 import at.fhv.spiel_backend.model.Player;
@@ -216,7 +215,7 @@ public class GameRoomImpl implements IGameRoom {
 
                     if (gadget != null && gadget.getTimeRemaining() > 0) {
                         // HP-Boost starten
-                        if (gadget.getType() == GadgetType.HP_BOOST) {
+                        if (gadget.getType() == GadgetType.HEALTH_BOOST) {
                             p.setHpBoostActive(true);
                         }
                         // Damage-Boost starten

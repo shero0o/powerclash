@@ -211,11 +211,11 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-            case 'mage':   return 'avatar4';
-            case 'tank':   return 'avatar3';
-            case 'healer': return 'avatar5';
-            default:       return 'avatar2';
-        }
+                       case 'mage':   return 'avatar3'; // Soldier → Character3
+                           case 'healer': return 'avatar4'; // WomanGreen → Character4
+                           case 'tank':   return 'avatar5'; // Robot → Character5
+                           default:       return 'avatar2'; // Hitman → Character2
+                       }
     }
 
     _mapWeaponKey() {

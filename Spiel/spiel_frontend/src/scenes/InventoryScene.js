@@ -140,11 +140,11 @@ export default class InventoryScene extends Phaser.Scene {
     _showBrawlerOptions() {
         const { width, height } = this.scale;
         const avatars = [
-            { key: 'avatar2', value: 'sniper' },
-            { key: 'avatar3', value: 'tank' },
-            { key: 'avatar4', value: 'mage' },
-            { key: 'avatar5', value: 'healer' }
-        ];
+                       { key: 'avatar2', value: 'sniper' }, // Hitman
+                       { key: 'avatar3', value: 'mage'   }, // Soldier
+                       { key: 'avatar4', value: 'healer' }, // WomanGreen
+                       { key: 'avatar5', value: 'tank'   }  // Robot
+                   ];
         avatars.forEach((entry,i) => {
             const x = width/2 -300 + i*200, y = height/2;
             const spr = this.add.image(x, y, entry.key)
