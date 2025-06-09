@@ -343,19 +343,15 @@ export default class GameScene extends Phaser.Scene {
         this.input.on('pointerout',  ()      => this.stopFiring());
 
 // Eingabe: Q -> Gadget
-        this.input.keyboard.on('keydown-Q', () => {
+        const gadgetKey = this.registry.get('gadgetKey') || localStorage.getItem('gadgetKey') || 'Q';
+        this.gadgetKey = gadgetKey;
+
+        this.input.keyboard.on(`keydown-${gadgetKey}`, () => {
             const now = this.time.now;
-            if (this.gadgetMaxUses <= 0) {
-                console.log('Kein Gadget-Einsatz mehr möglich');
-                return;
-            }
-            if (now < this.cooldownExpireTime) {
-                console.log('Gadget im Cooldown');
-                return;
-            }
-            console.log('keydown-Q ausgelöst → useGadget() wird aufgerufen');
+            if (this.gadgetMaxUses <= 0 || now < this.cooldownExpireTime) return;
             this.useGadget();
         });
+
         // Socket-Update
         this.socket.on('stateUpdate', state => {
             this.npcs = state.npcs || [];
@@ -604,7 +600,7 @@ export default class GameScene extends Phaser.Scene {
                 else{
                     // Bereit
                     this.gadgetText
-                        .setText("Q")
+                        .setText(this.gadgetKey)
                         .setStyle({ fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3 });
                 }
             }
