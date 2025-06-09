@@ -15,7 +15,7 @@ public class Brawler {
     private String name;
 
     @Column(nullable = false)
-    private Integer cost;
+    private Integer price;
 
     @Column(nullable = false)
     private Integer healthPoints;

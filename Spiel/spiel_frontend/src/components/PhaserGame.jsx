@@ -7,6 +7,7 @@ import InventoryScene from "../scenes/InventoryScene.js";
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
 import LobbyScene from "../scenes/LobbyScene.js";
+import ShopScene from "../scenes/ShopScene.js";
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -35,7 +36,8 @@ export default function PhaserGame() {
             new LobbyScene(),
             new InventoryScene(),
             new WaitingScene(),
-            new GameScene()
+            new GameScene(),
+            new ShopScene()
         ];
         scenes.forEach(s => s.socket = socket);
 

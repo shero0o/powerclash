@@ -1,7 +1,6 @@
 package at.fhv.shop_catalogue.controller;
 
-import at.fhv.shop_catalogue.model.Brawler;
-import at.fhv.shop_catalogue.model.Gadget;
+import at.fhv.shop_catalogue.model.*;
 import at.fhv.shop_catalogue.service.ShopCatalogueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,21 +15,43 @@ public class ShopCatalogueController {
 
     private final ShopCatalogueService shopCatalogueService;
 
-    // -----------------------
-    // Brawler-Endpunkte
-    // -----------------------
+    @GetMapping("/items")
+    public List<ShopItemDTO> getAllShopItems() {
+        return shopCatalogueService.getAllShopItems();
+    }
+
+    @PostMapping("/brawler/{brawlerId}/buy")
+    public void buyBrawler(@RequestParam String playerId, @PathVariable Long brawlerId) {
+        shopCatalogueService.buyBrawler(playerId, brawlerId);
+    }
+
+    @PostMapping("/gadget/{gadgetId}/buy")
+    public void buyGadget(@RequestParam String playerId, @PathVariable Long gadgetId) {
+        shopCatalogueService.buyGadget(playerId, gadgetId);
+    }
+
+    @PostMapping("/level/{levelId}/buy")
+    public void buyLevel(@RequestParam String playerId, @PathVariable Long levelId) {
+        shopCatalogueService.buyLevel(playerId, levelId);
+    }
+
+    @GetMapping("/player/{playerId}/purchases")
+    public List<Purchase> getPurchases(@PathVariable String playerId) {
+        return shopCatalogueService.getPurchasesForPlayer(playerId);
+    }
 
     @GetMapping("/brawlers")
     public ResponseEntity<List<Brawler>> getAllBrawlers() {
         return ResponseEntity.ok(shopCatalogueService.getAllBrawlers());
     }
 
-    // -----------------------
-    // Gadget-Endpunkte
-    // -----------------------
-
     @GetMapping("/gadgets")
     public ResponseEntity<List<Gadget>> getAllGadgets() {
         return ResponseEntity.ok(shopCatalogueService.getAllGadgets());
+    }
+
+    @GetMapping("/level")
+    public ResponseEntity<List<Level>> getAllLevel() {
+        return ResponseEntity.ok(shopCatalogueService.getAllLevels());
     }
 }
