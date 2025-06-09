@@ -13,7 +13,7 @@ export default defineConfig({
       },
       // HTTP-Proxy: Weiterleitung aller /api-Aufrufe zum Spring-Gateway auf Port 8080
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8092',
         changeOrigin: true,
         secure: false
       }

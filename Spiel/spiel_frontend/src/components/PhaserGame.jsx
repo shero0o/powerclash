@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import io from 'socket.io-client';
 
+import InventoryScene from "../scenes/InventoryScene.js";
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
 import LobbyScene from "../scenes/LobbyScene.js";
@@ -32,6 +33,7 @@ export default function PhaserGame() {
 
         const scenes = [
             new LobbyScene(),
+            new InventoryScene(),
             new WaitingScene(),
             new GameScene()
         ];

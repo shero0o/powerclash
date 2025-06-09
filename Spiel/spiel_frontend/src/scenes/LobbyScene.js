@@ -54,11 +54,17 @@ export default class LobbyScene extends Phaser.Scene {
         this.load.image('avatar4', '/assets/PNG/Characters/Character4.png');
         this.load.image('avatar5', '/assets/PNG/Characters/Character5.png');
 
+        // Waffen
+        this.load.image('weapon_rifle',   '/assets/PNG/Weapons/Mashinegun.png');
+        this.load.image('weapon_sniper',  '/assets/PNG/Weapons/Sniper.png');
+        this.load.image('weapon_shotgun', '/assets/PNG/Weapons/Shotgun.png');
+        this.load.image('weapon_mine',    '/assets/PNG/Weapons/weapon_bomb.png');
+
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
 
-        this.load.svg("healthGadget", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
-        this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
-        this.load.svg("damageGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
+        this.load.svg("gadget_health", "assets/svg/healthGadget.svg", { width: 400, height: 200 });
+        this.load.svg("gadget_damage", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
+        this.load.svg("gadget_speed", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
         this.load.image("mashineGun", "assets/PNG/Weapons/Mashinegun.png")
 
@@ -74,10 +80,10 @@ export default class LobbyScene extends Phaser.Scene {
             .setDisplaySize(width, height);
 
         // --- Avatar + Kreis/Schatten ---
-        this.add.image(width / 2, height / 2 + 140, 'avatar2')
+        // --- Dynamisches Brawler‐Icon ---
+        this.brawlerIcon = this.add.image(width/2, height/2 + 140, this._mapBrawlerKey())
             .setOrigin(0.5)
             .setDisplaySize(400, 600);
-
 
         // Schatten-Kreis (leicht weiches Schwarz hinter dem Avatar)
 
@@ -135,13 +141,22 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.rectangle(width / 2 - 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffffff)
             .setOrigin(0.5);
-        this.add.image(width / 2 - 40, 220, "mashineGun"
-        ).setOrigin(0.5).setDisplaySize(60, 60);
+        const weaponKey = this._mapWeaponKey();
+        const weaponX = width / 2 - 40;
+        const weaponY = 220;
+
+        this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey).setOrigin(0.5);
+
+        if (this.selectedWeapon === 'MINE') {
+            this.weaponIcon.setDisplaySize(60, 60); // oder 90×90 je nach Bildgröße
+        } else {
+            this.weaponIcon.setDisplaySize(60, 60);
+        }
 
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.add.image(width / 2 + 40, 220, currentGadgetKey).setOrigin(0.5).setDisplaySize(100, 50);
+        this.gadgetIcon = this.add.image(width/2 + 40, 220, this._mapGadgetKey()).setOrigin(0.5).setDisplaySize(100, 50);
 
         // --- Großer PLAY-Button unten rechts ---
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')
@@ -169,6 +184,18 @@ export default class LobbyScene extends Phaser.Scene {
 
         // --- Neuer, kleiner LEVEL-Label-Button direkt über PLAY ---
         this._createLevelLabel(width, height);
+        btnBrawlers.on('pointerdown', () => {
+            // pause lobby so it doesn’t render underneath
+            this.scene.pause();
+            // pass current selections into InventoryScene
+            this.scene.launch('InventoryScene', {
+                weapon: this.selectedWeapon,
+                brawler: this.selectedBrawler,
+                gadget: this.selectedGadget
+            });
+        });
+        this.events.on('inventoryDone', this.onInventoryDone, this);
+
 
     }
 
@@ -178,6 +205,50 @@ export default class LobbyScene extends Phaser.Scene {
      *   - Schwarzes, abgerundetes Rechteck daneben
      *   - Weißen Text mittig über das Rechteck
      */
+    _mapBrawlerKey() {
+        switch (this.selectedBrawler) {
+            case 'mage':   return 'avatar4';
+            case 'tank':   return 'avatar3';
+            case 'healer': return 'avatar5';
+            default:       return 'avatar2';
+        }
+    }
+
+    _mapWeaponKey() {
+        switch (this.selectedWeapon) {
+            case 'SNIPER':         return 'weapon_sniper';
+            case 'SHOTGUN_PELLET': return 'weapon_shotgun';
+            case 'MINE':           return 'weapon_mine';
+            default:               return 'weapon_rifle';
+        }
+    }
+
+    _mapGadgetKey() {
+        switch (this.selectedGadget) {
+            case 'SPEED_BOOST':  return 'gadget_speed';
+            case 'HEALTH_BOOST': return 'gadget_health';
+            default:             return 'gadget_damage';
+        }
+    }
+
+    // ─── Inventory‐done callback ─────────────────────────────────────────────
+    onInventoryDone() {
+        // pull back everything from the registry
+        this.selectedBrawler = this.registry.get('brawler');
+        this.selectedWeapon  = this.registry.get('weapon');
+        this.selectedGadget  = this.registry.get('gadget');
+
+        // update textures:
+        this.brawlerIcon.setTexture(this._mapBrawlerKey());
+        this.weaponIcon .setTexture(this._mapWeaponKey());
+        this.gadgetIcon .setTexture(this._mapGadgetKey());
+
+        if (this.selectedWeapon === 'MINE') {
+            this.weaponIcon.setDisplaySize(60, 60);
+        } else {
+            this.weaponIcon.setDisplaySize(60, 60);
+        }
+    }
     _createCoinDisplay() {
         const { coinX, coinY, coinSize, rectHeight, cornerRadius, strokeWidth } = this;
 
@@ -358,6 +429,7 @@ export default class LobbyScene extends Phaser.Scene {
         const numberOnly = levelId.replace(/^level/, '');
         this.levelLabel.setText(`Level: ${numberOnly}`);
         this.levelDropdown.setVisible(false);
+        this.registry.set('levelId', levelId);
     }
 
     /**
@@ -377,9 +449,10 @@ export default class LobbyScene extends Phaser.Scene {
         localStorage.setItem('playerName', enteredName);
 
         // 3) Default-Waffen und Brawler verarbeiten (stehen schon in this.selectedWeapon, this.selectedBrawler)
-        //    Hier könnte man bei Bedarf später erweitern, wenn du auch Waffen/Brawler im Lobby wählen möchtest.
+        //    – hier nichts ändern, wir lesen gleich aus der Registry
 
         // 4) Gewählten Level in Registry/LocalStorage schreiben
+        //    (wurde schon über selectLevel gesetzt)
         const levelToSend = this.selectedLevel || 'level1';
         localStorage.setItem('chosenMapLevel', levelToSend);
 
@@ -389,22 +462,28 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('levelId', levelToSend);
         this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
-        this.registry.set("gadget", this.selectedGadget);
+        this.registry.set('gadget', this.selectedGadget);
 
-        //6) Wenn du einen Socket‐Emit brauchst (wie in SelectionScene), z.B.:
-           this.socket.emit('joinRoom', { playerId, brawlerId: this.selectedBrawler, levelId: levelToSend, chosenWeapon: this.selectedWeapon, playerName: enteredName, chosenGadget: this.selectedGadget }, (response) => {
-               this.registry.set('roomId', response.roomId);
-               this.scene.start('WaitingScene');
-           });
-        //
-        //    Falls du das Socket-Protokoll genauso wie vorher möchtest, dekodiere es hier.
-        //    Für dieses Beispiel starten wir jedoch direkt WaitingScene:
-
-        console.log('JoinRoom: ', {
+        // 6) Socket-Emit an den Spiel-Server mit allen Auswahlparametern
+        this.socket.emit('joinRoom', {
             playerId,
-            playerName: enteredName,
-            brawlerId: this.selectedBrawler,
-            levelId: levelToSend,
+            playerName:   enteredName,
+            brawlerId:    this.selectedBrawler,
+            levelId:      levelToSend,
+            chosenWeapon: this.selectedWeapon,
+            chosenGadget: this.selectedGadget
+        }, (response) => {
+            // Raum-ID zurück in die Registry schreiben …
+            this.registry.set('roomId', response.roomId);
+            // … und dann in die Warteschleife wechseln
+            this.scene.start('WaitingScene');
+        });
+
+        console.log('JoinRoom:', {
+            playerId,
+            playerName:   enteredName,
+            brawlerId:    this.selectedBrawler,
+            levelId:      levelToSend,
             chosenWeapon: this.selectedWeapon,
             chosenGadget: this.selectedGadget
         });
@@ -414,9 +493,11 @@ export default class LobbyScene extends Phaser.Scene {
             this.nameInput.parentNode.removeChild(this.nameInput);
         }
 
-        // 8) Szene wechseln
-        this.scene.start('WaitingScene');
+        // 8) Szene wechseln (wird durch das Callback der socket.emit ohnehin gemacht,
+        //    aber falls kein Callback mehr kommen sollte, sorgen wir hier nochmal vor)
+        // this.scene.start('WaitingScene');
     }
+
 
     shutdown() {
         if (this.nameInput && this.nameInput.parentNode) {
@@ -542,6 +623,8 @@ export default class LobbyScene extends Phaser.Scene {
                 title.destroy();
                 exampleText.destroy();
                 closeBtn.destroy();
+
             });
+
     }
 }
