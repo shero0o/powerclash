@@ -3,11 +3,10 @@ import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import io from 'socket.io-client';
 
+import InventoryScene from "../scenes/InventoryScene.js";
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
 import LobbyScene from "../scenes/LobbyScene.js";
-import DressingRoomScene from '../scenes/DressingRoomScene.js';
-
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -34,11 +33,10 @@ export default function PhaserGame() {
 
         const scenes = [
             new LobbyScene(),
-            new DressingRoomScene(),
+            new InventoryScene(),
             new WaitingScene(),
             new GameScene()
         ];
-
         scenes.forEach(s => s.socket = socket);
 
         const config = {
