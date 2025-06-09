@@ -61,6 +61,7 @@ export default class InventoryScene extends Phaser.Scene {
                 fetch(`${API_BASE}/brawlers`),
                 fetch(`${API_BASE}/gadgets`),
                 fetch(`${API_BASE}/levels`),
+                fetch(`${API_BASE}/weapons`),
                 //fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
             ]);
 
@@ -68,6 +69,7 @@ export default class InventoryScene extends Phaser.Scene {
             this.brawlers = await brawlersRes.json();
             this.gadgets  = await gadgetsRes.json();
             this.levels   = await levelsRes.json();
+            this.weapons  = await weaponsRes.json();
             //const sel     = await selectedRes.json();
 
            // this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
@@ -171,11 +173,31 @@ export default class InventoryScene extends Phaser.Scene {
             this.add.text(x, y+80, w.label, {
                 fontFamily:'Arial', fontSize:'20px', color:'#fff'
             }).setOrigin(0.5).tabged = true;
+
+            // 1) Finde die zugehörigen Daten
+            const info = this.brawlers.find(b => b.id === w.value);
+            // 2) Erstelle den Infotext
+            if (info) {
+                const infoTxt = `
+                Damage: ${info.damage}
+                Proj.Speed:${info.projectileSpeed}
+                Range: ${info.range}
+                Cooldown: ${info.weaponCooldown}
+                Mag.Size: ${info.magazineSize}
+                `.trim();
+                this.add.text(x, y + 110, infoTxt, {
+                    fontFamily: 'Arial', fontSize: '14px', color: '#00ff00', align: 'center'
+                })
+                    .setOrigin(0.5, 0)
+                    .tabged = true;
+            }
         });
+
     }
 
     _showBrawlerOptions() {
         const { width, height } = this.scale;
+        // avatars enthält nur die Keys & Werte fürs Event-Handling
         const avatars = [
             { key: 'avatar2', value: 'sniper' },
             { key: 'avatar3', value: 'tank' },
@@ -188,10 +210,26 @@ export default class InventoryScene extends Phaser.Scene {
                 .setInteractive({useHandCursor:true})
                 .setScale(0.4)
                 .on('pointerdown', () => {
-                    this.selectedBrawler = entry.value;  // <-- jetzt 'mage', 'tank', etc.
+                    this.selectedBrawler = entry.value;
                     this.finish();
                 });
             spr.tabged = true;
+
+            // 1) Finde die zugehörigen Daten
+            const info = this.brawlers.find(b => b.id === entry.value);
+            // 2) Erstelle den Infotext
+            if (info) {
+                const txt = `
+                    Name: ${info.name}
+                    HP:   ${info.health}
+                    Speed:${info.speed}
+                    `;
+                this.add.text(x, y + 80, txt.trim(), {
+                    fontFamily:'Arial', fontSize:'16px', color:'#ffff00', align: 'center'
+                })
+                    .setOrigin(0.5, 0)
+                    .tabged = true;
+            }
         });
     }
 
@@ -216,6 +254,20 @@ export default class InventoryScene extends Phaser.Scene {
             this.add.text(x, y+80, g.label, {
                 fontFamily:'Arial', fontSize:'20px', color:'#fff'
             }).setOrigin(0.5).tabged = true;
+
+            // Gadget-Info aus this.gadgets holen
+            const info = this.gadgets.find(item => item.id === g.value);
+            if (info) {
+                const gadgetTxt = `
+                    Cooldown: ${info.cooldown}s
+                    Effect:   ${info.effect}
+                    `;
+                this.add.text(x, y + 110, gadgetTxt.trim(), {
+                    fontFamily:'Arial', fontSize:'16px', color:'#00ff00', align: 'center'
+                })
+                    .setOrigin(0.5, 0)
+                    .tabged = true;
+            }
         });
     }
 
