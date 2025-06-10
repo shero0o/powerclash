@@ -23,6 +23,8 @@ export default class GameScene extends Phaser.Scene {
         this.boostEndTime      = 0;
         this.boostMultiplier   = 2;
         this.gadgetMaxUses     = 3;
+        this.matchOverEmitted = false;
+
     }
 
     init(data) {
@@ -91,12 +93,23 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        const cam = this.cameras.main;
         const vw = this.scale.width;   // Breite des Viewports in Pixeln
         const vh = this.scale.height;  // Höhe des Viewports in Pixeln
            // fest am Bildschirm haften
 
 
+        // ─── 1) matchOver-Listener einmalig registrieren ───
+        this.socket.on('matchOver', () => {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (!me || me.currentHealth <= 0) {
+                const alive = this.latestState.players.filter(p => p.currentHealth > 0).length;
+                const place = alive + 1;
+                const base  = me?.coinCount ?? 0;
+                const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
+                this.showDefeatScreen(place, base, bonus, base + bonus);
+                this.defeatShown = true;
+                }
+        });
 
         this.exitButtonSvg = this.add.image(
             this.cameras.main.width / 2,
@@ -108,7 +121,7 @@ export default class GameScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .setVisible(false)   // zunächst wegstecken
             .on('pointerdown', () => {
-                this.socket.emit('leaveRoom', { roomId: this.roomId, playerId: this.playerId });
+                this.socket.emit('leaveRoom', { playerId: this.playerId });
                 this.socket.disconnect();
                 window.location.reload();
             });
@@ -537,8 +550,6 @@ export default class GameScene extends Phaser.Scene {
             }
 
 
-            // if game won/lost, stop here
-            if (this.hasWon || this.defeatShown) return;
 
             // ─── handle mines/explosions ────────────────────────
             const currIds = new Set(this.latestState.projectiles
@@ -641,7 +652,7 @@ export default class GameScene extends Phaser.Scene {
                 let bar = this.npcBars[npc.id];
                 let label = this.npcLabels[npc.id];
 
-                if (!spr) {
+                if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
                     // a) main sprite
                     spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
                         .setOrigin(0.5);
@@ -777,7 +788,9 @@ export default class GameScene extends Phaser.Scene {
                     this.playerSprites[p.playerId] = spr;
                 }
                 // Kollision gegen Wände
-                this.physics.add.collider(spr, this.obstacleLayer);
+                if (spr) {
+                     this.physics.add.collider(spr, this.obstacleLayer);
+                }
 
             if (spr) {
                 if (p.currentHealth <= 0) {
@@ -972,22 +985,8 @@ export default class GameScene extends Phaser.Scene {
 
         const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
 
-        // 1) Wenn nur noch ein Spieler übrig ist (Sieg-Bedingung)
-        if (!this.hasWon && alivePlayers === 1) {
-            const meAlive = this.latestState.players.find(p => p.playerId === this.playerId);
-            if (meAlive && meAlive.currentHealth > 0) {
-                const place = 1; // Sieger ist automatisch Platz 1
-                const baseCoins = meAlive.coinCount ?? 0;
-                // Bonus-Regeln: Platz 1 +10, Platz 2 +5, Platz 3 +0, Platz 4 -10
-                const bonus = 10; // Platz 1 immer +10
-                const totalCoins = baseCoins + bonus;
-                this.showVictoryScreen(place, baseCoins, bonus, totalCoins);
-                this.hasWon = true;
-            }
-            const newCount = me.coinCount ?? 0;
-            this.lastCoinCount = newCount;
-            this.coinText.setText(`${newCount}`);
-        }
+
+
 
         // 2) Wenn man selbst gerade gestorben ist
         if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
@@ -1036,6 +1035,38 @@ export default class GameScene extends Phaser.Scene {
                 this.cameras.main.setZoom(this.initialZoom);
             }
         }
+
+            // … dein bestehender Code bis zum Schluss …
+
+        // 1) matchOver EINMALIG senden
+        if (!this.matchOverEmitted && alivePlayers === 1) {
+            this.socket.emit('matchOver', { roomId: this.roomId });
+            this.matchOverEmitted = true;
+        }
+
+        // 2) Nur Gewinner zeigt Victory
+        if (!this.hasWon && alivePlayers === 1 && me?.currentHealth > 0) {
+            const base = me.coinCount ?? 0, bonus = 10;
+            this.showVictoryScreen(1, base, bonus, base + bonus);
+            this.hasWon = true;
+        }
+
+        // 3) Nur der Gestorbene zeigt Defeat
+        if (!this.defeatShown && me && me.currentHealth <= 0) {
+            const place = alivePlayers + 1, base = me.coinCount ?? 0;
+            const bonus = place === 2 ? 5 : place === 3 ? 0 : place === 4 ? -10 : 0;
+            this.showDefeatScreen(place, base, bonus, base + bonus);
+            this.defeatShown = true;
+        }
+
+        // 4) Bewegungs-Emit IMMER senden (auch wenn jemand gestorben ist)
+        const dirX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
+        const dirY = (this.keys.down.isDown  ? 1 : 0) - (this.keys.up.isDown   ? 1 : 0);
+        const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
+        const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
+        this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+
+        // Ende von update()
 
 
 
@@ -1129,10 +1160,8 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', () => {
-            this.socket.emit('leaveRoom', {
-                roomId: this.roomId,
-                playerId: this.playerId
-            });
+            this.socket.emit('leaveRoom', { playerId: this.playerId });
+
             this.socket.disconnect();
             window.location.reload();
         });
@@ -1224,10 +1253,8 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', () => {
-            this.socket.emit('leaveRoom', {
-                roomId: this.roomId,
-                playerId: this.playerId
-            });
+            this.socket.emit('leaveRoom', { playerId: this.playerId });
+
             this.socket.disconnect();
             window.location.reload();
         });

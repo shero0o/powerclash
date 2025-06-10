@@ -1,13 +1,21 @@
 package at.fhv.spiel_backend.config;
 
-import at.fhv.spiel_backend.DTO.*;
+import at.fhv.spiel_backend.DTO.JoinRequestDTO;
+import at.fhv.spiel_backend.DTO.JoinResponseDTO;
+import at.fhv.spiel_backend.DTO.WaitingReadyDTO;
+import at.fhv.spiel_backend.DTO.MoveRequestDTO;
+import at.fhv.spiel_backend.DTO.ShootProjectileDTO;
+import at.fhv.spiel_backend.DTO.ChangeWeaponDTO;
+import at.fhv.spiel_backend.DTO.UseGadgetDTO;
+import at.fhv.spiel_backend.DTO.LeaveRoomDTO;
+import at.fhv.spiel_backend.DTO.RoomIdOnlyDTO;
 import at.fhv.spiel_backend.logic.DefaultGameLogic;
 import at.fhv.spiel_backend.model.Gadget;
 import at.fhv.spiel_backend.model.Player;
 import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.model.Position;
-import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
+import at.fhv.spiel_backend.server.room.IRoomManager;
 import com.corundumstudio.socketio.SocketIOServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,48 +39,38 @@ public class SocketIOConfig {
         log.info("Starting SocketIOServer on {}:{} with origin {}",
                 config.getHostname(), config.getPort(), config.getOrigin());
 
-        // Spieler joinen und anlegen
+        // joinRoom
         server.addEventListener("joinRoom", JoinRequestDTO.class, (client, data, ack) -> {
             String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
-            IGameRoom room = roomManager.getRoom(roomId);
             client.joinRoom(roomId);
-            server.getRoomOperations(roomId).sendEvent("stateUpdate", room.buildStateUpdate());
+            // initial state
+            roomManager.getRoom(roomId).buildStateUpdate();
+            server.getRoomOperations(roomId).sendEvent("stateUpdate", roomManager.getRoom(roomId).buildStateUpdate());
 
             if (data.getChosenWeapon() != null) {
-                 room.getGameLogic().setPlayerWeapon(
-                         data.getPlayerId(),
-                         data.getChosenWeapon());
+                roomManager.getRoom(roomId).getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getChosenWeapon());
             }
             if (data.getChosenGadget() != null) {
-                room.getGameLogic().setPlayerGadget(
-                        data.getPlayerId(),
-                        data.getChosenGadget());
+                roomManager.getRoom(roomId).getGameLogic().setPlayerGadget(data.getPlayerId(), data.getChosenGadget());
             }
-
-
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
 
-        // Ready-Phase
+        // waitingReady
         server.addEventListener("waitingReady", WaitingReadyDTO.class,
                 (client, data, ack) -> {
                     String incoming = data.getRoomId();
-                    IGameRoom room     = roomManager.getRoom(incoming);
-                    boolean isNewRoom  = false;
-
+                    IGameRoom room = roomManager.getRoom(incoming);
                     if (room == null) {
                         String newId = roomManager.assignToRoom(
-                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName()
-                        );
-                        room = roomManager.getRoom(newId);
+                                data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
                         client.joinRoom(newId);
                         ack.sendAckData(new JoinResponseDTO(newId));
+                        room = roomManager.getRoom(newId);
                         log.info("Auto-created room {} for player {}", newId, data.getPlayerId());
-                        isNewRoom = true;
                     } else {
                         ack.sendAckData("ok");
                     }
-
                     room.markReady(data.getPlayerId(), data.getBrawlerId());
                     if (room.getReadyCount() == room.getPlayerCount() && room.getPlayerCount() == room.getMaxPlayers()) {
                         server.getRoomOperations(room.getId()).sendEvent("startGame");
@@ -81,7 +79,7 @@ public class SocketIOConfig {
                 }
         );
 
-        // Bewegungspayload verarbeiten
+        // move
         server.addEventListener("move", MoveRequestDTO.class,
                 (client, data, ack) -> {
                     GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
@@ -99,7 +97,7 @@ public class SocketIOConfig {
                 }
         );
 
-        // Projektil-Schuss verarbeiten (frontend nutzt 'shootProjectile')
+        // shootProjectile
         server.addEventListener("shootProjectile", ShootProjectileDTO.class,
                 (client, data, ack) -> {
                     IGameRoom room = roomManager.getRoom(data.getRoomId());
@@ -111,11 +109,11 @@ public class SocketIOConfig {
                                 data.getProjectileType()
                         );
                     }
-                    // Optionally ack here if DTO supports it
+                    ack.sendAckData("ok");
                 }
         );
 
-        // Weapon-Change-event
+        // changeWeapon
         server.addEventListener("changeWeapon", ChangeWeaponDTO.class,
                 (client, data, ack) -> {
                     IGameRoom room = roomManager.getRoom(data.getRoomId());
@@ -123,6 +121,61 @@ public class SocketIOConfig {
                     ack.sendAckData("ok");
                 }
         );
+
+        // useGadget
+        server.addEventListener("useGadget", UseGadgetDTO.class,
+                (client, data, ack) -> {
+                    GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+                    DefaultGameLogic logic = (DefaultGameLogic) room.getGameLogic();
+                    Player p = logic.getPlayer(data.getPlayerId());
+                    Gadget g = room.getGameLogic().getGadget(data.getPlayerId());
+                    if (g == null) {
+                        ack.sendAckData("error:no_gadget");
+                        return;
+                    }
+                    if (g.getRemainingUses() <= 0) {
+                        ack.sendAckData("error:no_uses_left");
+                        return;
+                    }
+                    if (g.getTimeRemaining() > 0) {
+                        ack.sendAckData("error:cooldown");
+                        return;
+                    }
+                    long now = System.currentTimeMillis();
+                    switch (g.getType()) {
+                        case SPEED_BOOST:
+                            p.setSpeedBoostActive(true);
+                            break;
+                        case HEALTH_BOOST:
+                            p.setMaxHealth(p.getMaxHealth() + Player.HP_BOOST_AMOUNT);
+                            p.setCurrentHealth(
+                                    Math.min(p.getMaxHealth(),
+                                            p.getCurrentHealth() + Player.HP_BOOST_AMOUNT)
+                            );
+                            break;
+                        case DAMAGE_BOOST:
+                            p.setDamageBoostEndTime(now + 10_000);
+                            break;
+                    }
+                    g.setTimeRemaining(10_000L);
+                    g.setRemainingUses(g.getRemainingUses() - 1);
+                    ack.sendAckData("ok");
+                }
+        );
+
+        // leaveRoom
+        server.addEventListener("leaveRoom", LeaveRoomDTO.class, (client, data, ack) -> {
+            roomManager.removeFromRoom(data.getPlayerId());
+            log.info("Player {} left the room", data.getPlayerId());
+            ack.sendAckData("ok");
+        });
+
+        // matchOver
+        server.addEventListener("matchOver", RoomIdOnlyDTO.class, (client, data, ack) -> {
+            log.info("Match over in room {}", data.getRoomId());
+            server.getRoomOperations(data.getRoomId()).sendEvent("matchOver");
+            ack.sendAckData("ok");
+        });
 
         server.addDisconnectListener(client -> {
             String playerId = client.getHandshakeData().getSingleUrlParam("playerId");
@@ -132,60 +185,6 @@ public class SocketIOConfig {
             }
         });
 
-        server.addEventListener("leaveRoom", WaitingReadyDTO.class, (client, data, ack) -> {
-            String playerId = data.getPlayerId();
-            roomManager.removeFromRoom(playerId);
-            log.info("Player {} left the room voluntarily", playerId);
-            ack.sendAckData("ok");
-        });
-
-
-        // Gadget-event
-        server.addEventListener("useGadget", UseGadgetDTO.class, (client, data, ack) -> {
-            System.out.println("[INFO] Gadget used for " + data.getPlayerId());
-            GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
-            DefaultGameLogic logic = (DefaultGameLogic) room.getGameLogic();
-            Player p = logic.getPlayer(data.getPlayerId());
-            Gadget g = room.getGameLogic().getGadget(data.getPlayerId());
-            if (g == null) {
-                ack.sendAckData("error:no_gadget");
-                return;
-            }
-            if (g.getRemainingUses() <= 0) {
-                ack.sendAckData("error:no_uses_left");
-                return;
-            }
-            if (g.getTimeRemaining() > 0) {
-                ack.sendAckData("error:cooldown");
-                return;
-            }
-            long now = System.currentTimeMillis();
-            switch (g.getType()) {
-                case SPEED_BOOST:
-                    p.setSpeedBoostActive(true);
-                    break;
-
-                case HEALTH_BOOST:
-                    p.setMaxHealth(p.getMaxHealth() + Player.HP_BOOST_AMOUNT);
-                    p.setCurrentHealth(
-                            Math.min(p.getMaxHealth(),
-                                    p.getCurrentHealth() + Player.HP_BOOST_AMOUNT)
-                    );
-                    break;
-
-                case DAMAGE_BOOST:
-                    p.setDamageBoostEndTime(now + 10_000);
-                    break;
-            }
-
-            // Gemeinsames Starten von Cooldown & Use-Zähler
-            g.setTimeRemaining(10_000L);                        // 10 Sekunden Buff-Laufzeit
-            g.setRemainingUses(g.getRemainingUses() - 1);      // Use reduzieren
-            System.out.println("Gadget "+ g.getType() +" used for " + data.getPlayerId());
-            System.out.println("Remaining uses: " + g.getRemainingUses());
-
-            ack.sendAckData("ok");
-        });
         server.start();
         return server;
     }
