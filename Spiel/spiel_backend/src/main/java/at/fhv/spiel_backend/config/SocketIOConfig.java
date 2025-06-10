@@ -8,7 +8,6 @@ import at.fhv.spiel_backend.server.game.GameRoomImpl;
 import at.fhv.spiel_backend.model.Position;
 import at.fhv.spiel_backend.server.room.IRoomManager;
 import at.fhv.spiel_backend.server.game.IGameRoom;
-import at.fhv.spiel_backend.ws.StateUpdateMessage;
 import com.corundumstudio.socketio.SocketIOServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,7 +165,7 @@ public class SocketIOConfig {
                     p.setSpeedBoostActive(true);
                     break;
 
-                case HP_BOOST:
+                case HEALTH_BOOST:
                     p.setMaxHealth(p.getMaxHealth() + Player.HP_BOOST_AMOUNT);
                     p.setCurrentHealth(
                             Math.min(p.getMaxHealth(),

@@ -32,7 +32,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.load.svg('btn-settings',  '/assets/svg/btn-settings.svg',{ width:200, height:100 });
         this.load.svg('icon_shop',     '/assets/svg/btn-shop.svg',    { width:200, height:80 });
         this.load.svg('icon_coin',     '/assets/svg/coin-icon.svg',   { width:100, height:100 });
-
+        this.load.svg('home', '/assets/svg/btn-navigation.svg',{width:130,height:115})
         // — Waffen-Assets —
         this.load.image('weapon_rifle',   '/assets/PNG/Weapons/Mashinegun.png');
         this.load.image('weapon_sniper',  '/assets/PNG/Weapons/Sniper.png');
@@ -108,6 +108,7 @@ export default class InventoryScene extends Phaser.Scene {
         this._createCoinDisplay();
 
         // — Shop & Back to Lobby —
+        const shopX = 90, shopY = height/2 - 100;
         const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
@@ -116,6 +117,17 @@ export default class InventoryScene extends Phaser.Scene {
         btnShop.on('pointerdown', () => {
             this.scene.start('ShopScene');
         });
+
+        this.add.image(shopX, shopY + 100, 'home')
+            .setOrigin(0.5)
+            .setDisplaySize(100, 100)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.finish());
+
+    .setOrigin(0.5)
+            .setDisplaySize(100, 100)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.finish());
 
         // — Tab-Leiste unter y=120 —
         const tabs = ['Weapons','Brawlers','Gadgets'];
@@ -199,11 +211,11 @@ export default class InventoryScene extends Phaser.Scene {
         const { width, height } = this.scale;
         // avatars enthält nur die Keys & Werte fürs Event-Handling
         const avatars = [
-            { key: 'avatar2', value: 'sniper' },
-            { key: 'avatar3', value: 'tank' },
-            { key: 'avatar4', value: 'mage' },
-            { key: 'avatar5', value: 'healer' }
-        ];
+                       { key: 'avatar2', value: 'sniper' }, // Hitman
+                       { key: 'avatar3', value: 'mage'   }, // Soldier
+                       { key: 'avatar4', value: 'healer' }, // WomanGreen
+                       { key: 'avatar5', value: 'tank'   }  // Robot
+                   ];
         avatars.forEach((entry,i) => {
             const x = width/2 -300 + i*200, y = height/2;
             const spr = this.add.image(x, y, entry.key)

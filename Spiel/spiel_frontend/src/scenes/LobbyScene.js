@@ -37,6 +37,8 @@ export default class LobbyScene extends Phaser.Scene {
         this.coinY        = 50;  // y-pos für Coin-Icon
         this.coinSize     = 60;  // Größe (60×60) für Coin-Icon
         this.coinContainer= null;
+        this.settingsOpen = false;
+
     }
 
     preload() {
@@ -119,7 +121,9 @@ export default class LobbyScene extends Phaser.Scene {
         const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
-            .setInteractive({ useHandCursor: true }).setDepth(500);
+            .setInteractive({ useHandCursor: true })
+            .setAlpha(1)
+            .setDepth(1000);
 
         settingsBtn.on('pointerdown', () => {
             this.openSettingsWindow();
@@ -243,11 +247,11 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-            case 'mage':   return 'avatar4';
-            case 'tank':   return 'avatar3';
-            case 'healer': return 'avatar5';
-            default:       return 'avatar2';
-        }
+                       case 'mage':   return 'avatar3'; // Soldier → Character3
+                           case 'healer': return 'avatar4'; // WomanGreen → Character4
+                           case 'tank':   return 'avatar5'; // Robot → Character5
+                           default:       return 'avatar2'; // Hitman → Character2
+                       }
     }
 
     _mapWeaponKey() {
@@ -553,6 +557,9 @@ export default class LobbyScene extends Phaser.Scene {
 
 
     openSettingsWindow() {
+        if (this.settingsOpen) return;
+        this.settingsOpen = true;
+
         const vw = this.scale.width;
         const vh = this.scale.height;
 
@@ -616,7 +623,7 @@ export default class LobbyScene extends Phaser.Scene {
         const exampleText = this.add.text(
             vw / 2,
             vh / 2 - 20,
-            'Sound:',
+            'Key for Gadget:',
             {
                 fontSize: '24px',
                 fontFamily: 'Arial',
@@ -626,6 +633,38 @@ export default class LobbyScene extends Phaser.Scene {
             .setOrigin(0.5, 0.5)
             .setScrollFactor(0)
             .setDepth(1003);
+
+        // Gadget-Key Eingabefeld
+        const gadgetKeyInput = document.createElement('input');
+        gadgetKeyInput.type = 'text';
+        gadgetKeyInput.maxLength = 1;
+        gadgetKeyInput.placeholder = 'Taste für Gadget';
+        gadgetKeyInput.style.position = 'absolute';
+        const textBounds = exampleText.getBounds();
+
+        gadgetKeyInput.style.left = `${textBounds.right + 10}px`;
+        gadgetKeyInput.style.top  = `${textBounds.top - 5}px`;
+
+        Object.assign(gadgetKeyInput.style, {
+            position: 'absolute',
+            left: `${textBounds.right + 10}px`,
+            top: `${textBounds.top - 5}px`,
+            width: '30px',
+            height: '30px',
+            fontSize: '16px',
+            textAlign: 'center',
+            padding: '2px',
+            border: '2px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#222',
+            color: '#fff',
+            zIndex: 10000
+        });
+
+        gadgetKeyInput.value = localStorage.getItem('gadgetKey') || 'Q'; // Standard
+
+        document.body.appendChild(gadgetKeyInput);
+
 
         // Beispiel‐Button „Close“, um das Fenster zu schließen
         const closeBtn = this.add.image(
@@ -637,15 +676,29 @@ export default class LobbyScene extends Phaser.Scene {
             .setDepth(1003)
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
-                // Beim Klick alle erzeugten Objekte löschen
+                const newKey = gadgetKeyInput.value.toUpperCase();
+
+                if (/^[A-Z]$/.test(newKey)) {
+                    localStorage.setItem('gadgetKey', newKey);        // dauerhaft speichern
+                    this.registry.set('gadgetKey', newKey);           // session-übergreifend speichern
+                    console.log(`Gadget-Taste gespeichert: ${newKey}`);
+                } else {
+                    alert('Ungültige Taste! Bitte nur einen Buchstaben A-Z eingeben.');
+                }
+
+                // HTML-Input entfernen
+                gadgetKeyInput.remove();
+
+                // Phaser-Elemente löschen
                 overlay.destroy();
                 dialogBg.destroy();
                 border.destroy();
                 title.destroy();
                 exampleText.destroy();
                 closeBtn.destroy();
-
+                this.settingsOpen = false;
             });
+
 
     }
 }
