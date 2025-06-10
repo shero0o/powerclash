@@ -7,8 +7,6 @@ export default class LobbyScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LobbyScene' });
 
-        this.playerId = 4;
-
         // PLAY-Button
         this.playButton = null;
 
@@ -75,6 +73,11 @@ export default class LobbyScene extends Phaser.Scene {
         this.load.image("mashineGun", "assets/PNG/Weapons/Mashinegun.png")
 
 
+    }
+
+    init() {
+        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerName = this.registry.get('playerName') || 'Player';
     }
 
     create() {
@@ -144,7 +147,7 @@ export default class LobbyScene extends Phaser.Scene {
             currentGadgetKey = "speedGadget";
         }else{currentGadgetKey = "damageGadget"}
 
-        this.add.text(width / 2, 165, 'Player', {
+        this.add.text(width / 2, 165, this.playerName, {
             fontFamily: 'Arial',
             fontSize: '28px',
             color: '#ffffff',

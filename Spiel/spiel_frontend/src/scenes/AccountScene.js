@@ -13,6 +13,8 @@ export default class AccountScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
+        this.cameras.main.setBackgroundColor('#000000');
+
         // Titel
         this.add.text(width / 2, 80, 'Account', {
             fontFamily: 'Arial', fontSize: '48px', color: '#ffffff', stroke: '#000000', strokeThickness: 6
@@ -51,6 +53,8 @@ export default class AccountScene extends Phaser.Scene {
     updateStatus() {
         if (this.playerId) {
             this.statusText.setText(`Player: ${this.playerName} (ID: ${this.playerId})`);
+            this.registry.set('playerId', this.playerId);
+            this.registry.set('playerName', this.playerName);
         } else {
             this.statusText.setText('Not logged in');
         }
