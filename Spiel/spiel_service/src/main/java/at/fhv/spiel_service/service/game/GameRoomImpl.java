@@ -4,6 +4,9 @@ import at.fhv.spiel_service.domain.*;
 import at.fhv.spiel_service.factory.IMapFactory;
 import at.fhv.spiel_service.messaging.EventPublisher;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
+import at.fhv.spiel_service.service.game.core.GameLogic;
+import at.fhv.spiel_service.service.game.core.IGameRoom;
+import at.fhv.spiel_service.service.game.impl.DefaultGameLogic;
 
 import java.util.Collections;
 import java.util.Map;
