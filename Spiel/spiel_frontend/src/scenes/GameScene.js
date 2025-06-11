@@ -123,7 +123,7 @@ export default class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', { playerId: this.playerId });
                 this.socket.disconnect();
-                window.location.reload();
+                this.scene.start('LobbyScene');
             });
 
         // Hintergrundfarbe
@@ -1163,7 +1163,7 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            window.location.reload();
+            this.scene.start('LobbyScene');;
         });
 
 
@@ -1256,7 +1256,7 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            window.location.reload();
+            this.scene.start('LobbyScene');;
         });
 
     }
