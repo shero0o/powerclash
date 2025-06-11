@@ -1256,7 +1256,7 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            this.scene.start('LobbyScene');;
+            this.scene.start('LobbyScene');
         });
 
     }
