@@ -51,152 +51,6 @@ export default class InventoryScene extends Phaser.Scene {
         this.load.svg('gadget_health', '/assets/svg/healthGadget.svg',{ width:400, height:200 });
     }
 
-    openSettingsWindow() {
-        if (this.settingsOpen) return;
-        this.settingsOpen = true;
-
-        const vw = this.scale.width;
-        const vh = this.scale.height;
-
-        // a) Schwarzes halbtransparentes Overlay, das den ganzen Viewport abdeckt
-        const overlay = this.add.rectangle(
-            vw / 2,    // in der Mitte des Viewports
-            vh / 2,
-            vw,        // volle Breite des Viewports
-            vh,        // volle Höhe des Viewports
-            0x000000   // Farbe: Schwarz
-        )
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setAlpha(0.8)     // 80% Opazität → leicht durchsichtig
-            .setDepth(1000);   // sehr hoher Depth, damit alles darunter verdeckt ist
-
-        // b) Schwarzes Rechteck in der Mitte für den Settings‐Dialog
-        //    Beispiel: halbe Breite, halbe Höhe, zentriert
-        const winWidth  = vw * 0.6;
-        const winHeight = vh * 0.6;
-        const dialogBg = this.add.rectangle(
-            vw / 2, vh / 2,
-            winWidth, winHeight,
-            0x111111   // dunkles Grau/Schwarz
-        )
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(1001)    // eine Stufe über dem Overlay
-
-        // Optional: Rahmen um das Dialogfeld (weiß oder helle Farbe)
-        const border = this.add.graphics()
-            .lineStyle(4, 0xffffff)  // 4px weißer Rahmen
-            .strokeRect(
-                (vw - winWidth) / 2,
-                (vh - winHeight) / 2,
-                winWidth,
-                winHeight
-            )
-            .setScrollFactor(0)
-            .setDepth(1002);         // noch eine Stufe höher, damit es über dialogBg liegt
-
-        // c) Titel „Settings“ oben im Dialog
-        const title = this.add.text(
-            vw / 2,
-            (vh - winHeight) / 2 + 30,
-            'Settings',
-            {
-                fontSize: '36px',
-                fontFamily: 'Arial',
-                color: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 6
-            }
-        )
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(1003);
-
-        // d) Beispiel‐Checkbox oder Textfeld im Dialog
-        //    Du kannst hier beliebige Phaser‐UI‐Elemente oder Textfelder hinzufügen.
-        const exampleText = this.add.text(
-            vw / 2,
-            vh / 2 - 20,
-            'Key for Gadget:',
-            {
-                fontSize: '24px',
-                fontFamily: 'Arial',
-                color: '#ffffff'
-            }
-        )
-            .setOrigin(0.5, 0.5)
-            .setScrollFactor(0)
-            .setDepth(1003);
-
-        // Gadget-Key Eingabefeld
-        const gadgetKeyInput = document.createElement('input');
-        gadgetKeyInput.type = 'text';
-        gadgetKeyInput.maxLength = 1;
-        gadgetKeyInput.placeholder = 'Taste für Gadget';
-        gadgetKeyInput.style.position = 'absolute';
-        const textBounds = exampleText.getBounds();
-
-        gadgetKeyInput.style.left = `${textBounds.right + 10}px`;
-        gadgetKeyInput.style.top  = `${textBounds.top - 5}px`;
-
-        Object.assign(gadgetKeyInput.style, {
-            position: 'absolute',
-            left: `${textBounds.right + 10}px`,
-            top: `${textBounds.top - 5}px`,
-            width: '30px',
-            height: '30px',
-            fontSize: '16px',
-            textAlign: 'center',
-            padding: '2px',
-            border: '2px solid #ccc',
-            borderRadius: '4px',
-            backgroundColor: '#222',
-            color: '#fff',
-            zIndex: 10000
-        });
-
-        gadgetKeyInput.value = localStorage.getItem('gadgetKey') || 'Q'; // Standard
-
-        document.body.appendChild(gadgetKeyInput);
-
-
-        // Beispiel‐Button „Close“, um das Fenster zu schließen
-        const closeBtn = this.add.image(
-            vw / 2,
-            (vh + winHeight) / 2 - 30, "exitButtonSvg"
-        )
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(1003)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => {
-                const newKey = gadgetKeyInput.value.toUpperCase();
-
-                if (/^[A-Z]$/.test(newKey)) {
-                    localStorage.setItem('gadgetKey', newKey);        // dauerhaft speichern
-                    this.registry.set('gadgetKey', newKey);           // session-übergreifend speichern
-                    console.log(`Gadget-Taste gespeichert: ${newKey}`);
-                } else {
-                    alert('Ungültige Taste! Bitte nur einen Buchstaben A-Z eingeben.');
-                }
-
-                // HTML-Input entfernen
-                gadgetKeyInput.remove();
-
-                // Phaser-Elemente löschen
-                overlay.destroy();
-                dialogBg.destroy();
-                border.destroy();
-                title.destroy();
-                exampleText.destroy();
-                closeBtn.destroy();
-                this.settingsOpen = false;
-            });
-
-
-    }
-
     async create() {
         const { width, height } = this.scale;
 
@@ -243,7 +97,7 @@ export default class InventoryScene extends Phaser.Scene {
                 this.scene.start('AccountScene');
             });;
 
-        const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
+        const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
             .setInteractive({ useHandCursor: true })
@@ -476,5 +330,152 @@ export default class InventoryScene extends Phaser.Scene {
 
 
     }
+
+    openSettingsWindow() {
+        if (this.settingsOpen) return;
+        this.settingsOpen = true;
+
+        const vw = this.scale.width;
+        const vh = this.scale.height;
+
+        // a) Schwarzes halbtransparentes Overlay, das den ganzen Viewport abdeckt
+        const overlay = this.add.rectangle(
+            vw / 2,    // in der Mitte des Viewports
+            vh / 2,
+            vw,        // volle Breite des Viewports
+            vh,        // volle Höhe des Viewports
+            0x000000   // Farbe: Schwarz
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setAlpha(0.8)     // 80% Opazität → leicht durchsichtig
+            .setDepth(1000);   // sehr hoher Depth, damit alles darunter verdeckt ist
+
+        // b) Schwarzes Rechteck in der Mitte für den Settings‐Dialog
+        //    Beispiel: halbe Breite, halbe Höhe, zentriert
+        const winWidth  = vw * 0.6;
+        const winHeight = vh * 0.6;
+        const dialogBg = this.add.rectangle(
+            vw / 2, vh / 2,
+            winWidth, winHeight,
+            0x111111   // dunkles Grau/Schwarz
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1001)    // eine Stufe über dem Overlay
+
+        // Optional: Rahmen um das Dialogfeld (weiß oder helle Farbe)
+        const border = this.add.graphics()
+            .lineStyle(4, 0xffffff)  // 4px weißer Rahmen
+            .strokeRect(
+                (vw - winWidth) / 2,
+                (vh - winHeight) / 2,
+                winWidth,
+                winHeight
+            )
+            .setScrollFactor(0)
+            .setDepth(1002);         // noch eine Stufe höher, damit es über dialogBg liegt
+
+        // c) Titel „Settings“ oben im Dialog
+        const title = this.add.text(
+            vw / 2,
+            (vh - winHeight) / 2 + 30,
+            'Settings',
+            {
+                fontSize: '36px',
+                fontFamily: 'Arial',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 6
+            }
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1003);
+
+        // d) Beispiel‐Checkbox oder Textfeld im Dialog
+        //    Du kannst hier beliebige Phaser‐UI‐Elemente oder Textfelder hinzufügen.
+        const exampleText = this.add.text(
+            vw / 2,
+            vh / 2 - 20,
+            'Key for Gadget:',
+            {
+                fontSize: '24px',
+                fontFamily: 'Arial',
+                color: '#ffffff'
+            }
+        )
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0)
+            .setDepth(1003);
+
+        // Gadget-Key Eingabefeld
+        const gadgetKeyInput = document.createElement('input');
+        gadgetKeyInput.type = 'text';
+        gadgetKeyInput.maxLength = 1;
+        gadgetKeyInput.placeholder = 'Taste für Gadget';
+        gadgetKeyInput.style.position = 'absolute';
+        const textBounds = exampleText.getBounds();
+
+        gadgetKeyInput.style.left = `${textBounds.right + 10}px`;
+        gadgetKeyInput.style.top  = `${textBounds.top - 5}px`;
+
+        Object.assign(gadgetKeyInput.style, {
+            position: 'absolute',
+            left: `${textBounds.right + 10}px`,
+            top: `${textBounds.top - 5}px`,
+            width: '30px',
+            height: '30px',
+            fontSize: '16px',
+            textAlign: 'center',
+            padding: '2px',
+            border: '2px solid #ccc',
+            borderRadius: '4px',
+            backgroundColor: '#222',
+            color: '#fff',
+            zIndex: 10000
+        });
+
+        gadgetKeyInput.value = localStorage.getItem('gadgetKey') || 'Q'; // Standard
+
+        document.body.appendChild(gadgetKeyInput);
+
+
+        // Beispiel‐Button „Close“, um das Fenster zu schließen
+        const closeBtn = this.add.image(
+            vw / 2,
+            (vh + winHeight) / 2 - 30, "exitButtonSvg"
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1003)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => {
+                const newKey = gadgetKeyInput.value.toUpperCase();
+
+                if (/^[A-Z]$/.test(newKey)) {
+                    localStorage.setItem('gadgetKey', newKey);        // dauerhaft speichern
+                    this.registry.set('gadgetKey', newKey);           // session-übergreifend speichern
+                    console.log(`Gadget-Taste gespeichert: ${newKey}`);
+                } else {
+                    alert('Ungültige Taste! Bitte nur einen Buchstaben A-Z eingeben.');
+                }
+
+                // HTML-Input entfernen
+                gadgetKeyInput.remove();
+
+                // Phaser-Elemente löschen
+                overlay.destroy();
+                dialogBg.destroy();
+                border.destroy();
+                title.destroy();
+                exampleText.destroy();
+                closeBtn.destroy();
+                this.settingsOpen = false;
+            });
+
+
+    }
+
 
 }

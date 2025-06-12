@@ -10,10 +10,26 @@ export default class AccountScene extends Phaser.Scene {
         this.statusText = null;
     }
 
+    preload() {
+        // — Lobby-Assets (Hintergrund, UI) —
+        this.load.svg('lobby_bg',      '/assets/svg/lobby_bg.svg');
+        this.load.svg('icon_profile',  '/assets/svg/profile-icon.svg', { width:200, height:100 });
+        this.load.svg('btn-settings',  '/assets/svg/btn-settings.svg',{ width:200, height:100 });
+        this.load.svg('icon_shop',     '/assets/svg/btn-shop.svg',    { width:200, height:80 });
+        this.load.svg('icon_coin',     '/assets/svg/coin-icon.svg',   { width:100, height:100 });
+        this.load.svg('home', '/assets/svg/btn-navigation.svg',{width:130,height:115})
+        }
+
+
     create() {
         const { width, height } = this.scale;
 
         this.cameras.main.setBackgroundColor('#000000');
+
+        // — Hintergrund & Header UI auf y=60 —
+        this.add.image(width/2, height/2, 'lobby_bg')
+            .setOrigin(0.5)
+            .setDisplaySize(width, height);
 
         // Titel
         this.add.text(width / 2, 80, 'Account', {
@@ -22,32 +38,55 @@ export default class AccountScene extends Phaser.Scene {
 
         // Statusanzeige
         this.statusText = this.add.text(width / 2, 160, 'Not logged in', {
-            fontFamily: 'Arial', fontSize: '24px', color: '#ffff00'
+            fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
         }).setOrigin(0.5);
 
         // Register Button
         const registerBtn = this.add.text(width / 2, 240, 'Register', {
-            fontFamily: 'Arial', fontSize: '32px', color: '#00ff00'
+            fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         registerBtn.on('pointerdown', () => this.register());
 
         // Login Button
         const loginBtn = this.add.text(width / 2, 320, 'Login', {
-            fontFamily: 'Arial', fontSize: '32px', color: '#00ff00'
+            fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         loginBtn.on('pointerdown', () => this.login());
 
         // Change Name Button
         const changeBtn = this.add.text(width / 2, 400, 'Change Name', {
-            fontFamily: 'Arial', fontSize: '32px', color: '#00ff00'
+            fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         changeBtn.on('pointerdown', () => this.changeName());
 
-        // Back Button
-        const backBtn = this.add.text(20, 20, '< Back', {
-            fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
-        }).setOrigin(0).setInteractive({ useHandCursor: true });
-        backBtn.on('pointerdown', () => this.scene.start('LobbyScene'));
+        // — Shop & Back to Lobby —
+        const shopX = 90, shopY = height/2 - 100;
+        const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
+            .setOrigin(0.5)
+            .setDisplaySize(200, 80)
+            .setInteractive({ useHandCursor: true });
+
+        btnShop.on('pointerdown', () => {
+            this.scene.start('ShopScene');
+        });
+
+        const btnHome = this.add.image(shopX, shopY + 200, 'home')
+            .setOrigin(0.5)
+            .setDisplaySize(100, 100)
+            .setInteractive({ useHandCursor: true })
+
+        btnHome.on('pointerdown', () => {
+            this.scene.start('LobbyScene');
+        });
+
+        const btnBrawlers = this.add.image(90, height / 2, 'icon_brawlers')
+            .setOrigin(0.5)
+            .setDisplaySize(200, 80)
+            .setInteractive({ useHandCursor: true });
+        btnBrawlers.on('pointerdown', () => {
+            this.scene.start('InventoryScene');
+        });
+
     }
 
     updateStatus() {
@@ -112,4 +151,5 @@ export default class AccountScene extends Phaser.Scene {
             console.error('Update name error:', err);
         }
     }
+
 }

@@ -121,7 +121,7 @@ export default class LobbyScene extends Phaser.Scene {
         });
 
 
-        const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
+        const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
             .setInteractive({ useHandCursor: true })
