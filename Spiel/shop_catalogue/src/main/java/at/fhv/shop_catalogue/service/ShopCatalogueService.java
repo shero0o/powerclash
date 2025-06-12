@@ -9,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,31 +24,46 @@ public class ShopCatalogueService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    private final String WALLET_BASE_URL = "http://localhost:8090/api/wallet";
+    private final String WALLET_BASE_URL = "http://localhost:8092/api/wallet";
 
     // -----------------------
     // BRAWLER-FUNKTIONEN
     // -----------------------
 
-    public List<ShopItemDTO> getAllShopItems() {
+    public List<ShopItemDTO> getAllShopItems(Long playerId) {
         List<ShopItemDTO> result = new ArrayList<>();
 
+        List<Purchase> purchases = purchaseRepo.findByPlayerId(playerId);
+
+        Set<String> purchasedKeys = purchases.stream()
+                .map(p -> p.getItemType() + "-" + p.getItemId())
+                .collect(Collectors.toSet());
+
         brawlerRepo.findAll().forEach(brawler -> {
-            result.add(new ShopItemDTO(brawler.getId(), brawler.getName(), brawler.getPrice(), ShopItemType.BRAWLER));
+            String key = ShopItemType.BRAWLER + "-" + brawler.getId();
+            if (!purchasedKeys.contains(key)) {
+                result.add(new ShopItemDTO(brawler.getId(), brawler.getName(), brawler.getPrice(), ShopItemType.BRAWLER));
+            }
         });
 
         gadgetRepo.findAll().forEach(gadget -> {
-            result.add(new ShopItemDTO(gadget.getId(), gadget.getName(), gadget.getPrice(), ShopItemType.GADGET));
+            String key = ShopItemType.GADGET + "-" + gadget.getId();
+            if (!purchasedKeys.contains(key)) {
+                result.add(new ShopItemDTO(gadget.getId(), gadget.getName(), gadget.getPrice(), ShopItemType.GADGET));
+            }
         });
 
         levelRepo.findAll().forEach(level -> {
-            result.add(new ShopItemDTO(level.getId(), level.getName(), level.getPrice(), ShopItemType.LEVEL));
+            String key = ShopItemType.LEVEL + "-" + level.getId();
+            if (!purchasedKeys.contains(key)) {
+                result.add(new ShopItemDTO(level.getId(), level.getName(), level.getPrice(), ShopItemType.LEVEL));
+            }
         });
 
         return result;
     }
 
-    public void buyBrawler(String playerId, Long brawlerId) {
+    public void buyBrawler(Long playerId, Long brawlerId) {
         Brawler brawler = brawlerRepo.findById(brawlerId)
                 .orElseThrow(() -> new RuntimeException("Brawler not found"));
 
@@ -60,7 +76,7 @@ public class ShopCatalogueService {
         purchaseRepo.save(purchase);
     }
 
-    public void buyGadget(String playerId, Long gadgetId) {
+    public void buyGadget(Long playerId, Long gadgetId) {
         Gadget gadget = gadgetRepo.findById(gadgetId)
                 .orElseThrow(() -> new RuntimeException("Gadget not found"));
 
@@ -71,7 +87,7 @@ public class ShopCatalogueService {
         purchaseRepo.save(purchase);
     }
 
-    public void buyLevel(String playerId, Long levelId) {
+    public void buyLevel(Long playerId, Long levelId) {
         Level level = levelRepo.findById(levelId)
                 .orElseThrow(() -> new RuntimeException("Level not found"));
 
@@ -84,7 +100,7 @@ public class ShopCatalogueService {
         purchaseRepo.save(purchase);
     }
 
-    public List<Purchase> getPurchasesForPlayer(String playerId) {
+    public List<Purchase> getPurchasesForPlayer(Long playerId) {
         return purchaseRepo.findByPlayerId(playerId);
     }
     public List<Brawler> getAllBrawlers() {

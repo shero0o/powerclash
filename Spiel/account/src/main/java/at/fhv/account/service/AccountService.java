@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
-import org.springframework.web.reactive.function.client.WebClient;
 
 
 import java.util.List;
@@ -39,17 +38,17 @@ public class AccountService {
     public Player createPlayer(String name) {
         // 1) Spieler in der Account-DB anlegen
         Player p = playerRepository.save(new Player(null, name));
+//
+//        // 2) WebClient-Aufruf an den Wallet-Service
+//        WebClient client = WebClient.create("http://host.docker.internal:8092");
+//        Mono<String> result = client.post()
+//                .uri("/api/wallet/defaults/{playerId}", p.getId())
+//                .retrieve()
+//                .bodyToMono(String.class);       // oder bodyToMono(Void.class)
+//        String body = result.block();         // synchron warten :contentReference[oaicite:0]{index=0}
 
-        // 2) WebClient-Aufruf an den Wallet-Service
-        WebClient client = WebClient.create("http://host.docker.internal:8092");
-        Mono<String> result = client.post()
-                .uri("/api/wallet/defaults/{playerId}", p.getId())
-                .retrieve()
-                .bodyToMono(String.class);       // oder bodyToMono(Void.class)
-        String body = result.block();         // synchron warten :contentReference[oaicite:0]{index=0}
-
-        // optional: auf result prüfen oder loggen
-        System.out.println("Assigned defaults for player " + p.getId() + ": " + body);
+//        // optional: auf result prüfen oder loggen
+//        System.out.println("Assigned defaults for player " + p.getId() + ": " + body);
 
         return p;
     }

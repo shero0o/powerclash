@@ -10,7 +10,7 @@ public class Purchase {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String playerId;
+    private Long playerId;
 
     @Enumerated(EnumType.STRING)
     private ShopItemType itemType;
@@ -19,9 +19,10 @@ public class Purchase {
 
     public Purchase() {}
 
-    public Purchase(String playerId, ShopItemType itemType, Long itemId) {
+    public Purchase(Long playerId, ShopItemType itemType, Long itemId) {
         this.playerId = playerId;
         this.itemType = itemType;
         this.itemId = itemId;
     }
+
 }
