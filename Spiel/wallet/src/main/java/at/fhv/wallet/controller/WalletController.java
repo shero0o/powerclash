@@ -1,10 +1,7 @@
 package at.fhv.wallet.controller;
 
-import at.fhv.wallet.model.Brawler;
-import at.fhv.wallet.model.Gadget;
+import at.fhv.wallet.model.*;
 import at.fhv.wallet.service.WalletService;
-import at.fhv.wallet.model.Level;
-import at.fhv.wallet.model.Selected;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -76,6 +73,16 @@ public class WalletController {
         walletService.buyGadget(playerId, gadgetId);
         return ResponseEntity.ok("Gadget gekauft");
     }
+
+    // -----------------------
+    // Weapon-Endpunkte
+    // -----------------------
+
+    @GetMapping("/weapons")
+    public ResponseEntity<List<Weapon>> getAllWeapons() {
+        return ResponseEntity.ok(walletService.getAllWeapons());
+    }
+
 
     // -----------------------
     // Coins-Endpunkte

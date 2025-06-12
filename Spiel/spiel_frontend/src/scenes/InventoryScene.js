@@ -56,13 +56,13 @@ export default class InventoryScene extends Phaser.Scene {
 
         // ─── Daten via GET laden ─────────────────────────────────────────
         try {
-            const [coinsRes, brawlersRes, gadgetsRes, levelsRes, selectedRes] = await Promise.all([
+            const [coinsRes, brawlersRes, gadgetsRes, levelsRes, weaponsRes, selectedRes] = await Promise.all([
                 fetch(`${API_BASE}/coins?playerId=${this.playerId}`),
                 fetch(`${API_BASE}/brawlers`),
                 fetch(`${API_BASE}/gadgets`),
                 fetch(`${API_BASE}/levels`),
                 fetch(`${API_BASE}/weapons`),
-                //fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
+                fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
             ]);
 
             this.coins    = await coinsRes.json();
@@ -70,12 +70,12 @@ export default class InventoryScene extends Phaser.Scene {
             this.gadgets  = await gadgetsRes.json();
             this.levels   = await levelsRes.json();
             this.weapons  = await weaponsRes.json();
-            //const sel     = await selectedRes.json();
+            const sel     = await selectedRes.json();
 
-           // this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
-           // this.selectedGadget  = sel?.gadgetId  || this.gadgets[0]?.id;
-           // this.selectedLevel   = sel?.levelId   || this.levels[0]?.id;
-           // this.selectedWeapon  = sel?.weaponId  || this.brawlers.find(b => b.id === this.selectedBrawler)?.defaultWeapon;
+            this.selectedBrawler = sel?.brawlerId || this.brawlers[0]?.id;
+            this.selectedGadget  = sel?.gadgetId  || this.gadgets[0]?.id;
+            this.selectedLevel   = sel?.levelId   || this.levels[0]?.id;
+            this.selectedWeapon  = sel?.weaponId  || this.brawlers.find(b => b.id === this.selectedBrawler)?.defaultWeapon;
             console.log('Loaded wallet data');
         } catch (err) {
             console.error('Fetch-Error:', err);

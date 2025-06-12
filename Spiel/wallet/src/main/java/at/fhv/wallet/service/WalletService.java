@@ -102,6 +102,10 @@ public class WalletService {
         return playerRepo.findById(playerId).map(Player::getCoins).orElse(0);
     }
 
+    public List<Weapon> getAllWeapons() {
+        return weaponRepo.findAll();
+    }
+
     public List<Level> getAllLevels() {
         return levelRepo.findAll();
     }
