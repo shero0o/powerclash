@@ -1,7 +1,7 @@
 package at.fhv.spiel_service.dto;
 
-import at.fhv.spiel_service.domain.ProjectileType;
-import at.fhv.spiel_service.domain.Position;
+import at.fhv.spiel_service.entities.ProjectileType;
+import at.fhv.spiel_service.entities.Position;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

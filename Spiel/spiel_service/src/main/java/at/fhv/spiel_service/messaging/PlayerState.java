@@ -1,7 +1,7 @@
 package at.fhv.spiel_service.messaging;
 
-import at.fhv.spiel_service.domain.Position;
-import at.fhv.spiel_service.domain.ProjectileType;
+import at.fhv.spiel_service.entities.Position;
+import at.fhv.spiel_service.entities.ProjectileType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
