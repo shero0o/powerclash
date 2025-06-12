@@ -198,7 +198,7 @@ export default class LobbyScene extends Phaser.Scene {
                         brawler: this.selectedBrawler,
                         gadget: this.selectedGadget
                 });
-            });    
+            });
         ;
 
         // --- Großer PLAY-Button unten rechts ---
@@ -250,11 +250,11 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-                       case 'mage':   return 'avatar3'; // Soldier → Character3
-                           case 'healer': return 'avatar4'; // WomanGreen → Character4
-                           case 'tank':   return 'avatar5'; // Robot → Character5
-                           default:       return 'avatar2'; // Hitman → Character2
-                       }
+            case 'mage':   return 'avatar3'; // Soldier → Character3
+            case 'healer': return 'avatar4'; // WomanGreen → Character4
+            case 'tank':   return 'avatar5'; // Robot → Character5
+            default:       return 'avatar2'; // Hitman → Character2
+        }
     }
 
     _mapWeaponKey() {
@@ -303,6 +303,7 @@ export default class LobbyScene extends Phaser.Scene {
         // 2) Schwarzes Rechteck
         this.rectX = coinX + coinSize - 12;
         this.rectY = coinY - rectHeight / 2;
+
         this.graphics = this.add.graphics();
         this.graphics.fillStyle(0x000000, 1);
         this.graphics.fillRoundedRect(this.rectX, this.rectY, rectWidth, rectHeight, cornerRadius);
@@ -492,11 +493,9 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('brawler', this.selectedBrawler);
         this.registry.set('gadget', this.selectedGadget);
 
-
-
         // 6) Socket-Emit an den Spiel-Server mit allen Auswahlparametern
         this.socket.connect();
-            this.socket.once('connect', () => {
+        this.socket.once('connect', () => {
             this.socket.emit('joinRoom', {
                 playerId,
                 playerName:   enteredName,

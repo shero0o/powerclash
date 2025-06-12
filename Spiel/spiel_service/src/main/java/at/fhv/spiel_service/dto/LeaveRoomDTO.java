@@ -1,4 +1,5 @@
-package at.fhv.spiel_backend.DTO;
+// New DTO: LeaveRoomDTO
+package at.fhv.spiel_service.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,10 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class AttackRequestDTO {
-    private String roomId;
+public class LeaveRoomDTO {
     private String playerId;
-    private float dirX;
-    private float dirY;
-    private float angle;
 }

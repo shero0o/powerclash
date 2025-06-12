@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/Spiel/wallet/pom.xml" />
         <option value="$PROJECT_DIR$/Spiel/gateway/pom.xml" />
         <option value="$PROJECT_DIR$/Spiel/shop_catalogue/pom.xml" />
+        <option value="$PROJECT_DIR$/Spiel/spiel_service/pom.xml" />
         <option value="$PROJECT_DIR$/Spiel/account/pom.xml" />
       </list>
     </option>
