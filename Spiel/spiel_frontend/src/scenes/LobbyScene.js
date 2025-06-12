@@ -211,11 +211,11 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-                       case 'mage':   return 'avatar3'; // Soldier → Character3
-                           case 'healer': return 'avatar4'; // WomanGreen → Character4
-                           case 'tank':   return 'avatar5'; // Robot → Character5
-                           default:       return 'avatar2'; // Hitman → Character2
-                       }
+            case 'mage':   return 'avatar3'; // Soldier → Character3
+            case 'healer': return 'avatar4'; // WomanGreen → Character4
+            case 'tank':   return 'avatar5'; // Robot → Character5
+            default:       return 'avatar2'; // Hitman → Character2
+        }
     }
 
     _mapWeaponKey() {
@@ -468,19 +468,28 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('brawler', this.selectedBrawler);
         this.registry.set('gadget', this.selectedGadget);
 
+
+
         // 6) Socket-Emit an den Spiel-Server mit allen Auswahlparametern
-        this.socket.emit('joinRoom', {
-            playerId,
-            playerName:   enteredName,
-            brawlerId:    this.selectedBrawler,
-            levelId:      levelToSend,
-            chosenWeapon: this.selectedWeapon,
-            chosenGadget: this.selectedGadget
-        }, (response) => {
-            // Raum-ID zurück in die Registry schreiben …
-            this.registry.set('roomId', response.roomId);
-            // … und dann in die Warteschleife wechseln
-            this.scene.start('WaitingScene');
+        this.socket.connect();
+        this.socket.once('connect', () => {
+            this.socket.emit('joinRoom', {
+                playerId,
+                playerName:   enteredName,
+                brawlerId:    this.selectedBrawler,
+                levelId:      levelToSend,
+                chosenWeapon: this.selectedWeapon,
+                chosenGadget: this.selectedGadget
+            }, (response) => {
+                // Raum-ID zurück in die Registry schreiben …
+                this.registry.set('roomId', response.roomId);
+                // … und dann in die Warteschleife wechseln
+                this.scene.start('WaitingScene');
+            });
+        });
+        this.socket.once('connect_error', err => {
+            console.error('[LobbyScene] Socket connect_error', err);
+            alert('Verbindung fehlgeschlagen!');
         });
 
         console.log('JoinRoom:', {

@@ -1,6 +1,5 @@
 package at.fhv.spiel_service.service.room;
-import at.fhv.spiel_service.service.game.DefaultGameLogic;
-import at.fhv.spiel_service.service.game.IGameRoom;
+import at.fhv.spiel_service.service.game.core.IGameRoom;
 
 public interface IRoomManager {
 

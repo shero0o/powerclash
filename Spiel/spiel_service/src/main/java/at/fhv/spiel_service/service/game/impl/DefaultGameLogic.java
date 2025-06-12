@@ -1,4 +1,4 @@
-package at.fhv.spiel_service.service.game;
+package at.fhv.spiel_service.service.game.impl;
 
 
 import at.fhv.spiel_service.domain.NPC;
@@ -14,6 +14,15 @@ import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.messaging.CrateState;
 import at.fhv.spiel_service.messaging.PlayerState;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
+import at.fhv.spiel_service.service.game.core.GameLogic;
+import at.fhv.spiel_service.service.game.impl.manager.EnvironmentalEffectsManagerImpl;
+import at.fhv.spiel_service.service.game.impl.manager.MovementManagerImpl;
+import at.fhv.spiel_service.service.game.impl.manager.NPCManagerImpl;
+import at.fhv.spiel_service.service.game.impl.manager.ZoneManagerImpl;
+import at.fhv.spiel_service.service.game.manager.EnvironmentalEffectsManager;
+import at.fhv.spiel_service.service.game.manager.MovementManager;
+import at.fhv.spiel_service.service.game.manager.NPCManager;
+import at.fhv.spiel_service.service.game.manager.ZoneManager;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,14 +37,6 @@ public class DefaultGameLogic implements GameLogic {
     private final List<NPC> npcs = new ArrayList<>();
     private GameMap gameMap;
     private long lastFrameTimeMs = System.currentTimeMillis();
-
-    // --- Zone fields ---
-    private boolean zoneActive = false;
-    private Position zoneCenter;
-    private float zoneRadius;
-    private float zoneShrinkRate;      // px/sec
-    private long zoneStartTimeMs;
-    private long zoneDurationMs;
 
     // --- Waffen & Ammo ---
     private static final int DEFAULT_MAX_AMMO = 3;
@@ -58,6 +59,16 @@ public class DefaultGameLogic implements GameLogic {
     private final Map<String, Integer> playerCoins = new ConcurrentHashMap<>();
 
 
+    private MovementManager movementManager;
+    private EnvironmentalEffectsManager envEffectsManager;
+    private ZoneManager zoneManager;
+    private NPCManager npcManager;
+
+
+
+
+
+
     @Override
     public void setGameMap(GameMap gameMap) {
         this.gameMap = gameMap;
@@ -68,6 +79,15 @@ public class DefaultGameLogic implements GameLogic {
             String key = tileX + "," + tileY;
             crates.put(key, new Crate(UUID.randomUUID().toString(), new Position(tileX, tileY)));
         }
+
+        this.movementManager = new MovementManagerImpl(
+                gameMap, players, crates
+        );
+        this.envEffectsManager = new EnvironmentalEffectsManagerImpl(
+                gameMap, players
+        );
+        this.zoneManager = new ZoneManagerImpl();
+        this.npcManager  = new NPCManagerImpl(gameMap, npcs);
 
     }
 
@@ -106,12 +126,8 @@ public class DefaultGameLogic implements GameLogic {
          * Activate shrinking zone
          */
         public void activateZone (Position center,float initialRadius, long durationMs){
-            this.zoneActive = true;
-            this.zoneCenter = center;
-            this.zoneRadius = initialRadius;
-            this.zoneDurationMs = durationMs;
-            this.zoneStartTimeMs = System.currentTimeMillis();
-            this.zoneShrinkRate = initialRadius / (durationMs / 1000f);
+            float shrinkRatePerSec = initialRadius / (durationMs / 1000f);
+            zoneManager.initZone(center, initialRadius, shrinkRatePerSec);
         }
 
         @Override
@@ -183,34 +199,7 @@ public class DefaultGameLogic implements GameLogic {
 
         @Override
         public void movePlayer (String playerId,float x, float y, float angle){
-            Player p = players.get(playerId);
-            if (p == null || gameMap == null) return;
-
-            int tileX = (int) (x / gameMap.getTileWidth());
-            int tileY = (int) (y / gameMap.getTileHeight());
-            // nur bewegen, wenn kein Wall-Tile
-            boolean crateBlocks = crates.values().stream()
-                    .anyMatch(c -> {
-                        int cx = (int) c.getPosition().getX();
-                        int cy = (int) c.getPosition().getY();
-                        return cx == tileX && cy == tileY;
-                    });
-
-            if (!gameMap.isWallAt(tileX, tileY) && !crateBlocks) {
-//                System.out.println("Move to " + tileX + "," + tileY +
-//                        " – wall: " + gameMap.isWallAt(tileX, tileY) +
-//                        ", crate: " + crateBlocks);
-
-                p.setPosition(new Position(x, y, angle));
-
-                // 🟡 Sichtbarkeit setzen anhand Busch
-                Position tilePos = new Position(tileX, tileY);
-                if (gameMap.isBushTile(tilePos)) {
-                    p.setVisible(false);
-                } else {
-                    p.setVisible(true);
-                }
-            }
+            movementManager.movePlayer(playerId, x, y, angle);
         }
 
 
@@ -230,117 +219,16 @@ public class DefaultGameLogic implements GameLogic {
 
     @Override
     public void applyEnvironmentalEffects () {
-        long now = System.currentTimeMillis();
-        float deltaSec = (now - lastFrameTimeMs) / 1000f;
+        // 1) Zeit berechnen
+        long now     = System.currentTimeMillis();
+        float delta  = (now - lastFrameTimeMs) / 1000f;
         lastFrameTimeMs = now;
-
-        for (Player p : players.values()) {
-            if (p.getCurrentHealth() <= 0) continue;
-
-            Position pos = p.getPosition();
-            int tileX = (int) (pos.getX() / gameMap.getTileWidth());
-            int tileY = (int) (pos.getY() / gameMap.getTileHeight());
-            Position tilePos = new Position(tileX, tileY);
-
-            if (gameMap.isPoisonTile(tilePos)) {
-                long last = p.getLastPoisonTime();
-                if (now - last >= 1000) {
-                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - 15));
-                    p.setLastPoisonTime(now);
-
-
-                    if (p.getCurrentHealth() <= 0) {
-                        p.setVisible(false); // Optional: unsichtbar wenn tot
-                    }
-                }
-            } else {
-                // Nicht in Giftfeld → Reset poison timer
-                p.setLastPoisonTime(0);
-            }
-
-            if (gameMap.isHealTile(tilePos)) {
-                long lastHeal = p.getLastHealTime();
-                if (now - lastHeal >= 1000) {
-                    int newHP = Math.min(p.getMaxHealth(), p.getCurrentHealth() + 15);
-                    p.setCurrentHealth(newHP);
-                    p.setLastHealTime(now);
-
-                }
-            } else {
-                p.setLastHealTime(0);
-            }
-        }
-
-        // zone shrink & damage outside
-        if (zoneActive) {
-            zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
-            for (Player p : players.values()) {
-                if (p.getCurrentHealth() <= 0) continue;
-                float dx = p.getPosition().getX() - zoneCenter.getX();
-                float dy = p.getPosition().getY() - zoneCenter.getY();
-                if (Math.hypot(dx, dy) > zoneRadius) {
-                    int dmg = (int) Math.ceil(0.05f * deltaSec);
-                    p.setCurrentHealth(Math.max(0, p.getCurrentHealth() - dmg));
-                }
-            }
-        }
-
-        // ── NPC AI: chase & melee ───────────────────────────────
-        for (NPC npc : npcs) {
-            // 1) find nearest alive player
-            Player target = null;
-            float minDist = Float.MAX_VALUE;
-            for (Player p : players.values()) {
-                if (p.getCurrentHealth() <= 0) continue;
-                float dx = p.getPosition().getX() - npc.getPosition().getX();
-                float dy = p.getPosition().getY() - npc.getPosition().getY();
-                float d = (float) Math.hypot(dx, dy);
-                if (d < minDist) {
-                    minDist = d;
-                    target = p;
-                }
-            }
-            if (target == null) continue;
-
-            // 2) compute facing angle once
-            float dx = target.getPosition().getX() - npc.getPosition().getX();
-            float dy = target.getPosition().getY() - npc.getPosition().getY();
-            float angle = (float) Math.atan2(dy, dx);
-
-            // 3) move toward if outside attack radius
-            if (minDist > npc.getAttackRadius()) {
-                float len = (float) Math.hypot(dx, dy);
-                if (len > 0) {
-                    float nx = dx / len, ny = dy / len;
-                    float newX = npc.getPosition().getX() + nx * npc.getSpeed() * deltaSec;
-                    float newY = npc.getPosition().getY() + ny * npc.getSpeed() * deltaSec;
-                    int tx = (int) (newX / gameMap.getTileWidth());
-                    int ty = (int) (newY / gameMap.getTileHeight());
-                    if (!gameMap.isWallAt(tx, ty)) {
-                        npc.setPosition(new Position(newX, newY, angle));
-                    } else {
-                        // can't walk through wall, but still update facing
-                        npc.setPosition(new Position(npc.getPosition().getX(),
-                                npc.getPosition().getY(),
-                                angle));
-                    }
-                }
-            } else {
-                // inside melee range: just update facing
-                npc.setPosition(new Position(npc.getPosition().getX(),
-                        npc.getPosition().getY(),
-                        angle));
-            }
-
-            // 4) melee attack if in range & cooldown passed
-            if (minDist <= npc.getAttackRadius()
-                    && now - npc.getLastAttackTime() >= npc.getAttackCooldownMs()) {
-                int newHp = Math.max(0, target.getCurrentHealth() - npc.getDamage());
-                target.setCurrentHealth(newHp);
-                if (newHp == 0) target.setVisible(false);
-                npc.setLastAttackTime(now);
-            }
-        }
+        // 2) Umwelteinflüsse aufs Spielfeld
+        envEffectsManager.applyEnvironmentalEffects(delta);
+        // 3) Zone-Shrink & Schaden außerhalb
+        zoneManager.updateZone(delta, players);
+        // 4) NPC-KI (Bewegung & melee)
+        npcManager.updateNPCs(delta, players, npcs);
     }
 
     @Override
@@ -688,11 +576,16 @@ public class DefaultGameLogic implements GameLogic {
         msg.setGadgets(gadgets);
 
 
-            if (zoneActive) {
-                long elapsed = System.currentTimeMillis() - zoneStartTimeMs;
-                long left = Math.max(0, zoneDurationMs - elapsed);
-                msg.setZoneState(new ZoneState(zoneCenter, zoneRadius, left));
-            }
+        if (zoneManager.isZoneActive()) {
+            // Wir müssen eine ZoneState erzeugen – dafür brauchen wir
+            // den Restzeit-Wert. Den liefert z.B. ein neues Helper-Api:
+            long remainingMs = zoneManager.getRemainingTimeMs();
+            msg.setZoneState(new ZoneState(
+                    zoneManager.getCenter(),
+                    zoneManager.getZoneRadius(),
+                    remainingMs
+            ));
+        }
             msg.setNpcs(new ArrayList<>(npcs));
             return msg;
         }

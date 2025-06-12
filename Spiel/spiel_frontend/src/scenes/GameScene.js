@@ -95,7 +95,7 @@ export default class GameScene extends Phaser.Scene {
     create() {
         const vw = this.scale.width;   // Breite des Viewports in Pixeln
         const vh = this.scale.height;  // Höhe des Viewports in Pixeln
-           // fest am Bildschirm haften
+        // fest am Bildschirm haften
 
 
         // ─── 1) matchOver-Listener einmalig registrieren ───
@@ -108,7 +108,7 @@ export default class GameScene extends Phaser.Scene {
                 const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
                 this.showDefeatScreen(place, base, bonus, base + bonus);
                 this.defeatShown = true;
-                }
+            }
         });
 
         this.exitButtonSvg = this.add.image(
@@ -123,7 +123,7 @@ export default class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', { playerId: this.playerId });
                 this.socket.disconnect();
-                window.location.reload();
+                this.scene.start('LobbyScene');
             });
 
         // Hintergrundfarbe
@@ -530,47 +530,47 @@ export default class GameScene extends Phaser.Scene {
     update() {
         if (!this.latestState) return;
 
-            this.graphicsZone.clear();
+        this.graphicsZone.clear();
 
-            if (this.zoneState) {
-                const {center, radius, timeMsRemaining} = this.zoneState;
+        if (this.zoneState) {
+            const {center, radius, timeMsRemaining} = this.zoneState;
 
-                // Draw a green circle outline at the true world coords
-                this.graphicsZone
-                    .lineStyle(4, 0x00aa00)          // 4px thick, green
-                    .strokeCircle(center.x, center.y, radius);
+            // Draw a green circle outline at the true world coords
+            this.graphicsZone
+                .lineStyle(4, 0x00aa00)          // 4px thick, green
+                .strokeCircle(center.x, center.y, radius);
 
-                // Update the timer text (screen‐locked)
-                const secs = Math.ceil(timeMsRemaining / 1000);
-                const mm = String(Math.floor(secs / 60)).padStart(2, '0');
-                const ss = String(secs % 60).padStart(2, '0');
-                this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
-            } else {
-                this.textZoneTimer.setText('');
+            // Update the timer text (screen‐locked)
+            const secs = Math.ceil(timeMsRemaining / 1000);
+            const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+            const ss = String(secs % 60).padStart(2, '0');
+            this.textZoneTimer.setText(`Zone closes in ${mm}:${ss}`);
+        } else {
+            this.textZoneTimer.setText('');
+        }
+
+
+
+        // ─── handle mines/explosions ────────────────────────
+        const currIds = new Set(this.latestState.projectiles
+            .filter(p => p.projectileType === 'MINE')
+            .map(p => p.id));
+        this.prevProjectileIds.forEach(id => {
+            if (!currIds.has(id)) {
+                const pos = this.previousMinePositions[id];
+                if (pos) {
+                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
+                    expl.play('explode');
+                }
             }
-
-
-
-            // ─── handle mines/explosions ────────────────────────
-            const currIds = new Set(this.latestState.projectiles
-                .filter(p => p.projectileType === 'MINE')
-                .map(p => p.id));
-            this.prevProjectileIds.forEach(id => {
-                if (!currIds.has(id)) {
-                    const pos = this.previousMinePositions[id];
-                    if (pos) {
-                        const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
-                        expl.play('explode');
-                    }
-                }
-            });
-            this.previousMinePositions = {};
-            this.latestState.projectiles.forEach(p => {
-                if (p.projectileType === 'MINE') {
-                    this.previousMinePositions[p.id] = {x: p.position.x, y: p.position.y};
-                }
-            });
-            this.prevProjectileIds = currIds;
+        });
+        this.previousMinePositions = {};
+        this.latestState.projectiles.forEach(p => {
+            if (p.projectileType === 'MINE') {
+                this.previousMinePositions[p.id] = {x: p.position.x, y: p.position.y};
+            }
+        });
+        this.prevProjectileIds = currIds;
 
         // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
@@ -618,179 +618,179 @@ export default class GameScene extends Phaser.Scene {
 
 
 
-        const cdBarX = 10, cdBarY = 65, cdBarW = 100, cdBarH = 10;
-        const now    = this.time.now;
-        const remCd  = Math.max(0, this.cooldownExpireTime - now);
-        const ratio  = remCd > 0 ? (remCd / 10_000) : 1;
+            const cdBarX = 10, cdBarY = 65, cdBarW = 100, cdBarH = 10;
+            const now    = this.time.now;
+            const remCd  = Math.max(0, this.cooldownExpireTime - now);
+            const ratio  = remCd > 0 ? (remCd / 10_000) : 1;
 
-        // Hintergrund
-        this.cooldownBarBg
-            .clear()
-            .fillStyle(0x000000, 0.5)
-            .fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
+            // Hintergrund
+            this.cooldownBarBg
+                .clear()
+                .fillStyle(0x000000, 0.5)
+                .fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
 
-        // Füllung
-        this.cooldownBarFill
-            .clear()
-            .fillStyle(0xffffff, 1)
-            .fillRect(
-                cdBarX + 2,
-                cdBarY + 2,
-                Math.floor((cdBarW - 4) * ratio),
-                cdBarH - 4
-            );
+            // Füllung
+            this.cooldownBarFill
+                .clear()
+                .fillStyle(0xffffff, 1)
+                .fillRect(
+                    cdBarX + 2,
+                    cdBarY + 2,
+                    Math.floor((cdBarW - 4) * ratio),
+                    cdBarH - 4
+                );
         }
 
-            // ── render NPCs ─────────────────────────────────────────
-            const aliveNpcIds = new Set();
+        // ── render NPCs ─────────────────────────────────────────
+        const aliveNpcIds = new Set();
 
-            this.npcs.forEach(npc => {
-                aliveNpcIds.add(npc.id);
+        this.npcs.forEach(npc => {
+            aliveNpcIds.add(npc.id);
 
-                // 1) Ensure we have three GameObjects for this NPC:
-                let spr = this.npcSprites[npc.id];
-                let bar = this.npcBars[npc.id];
-                let label = this.npcLabels[npc.id];
+            // 1) Ensure we have three GameObjects for this NPC:
+            let spr = this.npcSprites[npc.id];
+            let bar = this.npcBars[npc.id];
+            let label = this.npcLabels[npc.id];
 
-                if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
-                    // a) main sprite
-                    spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
-                        .setOrigin(0.5);
-                    this.physics.add.collider(spr, this.obstacleLayer);
+            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
+                // a) main sprite
+                spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
+                    .setOrigin(0.5);
+                this.physics.add.collider(spr, this.obstacleLayer);
 
-                    // b) health-bar graphic
-                    bar = this.add.graphics().setDepth(11);
+                // b) health-bar graphic
+                bar = this.add.graphics().setDepth(11);
 
-                    // c) name label
-                    label = this.add.text(0, 0, 'NPC', {
-                        fontSize: '16px', fontFamily: 'Arial',
-                        color: '#ffffff', stroke: '#000000',
-                        strokeThickness: 2
-                    }).setOrigin(0.5).setDepth(12);
+                // c) name label
+                label = this.add.text(0, 0, 'NPC', {
+                    fontSize: '16px', fontFamily: 'Arial',
+                    color: '#ffffff', stroke: '#000000',
+                    strokeThickness: 2
+                }).setOrigin(0.5).setDepth(12);
 
-                    this.npcSprites[npc.id] = spr;
-                    this.npcBars[npc.id] = bar;
-                    this.npcLabels[npc.id] = label;
-                }
+                this.npcSprites[npc.id] = spr;
+                this.npcBars[npc.id] = bar;
+                this.npcLabels[npc.id] = label;
+            }
 
-                // 2) Update position & rotation
-                spr.setPosition(npc.position.x, npc.position.y)
-                    .setRotation(npc.position.angle);
+            // 2) Update position & rotation
+            spr.setPosition(npc.position.x, npc.position.y)
+                .setRotation(npc.position.angle);
 
-                // 3) Redraw health bar above the sprite
-                const maxHp = 50; // or pull from npc.maxHealth if you have it
-                const pct = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
-                const bw = 40, bh = 6;
-                bar.clear()
-                    .fillStyle(0x000000)
-                    .fillRect(
-                        npc.position.x - bw / 2 - 1,
-                        npc.position.y - spr.displayHeight / 2 - bh - 8,
-                        bw + 2, bh + 2
-                    )
-                    .fillStyle(0x00ff00)
-                    .fillRect(
-                        npc.position.x - bw / 2,
-                        npc.position.y - spr.displayHeight / 2 - bh - 7,
-                        bw * pct, bh
-                    );
-
-                // 4) Position the “NPC” label just above the bar
-                label.setPosition(
-                    npc.position.x,
-                    npc.position.y - spr.displayHeight / 2 - bh - 16
+            // 3) Redraw health bar above the sprite
+            const maxHp = 50; // or pull from npc.maxHealth if you have it
+            const pct = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
+            const bw = 40, bh = 6;
+            bar.clear()
+                .fillStyle(0x000000)
+                .fillRect(
+                    npc.position.x - bw / 2 - 1,
+                    npc.position.y - spr.displayHeight / 2 - bh - 8,
+                    bw + 2, bh + 2
+                )
+                .fillStyle(0x00ff00)
+                .fillRect(
+                    npc.position.x - bw / 2,
+                    npc.position.y - spr.displayHeight / 2 - bh - 7,
+                    bw * pct, bh
                 );
 
-                // 5) Hide if dead
-                const visible = npc.currentHealth > 0;
-                spr.setVisible(visible);
-                bar.setVisible(visible);
-                label.setVisible(visible);
-            });
+            // 4) Position the “NPC” label just above the bar
+            label.setPosition(
+                npc.position.x,
+                npc.position.y - spr.displayHeight / 2 - bh - 16
+            );
+
+            // 5) Hide if dead
+            const visible = npc.currentHealth > 0;
+            spr.setVisible(visible);
+            bar.setVisible(visible);
+            label.setVisible(visible);
+        });
 
 // 6) Cleanup any despawned NPCs
-            Object.keys(this.npcSprites).forEach(id => {
-                if (!aliveNpcIds.has(id)) {
-                    this.npcSprites[id].destroy();
-                    this.npcBars[id].destroy();
-                    this.npcLabels[id].destroy();
-                    delete this.npcSprites[id];
-                    delete this.npcBars[id];
-                    delete this.npcLabels[id];
-                }
-            });
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
 
 
 // Cleanup despawned NPCs
-            Object.keys(this.npcSprites).forEach(id => {
-                if (!aliveNpcIds.has(id)) {
-                    this.npcSprites[id].destroy();
-                    this.npcBars[id].destroy();
-                    this.npcLabels[id].destroy();
-                    delete this.npcSprites[id];
-                    delete this.npcBars[id];
-                    delete this.npcLabels[id];
-                }
-            });
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
 
 
-            // cleanup
-            Object.keys(this.npcSprites).forEach(id => {
-                if (!aliveNpcIds.has(id)) {
-                    this.npcSprites[id].destroy();
-                    this.npcBars[id].destroy();
-                    this.npcLabels[id].destroy();
-                    delete this.npcSprites[id];
-                    delete this.npcBars[id];
-                    delete this.npcLabels[id];
-                }
-            });
+        // cleanup
+        Object.keys(this.npcSprites).forEach(id => {
+            if (!aliveNpcIds.has(id)) {
+                this.npcSprites[id].destroy();
+                this.npcBars[id].destroy();
+                this.npcLabels[id].destroy();
+                delete this.npcSprites[id];
+                delete this.npcBars[id];
+                delete this.npcLabels[id];
+            }
+        });
 
 
-            // ─── render players & health ───────────────────────
-            const connected = this.latestState.players
-                .filter(p => p.currentHealth > 0).length;
-            const total = this.latestState.players.length;
-            this.playerCountText.setText(`${connected}/${total} players`);
+        // ─── render players & health ───────────────────────
+        const connected = this.latestState.players
+            .filter(p => p.currentHealth > 0).length;
+        const total = this.latestState.players.length;
+        this.playerCountText.setText(`${connected}/${total} players`);
 
-            this.latestState.players.forEach(p => {
-                const isMe = p.playerId === this.playerId;
-                let spr = this.playerSprites[p.playerId];
+        this.latestState.players.forEach(p => {
+            const isMe = p.playerId === this.playerId;
+            let spr = this.playerSprites[p.playerId];
 
-                // 🟢 Spawn: nur wenn noch kein Sprite vorhanden
-                if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
-                    const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
-                    spr = this.physics.add.sprite(p.position.x, p.position.y, key)
-                        .setOrigin(0.5);
+            // 🟢 Spawn: nur wenn noch kein Sprite vorhanden
+            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
+                const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
+                spr = this.physics.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5);
 
-                    // 🟡 OUTLINE-SPRITES ERZEUGEN
-                    spr.outline = this.add.sprite(p.position.x, p.position.y, key)
-                        .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
-                        .setDepth(10).setVisible(false);
+                // 🟡 OUTLINE-SPRITES ERZEUGEN
+                spr.outline = this.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
+                    .setDepth(10).setVisible(false);
 
-                    spr.healOutline = this.add.sprite(p.position.x, p.position.y, key)
-                        .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
-                        .setDepth(11).setVisible(false);
+                spr.healOutline = this.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5).setTint(0x00ff00).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
 
-                    spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, key)
-                        .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
-                        .setDepth(11).setVisible(false);
+                spr.poisonOutline = this.add.sprite(p.position.x, p.position.y, key)
+                    .setOrigin(0.5).setTint(0xff0000).setAlpha(0.4)
+                    .setDepth(11).setVisible(false);
 
 
-                    spr.healthBar = this.add.graphics();
-                    spr.label = this.add.text(0, 0, p.playerName || 'Player', {
-                        fontSize: '20px', fontFamily: 'Arial',
-                        color: isMe ? '#ffffff' : '#ff0000',
-                        stroke: '#000000', strokeThickness: 4,
-                        fontStyle: 'bold'
-                    }).setOrigin(0.5).setDepth(10);
+                spr.healthBar = this.add.graphics();
+                spr.label = this.add.text(0, 0, p.playerName || 'Player', {
+                    fontSize: '20px', fontFamily: 'Arial',
+                    color: isMe ? '#ffffff' : '#ff0000',
+                    stroke: '#000000', strokeThickness: 4,
+                    fontStyle: 'bold'
+                }).setOrigin(0.5).setDepth(10);
 
-                    this.playerSprites[p.playerId] = spr;
-                }
-                // Kollision gegen Wände
-                if (spr) {
-                     this.physics.add.collider(spr, this.obstacleLayer);
-                }
+                this.playerSprites[p.playerId] = spr;
+            }
+            // Kollision gegen Wände
+            if (spr) {
+                this.physics.add.collider(spr, this.obstacleLayer);
+            }
 
             if (spr) {
                 if (p.currentHealth <= 0) {
@@ -876,33 +876,33 @@ export default class GameScene extends Phaser.Scene {
         // Exit anzeigen, wenn tot
         if (me && me.currentHealth <= 0) this.exitButtonSvg.setVisible(true);
 
-            // Projektile rendern
-            const alive = new Set();
-            this.latestState.projectiles.forEach(p => {
-                const key = p.projectileType === 'SNIPER' ? 'sniper'
-                    : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
-                        : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
-                            : 'mine';
-                alive.add(p.id);
-                let spr = this.projectileSprites[p.id];
-                if (!spr) {
-                    spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
+        // Projektile rendern
+        const alive = new Set();
+        this.latestState.projectiles.forEach(p => {
+            const key = p.projectileType === 'SNIPER' ? 'sniper'
+                : p.projectileType === 'SHOTGUN_PELLET' ? 'shotgun_pellet'
+                    : p.projectileType === 'RIFLE_BULLET' ? 'rifle_bullet'
+                        : 'mine';
+            alive.add(p.id);
+            let spr = this.projectileSprites[p.id];
+            if (!spr) {
+                spr = this.add.sprite(p.position.x, p.position.y, key).setOrigin(0.5);
 
 
-                    if (p.projectileType === 'MINE') spr.setScale(0.3);
-                    this.projectileSprites[p.id] = spr;
-                } else {
-                    spr.setPosition(p.position.x, p.position.y);
-                }
-            });
+                if (p.projectileType === 'MINE') spr.setScale(0.3);
+                this.projectileSprites[p.id] = spr;
+            } else {
+                spr.setPosition(p.position.x, p.position.y);
+            }
+        });
 
-            // Entfernen
-            Object.keys(this.projectileSprites).forEach(id => {
-                if (!alive.has(id)) {
-                    this.projectileSprites[id].destroy();
-                    delete this.projectileSprites[id];
-                }
-            });
+        // Entfernen
+        Object.keys(this.projectileSprites).forEach(id => {
+            if (!alive.has(id)) {
+                this.projectileSprites[id].destroy();
+                delete this.projectileSprites[id];
+            }
+        });
 
         // Ammo-Bar
         if (me) {
@@ -1036,7 +1036,7 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-            // … dein bestehender Code bis zum Schluss …
+        // … dein bestehender Code bis zum Schluss …
 
         // 1) matchOver EINMALIG senden
         if (!this.matchOverEmitted && alivePlayers === 1) {
@@ -1163,7 +1163,7 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            window.location.reload();
+            this.scene.start('LobbyScene');;
         });
 
 
@@ -1256,7 +1256,7 @@ export default class GameScene extends Phaser.Scene {
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            window.location.reload();
+            this.scene.start('LobbyScene');
         });
 
     }

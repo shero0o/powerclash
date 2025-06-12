@@ -1,4 +1,4 @@
-package at.fhv.spiel_service.service.game;
+package at.fhv.spiel_service.service.game.core;
 
 import at.fhv.spiel_service.domain.GameMap;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;

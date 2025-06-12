@@ -5,12 +5,10 @@ import at.fhv.spiel_service.domain.Gadget;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.dto.*;
-import at.fhv.spiel_service.service.game.DefaultGameLogic;
+import at.fhv.spiel_service.service.game.impl.DefaultGameLogic;
 import at.fhv.spiel_service.service.game.GameRoomImpl;
-import at.fhv.spiel_service.service.game.IGameRoom;
+import at.fhv.spiel_service.service.game.core.IGameRoom;
 import at.fhv.spiel_service.service.room.IRoomManager;
-import at.fhv.spiel_service.domain.ProjectileType;
-import at.fhv.spiel_service.domain.Position;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
