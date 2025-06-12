@@ -55,5 +55,4 @@ public class Player {
             inverseJoinColumns = @JoinColumn(name = "weapon_id")
     )
     private List<Weapon> weapons = new ArrayList<>();
-
 }

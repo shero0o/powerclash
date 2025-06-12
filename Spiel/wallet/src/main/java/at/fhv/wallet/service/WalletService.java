@@ -130,9 +130,15 @@ public class WalletService {
         return ownedIds.isEmpty() ? levelRepo.findAll() : levelRepo.findByIdNotIn(ownedIds);
     }
 
-    public void selectWeapon(Long playerId, Long weaponId) {
+    public void selectBrawler(Long playerId, Long weaponId) {
         Selected selected = selectedRepo.findById(playerId).orElseThrow();
         selected.setBrawlerId(weaponId);
+        selectedRepo.save(selected);
+    }
+
+    public void selectWeapon(Long playerId, Long weaponId) {
+        Selected selected = selectedRepo.findById(playerId).orElseThrow();
+        selected.setWeaponId(weaponId);
         selectedRepo.save(selected);
     }
 
@@ -148,8 +154,8 @@ public class WalletService {
         selectedRepo.save(selected);
     }
 
-    public Optional<Selected> getSelectedForPlayer(Long playerId) {
-        return selectedRepo.findById(playerId);
+    public Selected getSelectedForPlayer(Long playerId) {
+        return selectedRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
     }
 
     public void assignDefaults(Player player) {
@@ -168,9 +174,10 @@ public class WalletService {
         playerRepo.save(player);
 
         Selected s = new Selected();
-        s.setPlayerId(player.getId());
-        s.setPlayerId(player.getId());
+        s.setSelectedId(player.getId());
+        s.setSelectedId(player.getId());
         s.setBrawlerId(1L);
+        s.setWeaponId(1L);
         s.setGadgetId(1L);
         s.setLevelId(1L);
         selectedRepo.save(s);

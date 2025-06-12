@@ -12,12 +12,9 @@ import lombok.*;
 public class Selected {
 
     @Id
-    @Column(name = "player_id")
-    private Long playerId;
-
-    @OneToOne
-    @JoinColumn(name = "player_id")
-    private Player player;
+    @Column(name = "selected_id")
+    @JoinColumn(name = "selected_id")
+    private Long selectedId;
 
     @Column(name = "brawler_id")
     private Long brawlerId;
@@ -27,4 +24,12 @@ public class Selected {
 
     @Column(name = "level_id")
     private Long levelId;
+
+    @Column(name = "weapon_id")
+    private Long weaponId;
+
+    @OneToOne
+    @JoinColumn(name = "player_id")
+    private Player player;
+
 }

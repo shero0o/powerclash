@@ -126,12 +126,20 @@ public class WalletController {
     // Selected-Endpunkte
     // -----------------------
 
+    @PostMapping("/selected/brawler")
+    public ResponseEntity<String> selectBrawler(
+            @RequestParam Long playerId,
+            @RequestParam Long brawlerId) {
+        walletService.selectBrawler(playerId, brawlerId);
+        return ResponseEntity.ok("Auswahl aktualisiert: Brawler");
+    }
+
     @PostMapping("/selected/weapon")
     public ResponseEntity<String> selectWeapon(
             @RequestParam Long playerId,
             @RequestParam Long weaponId) {
         walletService.selectWeapon(playerId, weaponId);
-        return ResponseEntity.ok("Auswahl aktualisiert: Brawler");
+        return ResponseEntity.ok("Auswahl aktualisiert: Weapon");
     }
 
     @PostMapping("/selected/gadget")
@@ -152,9 +160,7 @@ public class WalletController {
 
     @GetMapping("/selected")
     public ResponseEntity<Selected> getSelected(@RequestParam Long playerId) {
-        return walletService.getSelectedForPlayer(playerId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(walletService.getSelectedForPlayer(playerId));
     }
 
     @PostMapping("/createPlayer")

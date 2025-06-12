@@ -152,7 +152,7 @@ public class DataInitializer implements CommandLineRunner {
             playerRepository.save(defaultPlayer);
 
             Selected s = new Selected();
-            s.setPlayerId(defaultPlayer.getId());
+            s.setSelectedId(defaultPlayer.getId());
             selectedRepository.save(s);
         }
 
