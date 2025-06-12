@@ -2,11 +2,9 @@ package at.fhv.wallet.controller;
 
 import at.fhv.wallet.model.Brawler;
 import at.fhv.wallet.model.Gadget;
-import at.fhv.wallet.model.PlayerCoins;
 import at.fhv.wallet.service.WalletService;
 import at.fhv.wallet.model.Level;
 import at.fhv.wallet.model.Selected;
-import at.fhv.wallet.model.Weapon;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,13 +38,6 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllBrawlersNotOwnedByPlayer(playerId));
     }
 
-    @GetMapping("/brawlers/player/owns")
-    public ResponseEntity<Boolean> isBrawlerOwned(
-            @RequestParam Long playerId,
-            @RequestParam Long BrawlerId) {
-        return ResponseEntity.ok(walletService.isBrawlerOwnedByPlayer(playerId, BrawlerId));
-    }
-
     @PostMapping("/brawlers/buy")
     public ResponseEntity<String> buyBrawler(
             @RequestParam Long playerId,
@@ -78,13 +69,6 @@ public class WalletController {
         return ResponseEntity.ok(walletService.getAllGadgetsNotOwnedByPlayer(playerId));
     }
 
-    @GetMapping("/gadgets/player/owns")
-    public ResponseEntity<Boolean> isGadgetOwned(
-            @RequestParam Long playerId,
-            @RequestParam Long gadgetId) {
-        return ResponseEntity.ok(walletService.isBrawlerOwnedByPlayer(playerId, gadgetId));
-    }
-
     @PostMapping("/gadgets/buy")
     public ResponseEntity<String> buyGadget(
             @RequestParam Long playerId,
@@ -110,11 +94,6 @@ public class WalletController {
         return ResponseEntity.ok("Coins hinzugefügt");
     }
 
-    @GetMapping("/coins/all")
-    public ResponseEntity<List<PlayerCoins>> getAllCoins() {
-        return ResponseEntity.ok(walletService.getAllCoins());
-    }
-
 
     // -----------------------
     // Level-Endpunkte
@@ -133,13 +112,6 @@ public class WalletController {
     @GetMapping("/levels/player/notOwned")
     public ResponseEntity<List<Level>> getLevelsNotOwned(@RequestParam Long playerId) {
         return ResponseEntity.ok(walletService.getAllLevelsNotOwnedByPlayer(playerId));
-    }
-
-    @GetMapping("/levels/player/owns")
-    public ResponseEntity<Boolean> isLevelOwned(
-            @RequestParam Long playerId,
-            @RequestParam Long levelId) {
-        return ResponseEntity.ok(walletService.isLevelOwnedByPlayer(playerId, levelId));
     }
 
     @PostMapping("/levels/buy")
@@ -185,4 +157,9 @@ public class WalletController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/createPlayer")
+    public ResponseEntity<Void> createPlayer(@RequestParam Long playerId) {
+        walletService.createPlayer(playerId);
+        return ResponseEntity.ok().build();
+    }
 }

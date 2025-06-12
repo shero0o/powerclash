@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - shared-backend
 
   wallet-service:
     build:
@@ -29,12 +31,17 @@ services:
     ports:
       - "8092:8092"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://wallet-db:5432/wallet_db
       SPRING_DATASOURCE_USERNAME: wallet_user
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SERVER_PORT: 8092
-
+    networks:
+      - shared-backend
 volumes:
   wallet-db-data:
+networks:
+  shared-backend:
+    external: true

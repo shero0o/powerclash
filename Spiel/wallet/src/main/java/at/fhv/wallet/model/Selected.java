@@ -2,16 +2,22 @@ package at.fhv.wallet.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 @Entity
 @Table(name = "selected")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@ToString
 public class Selected {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "player_id")
     private Long playerId;
+
+    @OneToOne
+    @JoinColumn(name = "player_id")
+    private Player player;
 
     @Column(name = "brawler_id")
     private Long brawlerId;

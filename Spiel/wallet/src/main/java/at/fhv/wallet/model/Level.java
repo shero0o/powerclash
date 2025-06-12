@@ -4,16 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "gadget")
+@Table(name = "level")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
 public class Level {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "level_id")
     private Long id;
-
-    @Column(nullable = false, unique = true)
     private String name;
-
-    @Column(nullable = false)
     private Integer cost;
 }

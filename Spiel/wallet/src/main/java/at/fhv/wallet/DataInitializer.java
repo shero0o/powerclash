@@ -1,13 +1,7 @@
 package at.fhv.wallet;
 
-import at.fhv.wallet.model.Brawler;
-import at.fhv.wallet.model.Gadget;
-import at.fhv.wallet.model.Weapon;
-import at.fhv.wallet.repository.BrawlerRepository;
-import at.fhv.wallet.repository.GadgetRepository;
-import at.fhv.wallet.repository.LevelRepository;
-import at.fhv.wallet.model.Level;
-import at.fhv.wallet.repository.WeaponRepository;
+import at.fhv.wallet.model.*;
+import at.fhv.wallet.repository.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -21,36 +15,40 @@ public class DataInitializer implements CommandLineRunner {
     private final GadgetRepository gadgetRepository;
     private final WeaponRepository weaponRepository;
     private final LevelRepository levelRepository;
+    private final PlayerRepository playerRepository;
+    private final SelectedRepository selectedRepository;
 
     public DataInitializer(BrawlerRepository brawlerRepository,
                            GadgetRepository gadgetRepository,
-                           WeaponRepository weaponRepository, LevelRepository levelRepository) {
+                           WeaponRepository weaponRepository, LevelRepository levelRepository, PlayerRepository playerRepository, SelectedRepository selectedRepository) {
         this.brawlerRepository = brawlerRepository;
         this.gadgetRepository = gadgetRepository;
         this.weaponRepository = weaponRepository;
         this.levelRepository = levelRepository;
+        this.playerRepository = playerRepository;
+        this.selectedRepository = selectedRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
         if (brawlerRepository.count() == 0) {
             List<Brawler> defaultBrawlers = Arrays.asList(
-                new Brawler(null,   
+                new Brawler(1L,
                             "Sniper",   
                             0,         
                             100
                 ),
-                new Brawler(null,   
+                new Brawler(2L,
                             "Tank",   
                             100,         
                             100
                 ),
-                new Brawler(null,   
+                new Brawler(3L,
                             "Mage",   
                             200,         
                             100
                 ),
-                new Brawler(null,   
+                new Brawler(4L,
                             "Healer",   
                             300,         
                             100
@@ -64,17 +62,17 @@ public class DataInitializer implements CommandLineRunner {
 
         if (gadgetRepository.count() == 0) {
             List<Gadget> defaultGadgets = Arrays.asList(
-                new Gadget(null,
+                new Gadget(1L,
                            "Damage Boost",
-                           100, 
+                           0,
                            "Gives a temporary damage buff to take down opponents faster."
                 ),
-                new Gadget(null,
+                new Gadget(2L,
                            "Speed Boost",
                            150,
                            "Gives a temporary speed buff to outrun opponents."
                 ),
-                new Gadget(null,
+                new Gadget(3L,
                            "HP Boost",
                            200,
                            "Gives a temporary health buff to outtank your opponents."
@@ -89,7 +87,7 @@ public class DataInitializer implements CommandLineRunner {
         if (weaponRepository.count() == 0) {
             List<Weapon> defaultWeapons = Arrays.asList(
                     new Weapon(
-                            null,
+                            1L,
                             "Rifle",    
                             2,        
                             1000,        
@@ -98,7 +96,7 @@ public class DataInitializer implements CommandLineRunner {
                             15          
                     ),
                     new Weapon(
-                            null,
+                            2L,
                             "Sniper",    
                             30,        
                             1400,        
@@ -107,7 +105,7 @@ public class DataInitializer implements CommandLineRunner {
                             1          
                     ),
                     new Weapon(
-                            null,
+                            3L,
                             "Shotgun",    
                             5,        
                             800,        
@@ -116,7 +114,7 @@ public class DataInitializer implements CommandLineRunner {
                             3          
                     ),
                     new Weapon(
-                            null,
+                            4L,
                             "Mine",    
                             40,        
                             750,        
@@ -133,14 +131,31 @@ public class DataInitializer implements CommandLineRunner {
 
         if (levelRepository.count() == 0) {
             List<Level> defaultLevels = Arrays.asList(
-                    new Level(null, "Level 1", 100),
-                    new Level(null, "Level 2", 200),
-                    new Level(null, "Level 3", 300)
+                    new Level(1L, "Level 1", 0),
+                    new Level(2L, "Level 2", 200),
+                    new Level(3L, "Level 3", 300)
             );
             levelRepository.saveAll(defaultLevels);
             System.out.println("Initialized default levels: " + defaultLevels.size());
         } else {
             System.out.println("Levels already initialized (count = " + levelRepository.count() + ")");
         }
+
+        if (playerRepository.count() == 0) {
+            Player defaultPlayer = new Player();
+            defaultPlayer.setId(0L);
+            defaultPlayer.setCoins(0);
+            defaultPlayer.getLevels().add(new Level(1L, "Level 1", 0));
+            defaultPlayer.getBrawlers().add(new Brawler(1L, "Sniper",0,100));
+            defaultPlayer.getGadgets().add(new Gadget(1L,"Damage Boost",0,"Gives a temporary damage buff to take down opponents faster."));
+
+            playerRepository.save(defaultPlayer);
+
+            Selected s = new Selected();
+            s.setPlayerId(defaultPlayer.getId());
+            selectedRepository.save(s);
+        }
+
+
     }
 }

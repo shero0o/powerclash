@@ -41,9 +41,12 @@ public class AccountService {
         Player p = playerRepository.save(new Player(null, name));
 
         // 2) WebClient-Aufruf an den Wallet-Service
-        WebClient client = WebClient.create("http://host.docker.internal:8092");
+        WebClient client = WebClient.create("http://wallet-service:8092");
         Mono<String> result = client.post()
-                .uri("/api/wallet/defaults/{playerId}", p.getId())
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/wallet/createPlayer")
+                        .queryParam("playerId", p.getId())
+                        .build())
                 .retrieve()
                 .bodyToMono(String.class);       // oder bodyToMono(Void.class)
         String body = result.block();         // synchron warten :contentReference[oaicite:0]{index=0}
