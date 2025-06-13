@@ -1,6 +1,4 @@
 package at.fhv.spiel_service.service.game.core;
-
-
 import at.fhv.spiel_service.domain.NPC;
 import at.fhv.spiel_service.domain.GameMap;
 import at.fhv.spiel_service.domain.Projectile;
@@ -9,7 +7,6 @@ import at.fhv.spiel_service.domain.Crate;
 import at.fhv.spiel_service.domain.*;
 import at.fhv.spiel_service.domain.ProjectileType;
 
-
 import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.messaging.CrateState;
 import at.fhv.spiel_service.messaging.PlayerState;
@@ -17,6 +14,8 @@ import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.service.game.manager.environmentalEffects.EnvironmentalEffectsManagerImpl;
 import at.fhv.spiel_service.service.game.manager.movement.MovementManagerImpl;
 import at.fhv.spiel_service.service.game.manager.NPC.NPCManagerImpl;
+import at.fhv.spiel_service.service.game.manager.player.IPlayerService;
+import at.fhv.spiel_service.service.game.manager.player.PlayerServiceImpl;
 import at.fhv.spiel_service.service.game.manager.projectile.ProjectileManager;
 import at.fhv.spiel_service.service.game.manager.projectile.ProjectileManagerImpl;
 import at.fhv.spiel_service.service.game.manager.zone.ZoneManagerImpl;
@@ -29,33 +28,20 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static at.fhv.spiel_service.domain.ProjectileType.*;
-
 public class DefaultGameLogic implements GameLogic {
-    // --- Spielzustand ---
-    private final Map<String, Player> players = new ConcurrentHashMap<>();
 
     private final List<NPC> npcs = new ArrayList<>();
     private GameMap gameMap;
     private long lastFrameTimeMs = System.currentTimeMillis();
 
-    // --- Waffen & Ammo ---
-
-    private final Map<String, String> playerBrawler = new ConcurrentHashMap<>();
-    private final Map<String, String> playerNames = new ConcurrentHashMap<>();
-
-    // --- Gadget ---
-    private final Map<String, Gadget> playerGadget = new ConcurrentHashMap<>();
-
-    // -------------------------------------------------------------------------
     private final Map<String, Crate> crates = new ConcurrentHashMap<>();
-    private final Map<String, Integer> playerCoins = new ConcurrentHashMap<>();
 
     private MovementManager movementManager;
     private EnvironmentalEffectsManager envEffectsManager;
     private ZoneManager zoneManager;
     private NPCManager npcManager;
     private ProjectileManager projectileManager;
+    private IPlayerService playerService;
 
 
     @Override
@@ -69,27 +55,37 @@ public class DefaultGameLogic implements GameLogic {
             crates.put(key, new Crate(UUID.randomUUID().toString(), new Position(tileX, tileY)));
         }
 
-        this.movementManager = new MovementManagerImpl(
-                gameMap, players, crates
-        );
-        this.envEffectsManager = new EnvironmentalEffectsManagerImpl(
-                gameMap, players
-        );
+        Map<String, Player>      playersMap      = new ConcurrentHashMap<>();
+        Map<String, String>      brawlerMap      = new ConcurrentHashMap<>();
+        Map<String, String>      namesMap        = new ConcurrentHashMap<>();
+        Map<String, Gadget>      gadgetMap       = new ConcurrentHashMap<>();
+        Map<String, Integer>     coinsMap        = new ConcurrentHashMap<>();
+
+        this.projectileManager = new ProjectileManagerImpl(gameMap, playersMap);
+
+        this.playerService = new PlayerServiceImpl(playersMap,
+                        brawlerMap,
+                        namesMap,
+                        gadgetMap,
+                        coinsMap,
+                        projectileManager);
+
+        this.movementManager = new MovementManagerImpl(gameMap, playerService.getPlayers(), crates);
+        this.envEffectsManager = new EnvironmentalEffectsManagerImpl(gameMap, playerService.getPlayers());
         this.zoneManager = new ZoneManagerImpl();
         this.npcManager  = new NPCManagerImpl(gameMap, npcs);
-        this.projectileManager = new ProjectileManagerImpl(gameMap, players);
 
     }
 
     @Override
     public Player getPlayer(String playerId) {
-        return players.get(playerId);
+        return playerService.getPlayer(playerId);
     }
 
 
     @Override
     public Gadget getGadget(String playerId){
-        return playerGadget.get(playerId);
+        return playerService.getGadget(playerId);
     }
 
         /**
@@ -119,57 +115,12 @@ public class DefaultGameLogic implements GameLogic {
 
         @Override
         public void addPlayer (String playerId, String brawlerId, String playerName){
-            // wenn kein Brawler übergeben wurde, Default nehmen
-            if (brawlerId == null || brawlerId.isBlank()) {
-                brawlerId = "sniper";
-            }
-
-            // spawn-Logik wie gehabt …
-            int index = players.size();
-            Position spawn;
-            switch (index) {
-                case 0:
-                    // Spieler 1: oben links
-                    spawn = new Position(1200, 1200, 0);
-                    break;
-                case 1:
-                    // Spieler 2: oben rechts
-                    spawn = new Position(6520, 1200, 0);
-                    break;
-                case 2:
-                    // Spieler 3: unten links
-                    spawn = new Position(1200, 6480, 0);
-                    break;
-                case 3:
-                    // Spieler 4: unten rechts
-                    spawn = new Position(6520, 6480, 0);
-                    break;
-                default:
-                    // Falls mehr als 4 Spieler hinzukommen, z.B. zentriert spawnen:
-                    spawn = new Position(3860, 2700, 0);
-                    break;
-            }
-            Brawler br =  new Brawler(playerId, 1, 100, spawn);
-
-            players.put(playerId,
-                    new Player(br.getId(), br.getLevel(), br.getMaxHealth(), br.getPosition())
-            );
-
-            // Ammo initialisieren …
-            projectileManager.initPlayer(playerId, RIFLE_BULLET);
-            playerBrawler.put(playerId, brawlerId);
-            playerNames.put(playerId, playerName); // aus DTO übergeben
-            playerCoins.put(playerId, 0);
-
-
+            playerService.addPlayer(playerId, brawlerId, playerName);
         }
 
         @Override
         public void removePlayer (String playerId){
-            players.remove(playerId);
-            projectileManager.removePlayer(playerId);
-            playerBrawler.remove(playerId);
-            playerNames.remove(playerId);
+            playerService.removePlayer(playerId);
 
         }
 
@@ -186,9 +137,8 @@ public class DefaultGameLogic implements GameLogic {
 
     @Override
     public void setPlayerGadget(String playerId, GadgetType type) {
-        playerGadget.put(playerId, new Gadget(type, playerId));
+        playerService.setGadget(playerId, type);
     }
-
 
     @Override
     public void applyEnvironmentalEffects () {
@@ -199,9 +149,9 @@ public class DefaultGameLogic implements GameLogic {
         // 2) Umwelteinflüsse aufs Spielfeld
         envEffectsManager.applyEnvironmentalEffects(delta);
         // 3) Zone-Shrink & Schaden außerhalb
-        zoneManager.updateZone(delta, players);
+        zoneManager.updateZone(delta, playerService.getPlayers());
         // 4) NPC-KI (Bewegung & melee)
-        npcManager.updateNPCs(delta, players, npcs);
+        npcManager.updateNPCs(delta, playerService.getPlayers(), npcs);
     }
 
     @Override
@@ -215,10 +165,7 @@ public class DefaultGameLogic implements GameLogic {
                                 Position direction,
                                 ProjectileType type) {
         projectileManager.spawnProjectile(playerId, position, direction, type);
-
         }
-
-
 
         @Override
         public void updateProjectiles (float delta) {
@@ -228,7 +175,7 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public StateUpdateMessage buildStateUpdate() {
         // Spieler-Status mit aktuellem Ammo & Weapon
-        List<PlayerState> ps = players.values().stream().map(p -> {
+        List<PlayerState> ps = playerService.getAllPlayers().stream().map(p -> {
             String pid = p.getId();
             ProjectileType wep = projectileManager.getCurrentWeapon(pid);
             int ammo = projectileManager.getCurrentAmmo(pid);
@@ -239,9 +186,9 @@ public class DefaultGameLogic implements GameLogic {
                     p.isVisible(),
                     ammo,
                     wep,
-                    playerBrawler.getOrDefault(p.getId(), "sniper"),
-                    playerNames.getOrDefault(p.getId(), "Player"),
-                    playerCoins.getOrDefault(pid, 0),
+                    playerService.getPlayerBrawler().getOrDefault(p.getId(), "sniper"),
+                    playerService.getPlayerNames().getOrDefault(p.getId(), "Player"),
+                    playerService.getPlayerCoins().getOrDefault(pid, 0),
                     p.getMaxHealth()
 
             );
@@ -252,7 +199,6 @@ public class DefaultGameLogic implements GameLogic {
             msg.setEvents(Collections.emptyList());
             msg.setProjectiles(projectileManager.getProjectiles());
 
-
         List<CrateState> crateStates = crates.values().stream()
                     .map(c -> new CrateState(
                             c.getId(),
@@ -262,9 +208,8 @@ public class DefaultGameLogic implements GameLogic {
                     ))
                     .collect(Collectors.toList());
             msg.setCrates(crateStates);
-        List<Gadget> gadgets = getAllGadgets();  // oder wie immer Dein Logic das hält
+        List<Gadget> gadgets = playerService.getAllGadgets();  // oder wie immer Dein Logic das hält
         msg.setGadgets(gadgets);
-
 
         if (zoneManager.isZoneActive()) {
             // Wir müssen eine ZoneState erzeugen – dafür brauchen wir
@@ -278,23 +223,20 @@ public class DefaultGameLogic implements GameLogic {
         }
             msg.setNpcs(new ArrayList<>(npcs));
             return msg;
-        }
-
-    public List<Gadget> getAllGadgets() {
-        return new ArrayList<>(this.playerGadget.values());
     }
 
 
     @Override
     public List<Projectile> getProjectiles () {
-            return projectileManager.getProjectiles();
-        }
-
-        @Override
-        public Position getPlayerPosition (String playerId){
-            return players.get(playerId).getPosition();
-        }
-
+        return projectileManager.getProjectiles();
     }
+
+
+    @Override
+    public Position getPlayerPosition (String playerId){
+        return playerService.getPlayerPosition(playerId).getPosition();
+    }
+
+}
 
 
