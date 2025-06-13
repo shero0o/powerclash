@@ -1,9 +1,9 @@
 package at.fhv.spiel_service.messaging;
 
-import at.fhv.spiel_service.domain.Gadget;
-import at.fhv.spiel_service.domain.NPC;
-import at.fhv.spiel_service.domain.Projectile;
-import at.fhv.spiel_service.domain.ZoneState;
+import at.fhv.spiel_service.entities.Gadget;
+import at.fhv.spiel_service.entities.NPC;
+import at.fhv.spiel_service.entities.Projectile;
+import at.fhv.spiel_service.entities.ZoneState;
 import lombok.Data;
 
 import java.util.ArrayList;

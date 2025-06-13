@@ -1,8 +1,8 @@
 package at.fhv.spiel_service.dto;
 
 
-import at.fhv.spiel_service.domain.GadgetType;
-import at.fhv.spiel_service.domain.ProjectileType;
+import at.fhv.spiel_service.entities.GadgetType;
+import at.fhv.spiel_service.entities.ProjectileType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
