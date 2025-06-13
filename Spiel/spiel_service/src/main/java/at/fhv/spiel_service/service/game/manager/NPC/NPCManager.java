@@ -1,4 +1,4 @@
-package at.fhv.spiel_service.service.game.manager;
+package at.fhv.spiel_service.service.game.manager.NPC;
 
 import at.fhv.spiel_service.domain.NPC;
 import at.fhv.spiel_service.domain.Player;

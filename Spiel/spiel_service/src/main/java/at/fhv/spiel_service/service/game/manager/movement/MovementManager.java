@@ -1,4 +1,4 @@
-package at.fhv.spiel_service.service.game.manager;
+package at.fhv.spiel_service.service.game.manager.movement;
 
 public interface MovementManager {
 

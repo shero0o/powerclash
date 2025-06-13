@@ -1,10 +1,9 @@
-package at.fhv.spiel_service.service.game.impl.manager;
+package at.fhv.spiel_service.service.game.manager.movement;
 
 import at.fhv.spiel_service.domain.Crate;
 import at.fhv.spiel_service.domain.GameMap;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
-import at.fhv.spiel_service.service.game.manager.MovementManager;
 
 import java.util.Map;
 

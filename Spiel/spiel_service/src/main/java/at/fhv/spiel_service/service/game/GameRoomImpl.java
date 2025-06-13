@@ -6,7 +6,7 @@ import at.fhv.spiel_service.messaging.EventPublisher;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.service.game.core.GameLogic;
 import at.fhv.spiel_service.service.game.core.IGameRoom;
-import at.fhv.spiel_service.service.game.impl.DefaultGameLogic;
+import at.fhv.spiel_service.service.game.core.DefaultGameLogic;
 
 import java.util.Collections;
 import java.util.Map;

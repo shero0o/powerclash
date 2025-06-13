@@ -56,11 +56,6 @@ public interface GameLogic {
     Gadget getGadget(String playerId);
 
     /**
-     * Simple attack (legacy) for Bullet-based systems
-     */
-    void attack(String playerId, float dirX, float dirY, float angle);
-
-    /**
      * Spawn a projectile with full weapon logic
      */
     void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type);

@@ -2,7 +2,7 @@ package at.fhv.spiel_service.service.room;
 
 import at.fhv.spiel_service.factory.IMapFactory;
 import at.fhv.spiel_service.messaging.EventPublisher;
-import at.fhv.spiel_service.service.game.impl.DefaultGameLogic;
+import at.fhv.spiel_service.service.game.core.DefaultGameLogic;
 import at.fhv.spiel_service.service.game.GameRoomImpl;
 import at.fhv.spiel_service.service.game.core.IGameRoom;
 import org.springframework.stereotype.Service;

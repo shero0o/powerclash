@@ -1,4 +1,4 @@
-package at.fhv.spiel_service.service.game.manager;
+package at.fhv.spiel_service.service.game.manager.zone;
 
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;

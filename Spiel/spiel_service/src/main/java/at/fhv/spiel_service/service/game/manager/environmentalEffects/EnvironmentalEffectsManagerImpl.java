@@ -1,10 +1,8 @@
-package at.fhv.spiel_service.service.game.impl.manager;
+package at.fhv.spiel_service.service.game.manager.environmentalEffects;
 
 import at.fhv.spiel_service.domain.GameMap;
-import at.fhv.spiel_service.domain.NPC;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
-import at.fhv.spiel_service.service.game.manager.EnvironmentalEffectsManager;
 
 import java.util.Map;
 
