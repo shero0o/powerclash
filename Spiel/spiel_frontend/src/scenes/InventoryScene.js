@@ -95,7 +95,7 @@ export default class InventoryScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
                 this.scene.start('AccountScene');
-            });;
+            });
 
         const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)

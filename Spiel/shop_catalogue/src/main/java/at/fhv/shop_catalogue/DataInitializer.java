@@ -63,7 +63,7 @@ public class DataInitializer implements CommandLineRunner {
             List<Gadget> defaultGadgets = Arrays.asList(
                 new Gadget(null,
                            "Damage Boost",
-                           100, 
+                           0,
                            "Gives a temporary damage buff to take down opponents faster."
                 ),
                 new Gadget(null,

@@ -28,34 +28,7 @@ export default class DressingRoomScene extends Phaser.Scene {
         console.log('[DressingRoomScene] create() start');
 
         // ─── Seed Wallet via Backend-POSTs (playerId=1) ─────────────────
-        try {
-            // 1) Coins hinzufügen
-            await fetch(`${API_BASE}/coins/add?playerId=${this.playerId}&amount=500`, { method: 'POST' });
-            console.log('Seed: added coins');
 
-            // 2) Brawler kaufen
-            const allBrawlers = await (await fetch(`${API_BASE}/brawlers`)).json();
-            for (const b of allBrawlers) {
-                await fetch(`${API_BASE}/brawlers/buy?playerId=${this.playerId}&brawlerId=${b.id}`, { method: 'POST' });
-            }
-            console.log('Seed: bought brawlers');
-
-            // 3) Gadgets kaufen
-            const allGadgets = await (await fetch(`${API_BASE}/gadgets`)).json();
-            for (const g of allGadgets) {
-                await fetch(`${API_BASE}/gadgets/buy?playerId=${this.playerId}&gadgetId=${g.id}`, { method: 'POST' });
-            }
-            console.log('Seed: bought gadgets');
-
-            // 4) Levels kaufen
-            const allLevels = await (await fetch(`${API_BASE}/levels`)).json();
-            for (const lvl of allLevels) {
-                await fetch(`${API_BASE}/levels/buy?playerId=${this.playerId}&levelId=${lvl.id}`, { method: 'POST' });
-            }
-            console.log('Seed: bought levels');
-        } catch (seedErr) {
-            console.error('Seed-Error:', seedErr);
-        }
 
         // ─── Daten via GET laden ─────────────────────────────────────────
         try {
