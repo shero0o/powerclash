@@ -452,7 +452,8 @@ export default class GameScene extends Phaser.Scene {
         if (!meSprite || !meState || meState.ammo <= 0) return;
 
         const emitShot = () => {
-            const dir = new Phaser.Math.Vector2(pointer.worldX - meSprite.x, pointer.worldY - meSprite.y).normalize();
+            const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const dir = new Phaser.Math.Vector2(worldPoint.x - meSprite.x, worldPoint.y - meSprite.y).normalize();
             this.socket.emit('shootProjectile', {
                 roomId: this.roomId,
                 playerId: this.playerId,
