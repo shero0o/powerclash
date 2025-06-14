@@ -39,7 +39,7 @@ public class PlayerServiceImpl implements IPlayerService {
     public void addPlayer(String playerId, String brawlerId, String playerName) {
         // 1) Default Brawler
         if (brawlerId == null || brawlerId.isBlank()) {
-            brawlerId = "sniper";
+            brawlerId = "hitman";
         }
         // 2) Spawn-Logik
         int index = players.size();

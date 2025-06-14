@@ -56,10 +56,10 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
 
         // brawlers
-        this.load.image('brawler_sniper', '/assets/PNG/Hitman_1/hitman1_gun.png');
-        this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
-        this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
-        this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
+        this.load.image('hitman1', '/assets/PNG/Hitman_1/hitman1_gun.png');
+        this.load.image('robot1',   '/assets/PNG/Robot_1/robot1_machine.png');
+        this.load.image('soldier1',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
+        this.load.image('womanGreen', '/assets/PNG/Woman_Green/womanGreen_machine.png');
         this.load.image('npc', '/assets/PNG/Survivor1/survivor1_hold.png');
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
@@ -484,10 +484,10 @@ export default class GameScene extends Phaser.Scene {
 
     getBrawlerSpriteName(brawlerId) {
         switch (brawlerId) {
-            case 'tank':   return 'brawler_tank';
-            case 'mage':   return 'brawler_mage';
-            case 'healer': return 'brawler_healer';
-            default:       return 'brawler_sniper';
+            case 'robot':   return 'robot1';
+            case 'soldier':   return 'soldier1';
+            case 'woman': return 'womanGreen';
+            default:       return 'hitman1';
         }
     }
 

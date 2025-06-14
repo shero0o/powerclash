@@ -15,7 +15,7 @@ export default class LobbyScene extends Phaser.Scene {
         this.selectedGadget = 'DAMAGE_BOOST'
         // Default-Werte für Waffe und Brawler (wie in SelectionScene)
         this.selectedWeapon  = 'RIFLE_BULLET';
-        this.selectedBrawler = 'sniper';
+        this.selectedBrawler = 'hitman';
 
         // Label über dem PLAY-Button ("Level: X")
         this.levelLabel = null;
@@ -211,9 +211,9 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-            case 'mage':   return 'avatar3'; // Soldier → Character3
-            case 'healer': return 'avatar4'; // WomanGreen → Character4
-            case 'tank':   return 'avatar5'; // Robot → Character5
+            case 'soldier':   return 'avatar3'; // Soldier → Character3
+            case 'woman': return 'avatar4'; // WomanGreen → Character4
+            case 'robot':   return 'avatar5'; // Robot → Character5
             default:       return 'avatar2'; // Hitman → Character2
         }
     }
