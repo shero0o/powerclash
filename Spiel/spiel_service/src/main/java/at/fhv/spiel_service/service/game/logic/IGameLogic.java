@@ -1,10 +1,8 @@
-package at.fhv.spiel_service.service.game.core;
+package at.fhv.spiel_service.service.game.logic;
 
 import at.fhv.spiel_service.domain.GameMap;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.domain.*;
-
-import java.util.List;
 
 /**
  * Kombinierte GameLogic-Schnittstelle, die
@@ -15,7 +13,7 @@ import java.util.List;
  * - State-Updates
  * zusammenführt.
  */
-public interface GameLogic {
+public interface IGameLogic {
 
     /**
      * Build a snapshot of the current game state for clients

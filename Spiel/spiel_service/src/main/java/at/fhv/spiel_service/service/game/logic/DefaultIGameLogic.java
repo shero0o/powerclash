@@ -1,15 +1,12 @@
-package at.fhv.spiel_service.service.game.core;
+package at.fhv.spiel_service.service.game.logic;
 import at.fhv.spiel_service.domain.NPC;
 import at.fhv.spiel_service.domain.GameMap;
-import at.fhv.spiel_service.domain.Projectile;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Crate;
 import at.fhv.spiel_service.domain.*;
 import at.fhv.spiel_service.domain.ProjectileType;
 
 import at.fhv.spiel_service.domain.Position;
-import at.fhv.spiel_service.messaging.CrateState;
-import at.fhv.spiel_service.messaging.PlayerState;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.service.game.manager.collision.CollisionManager;
 import at.fhv.spiel_service.service.game.manager.collision.CollisionManagerImpl;
@@ -30,9 +27,8 @@ import at.fhv.spiel_service.service.game.manager.zone.ZoneManager;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
-public class DefaultGameLogic implements GameLogic {
+public class DefaultIGameLogic implements IGameLogic {
 
     private final List<NPC> npcs = new ArrayList<>();
     private GameMap gameMap;

@@ -1,6 +1,8 @@
-package at.fhv.spiel_service.service.game.core;
+package at.fhv.spiel_service.service.room;
 
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
+import at.fhv.spiel_service.service.game.logic.IGameLogic;
+
 import java.util.Map;
 
 public interface IGameRoom {
@@ -51,7 +53,7 @@ public interface IGameRoom {
     Map<String, Object> getPlayers();
     void markReady(String playerId, String brawlerId);
     int  getReadyCount();
-    GameLogic getGameLogic();
+    IGameLogic getGameLogic();
 
     int getMaxPlayers();
 }

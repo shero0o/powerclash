@@ -1,12 +1,10 @@
-package at.fhv.spiel_service.service.game;
+package at.fhv.spiel_service.service.room;
 
 import at.fhv.spiel_service.domain.*;
-import at.fhv.spiel_service.factory.IMapFactory;
 import at.fhv.spiel_service.messaging.EventPublisher;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
-import at.fhv.spiel_service.service.game.core.GameLogic;
-import at.fhv.spiel_service.service.game.core.IGameRoom;
-import at.fhv.spiel_service.service.game.core.DefaultGameLogic;
+import at.fhv.spiel_service.service.game.logic.IGameLogic;
+import at.fhv.spiel_service.service.game.logic.DefaultIGameLogic;
 
 import java.util.Collections;
 import java.util.Map;
@@ -32,8 +30,7 @@ public class GameRoomImpl implements IGameRoom {
     private final Map<String, Object> readyPlayers = new ConcurrentHashMap<>();
     private final Map<String, PlayerInput> inputs  = new ConcurrentHashMap<>();
 
-    private final IMapFactory mapFactory;
-    private final GameLogic gameLogic;
+    private final IGameLogic IGameLogic;
     private final EventPublisher eventPublisher;
     private final GameMap gameMap;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -47,16 +44,14 @@ public class GameRoomImpl implements IGameRoom {
     private boolean hasStarted = false;
 
 
-    public GameRoomImpl(IMapFactory mapFactory,
-                        GameLogic gameLogic,
+    public GameRoomImpl(IGameLogic gameLogic,
                         EventPublisher eventPublisher,
                         String levelId) {
-        this.mapFactory     = mapFactory;
-        this.gameLogic      = gameLogic;
+        this.IGameLogic = gameLogic;
         this.eventPublisher = eventPublisher;
         this.levelId = levelId;
-        this.gameMap        = mapFactory.create(levelId);
-        this.gameLogic.setGameMap(this.gameMap);
+        this.gameMap = new GameMap(levelId);
+        this.IGameLogic.setGameMap(this.gameMap);
     }
 
     @Override
@@ -83,13 +78,13 @@ public class GameRoomImpl implements IGameRoom {
         }
 
         // 1) register in logic
-        gameLogic.addPlayer(playerId, brawlerId, playerName);
+        IGameLogic.addPlayer(playerId, brawlerId, playerName);
         // 2) track locally
         players.put(playerId, new Object());
         System.out.println("[INFO] Player added: " + playerId);
 
         // ↓↓↓ new: immediately push the very first snapshot ↓↓↓
-        StateUpdateMessage initial = gameLogic.buildStateUpdate();
+        StateUpdateMessage initial = IGameLogic.buildStateUpdate();
         eventPublisher.publish(id, initial);
     }
 
@@ -103,7 +98,7 @@ public class GameRoomImpl implements IGameRoom {
         players.remove(playerId);
         readyPlayers.remove(playerId);
         inputs.remove(playerId);
-        gameLogic.removePlayer(playerId);
+        IGameLogic.removePlayer(playerId);
         System.out.println("[INFO] Player removed: " + playerId);
     }
 
@@ -130,13 +125,13 @@ public class GameRoomImpl implements IGameRoom {
     }
 
     @Override
-    public GameLogic getGameLogic() {
-        return gameLogic;
+    public IGameLogic getGameLogic() {
+        return IGameLogic;
     }
 
     @Override
     public StateUpdateMessage buildStateUpdate() {
-        return gameLogic.buildStateUpdate();
+        return IGameLogic.buildStateUpdate();
     }
 
     @Override
@@ -158,7 +153,7 @@ public class GameRoomImpl implements IGameRoom {
                            Position position,
                            Position direction,
                            ProjectileType type) {
-        gameLogic.spawnProjectile(playerId, position, direction, type);
+        IGameLogic.spawnProjectile(playerId, position, direction, type);
     }
 
     /**
@@ -171,8 +166,8 @@ public class GameRoomImpl implements IGameRoom {
         hasStarted = true;
 
         // Only for level 3: spawn two melee‐NPCs (“zombies”) at map center
-        if ("level3".equals(levelId) && gameLogic instanceof DefaultGameLogic) {
-            DefaultGameLogic logic = (DefaultGameLogic) gameLogic;
+        if ("level3".equals(levelId) && IGameLogic instanceof DefaultIGameLogic) {
+            DefaultIGameLogic logic = (DefaultIGameLogic) IGameLogic;
 
             // compute center of map in pixels
             float cx = gameMap.getWidthInPixels()  / 2f;
@@ -202,7 +197,7 @@ public class GameRoomImpl implements IGameRoom {
                 for (var entry : inputs.entrySet()) {
                     String pid = entry.getKey();
                     PlayerInput in = entry.getValue();
-                    Player p = gameLogic.getPlayer(pid);
+                    Player p = IGameLogic.getPlayer(pid);
                     if (p == null || p.getCurrentHealth() <= 0) continue;
 
                     Position pos = p.getPosition();
@@ -210,7 +205,7 @@ public class GameRoomImpl implements IGameRoom {
                     float nx  = len > 0 ? in.dirX / len : 0;
                     float ny  = len > 0 ? in.dirY / len : 0;
 
-                    Gadget gadget = gameLogic.getGadget(pid);
+                    Gadget gadget = IGameLogic.getGadget(pid);
                     float speedFactor = (gadget != null && gadget.getTimeRemaining() > 0 && gadget.getType() == GadgetType.SPEED_BOOST)
                             ? 2
                             : 1;
@@ -245,7 +240,7 @@ public class GameRoomImpl implements IGameRoom {
                     int tx = (int)(newX / gameMap.getTileWidth());
                     int ty = (int)(newY / gameMap.getTileHeight());
                     if (!gameMap.isWallAt(tx, ty)) {
-                        gameLogic.movePlayer(pid, newX, newY, in.angle);
+                        IGameLogic.movePlayer(pid, newX, newY, in.angle);
                     }
 
                     // Runterzählen des Gadget-Timers (pro Tick einmal TICK_DT*1000 ms)
@@ -256,8 +251,8 @@ public class GameRoomImpl implements IGameRoom {
                 }
 
                 // 2) update projectiles & apply environmental effects (including NPC AI)
-                gameLogic.updateProjectiles(TICK_DT);
-                gameLogic.applyEnvironmentalEffects();
+                IGameLogic.updateProjectiles(TICK_DT);
+                IGameLogic.applyEnvironmentalEffects();
 
                 // 3) broadcast the new state to all clients in this room
                 StateUpdateMessage update = buildStateUpdate();

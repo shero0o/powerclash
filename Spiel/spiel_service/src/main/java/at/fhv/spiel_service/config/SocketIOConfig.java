@@ -5,9 +5,9 @@ import at.fhv.spiel_service.domain.Gadget;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.dto.*;
-import at.fhv.spiel_service.service.game.core.DefaultGameLogic;
-import at.fhv.spiel_service.service.game.GameRoomImpl;
-import at.fhv.spiel_service.service.game.core.IGameRoom;
+import at.fhv.spiel_service.service.game.logic.DefaultIGameLogic;
+import at.fhv.spiel_service.service.room.GameRoomImpl;
+import at.fhv.spiel_service.service.room.IGameRoom;
 import at.fhv.spiel_service.service.room.IRoomManager;
 
 import org.slf4j.Logger;
@@ -119,7 +119,7 @@ public class SocketIOConfig {
         server.addEventListener("useGadget", UseGadgetDTO.class,
                 (client, data, ack) -> {
                     GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
-                    DefaultGameLogic logic = (DefaultGameLogic) room.getGameLogic();
+                    DefaultIGameLogic logic = (DefaultIGameLogic) room.getGameLogic();
                     Player p = logic.getPlayer(data.getPlayerId());
                     Gadget g = room.getGameLogic().getGadget(data.getPlayerId());
                     if (g == null) {

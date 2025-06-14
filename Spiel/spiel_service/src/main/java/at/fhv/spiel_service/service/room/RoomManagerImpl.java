@@ -1,10 +1,7 @@
 package at.fhv.spiel_service.service.room;
 
-import at.fhv.spiel_service.factory.IMapFactory;
 import at.fhv.spiel_service.messaging.EventPublisher;
-import at.fhv.spiel_service.service.game.core.DefaultGameLogic;
-import at.fhv.spiel_service.service.game.GameRoomImpl;
-import at.fhv.spiel_service.service.game.core.IGameRoom;
+import at.fhv.spiel_service.service.game.logic.DefaultIGameLogic;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,17 +12,15 @@ import java.util.List;
 public class RoomManagerImpl implements IRoomManager {
 
     private final List<IGameRoom> rooms = new ArrayList<>();
-    private final IMapFactory mapFactory;
     private final EventPublisher eventPublisher;
 
-    public RoomManagerImpl(IMapFactory mapFactory, EventPublisher eventPublisher) {
-        this.mapFactory = mapFactory;
+    public RoomManagerImpl(EventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
     @Override
     public IGameRoom createRoom(String levelId) {
-        IGameRoom newRoom = new GameRoomImpl(mapFactory, new DefaultGameLogic(), eventPublisher, levelId);
+        IGameRoom newRoom = new GameRoomImpl(new DefaultIGameLogic(), eventPublisher, levelId);
         rooms.add(newRoom);
         return newRoom;
     }
