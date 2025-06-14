@@ -27,7 +27,7 @@ public class GameLoop {
     // statt Movement-Klasse: key → [dirX, dirY, angle]
     private final ConcurrentMap<String, float[]> movementBuffer = new ConcurrentHashMap<>();
 
-    private volatile boolean running = false;
+    private boolean running = false;
 
     public GameLoop(String roomId,
                     IGameLogic logic,
