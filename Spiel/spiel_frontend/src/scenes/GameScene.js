@@ -27,6 +27,7 @@ export default class GameScene extends Phaser.Scene {
 
     }
 
+
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
@@ -778,7 +779,7 @@ export default class GameScene extends Phaser.Scene {
 
 
                 spr.healthBar = this.add.graphics();
-                spr.label = this.add.text(0, 0, p.playerName || 'Player', {
+                spr.label = this.add.text(0, 0, p.playerName || this.playerName, {
                     fontSize: '20px', fontFamily: 'Arial',
                     color: isMe ? '#ffffff' : '#ff0000',
                     stroke: '#000000', strokeThickness: 4,

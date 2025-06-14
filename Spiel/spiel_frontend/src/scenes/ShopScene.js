@@ -85,7 +85,7 @@ export default class ShopScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
             .setInteractive({ useHandCursor: true });
-        btnBrawlers.on('pointerdown', () => console.log('Brawlers öffnen'));
+        btnBrawlers.on('pointerdown', () => this.scene.start('InventoryScene'));
 
         this.add.image(90, height / 2 + 100, 'home')
             .setOrigin(0.5)
@@ -206,7 +206,7 @@ export default class ShopScene extends Phaser.Scene {
 
         // Maske absolut positioniert
         const maskShape = this.make.graphics();
-        maskShape.fillRect(0,0, listWidth, listHeight);
+        maskShape.fillRect(startX, startY, listWidth, listHeight);
         const mask = maskShape.createGeometryMask();
         this.shopContainer.setMask(mask);
 
@@ -235,25 +235,40 @@ export default class ShopScene extends Phaser.Scene {
                         this.shopContainer.add(img);
                     }
 
-                    // ─── Name und Preis ───
-                    const nameText = this.add.text(0, offsetY, `${item.name} (${type})`, {
-                    fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
+                // ─── Name und Preis ───
+                const nameText = this.add.text(0, offsetY, `${item.name} (${type})`, {
+                fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
                 });
-                const priceText = this.add.text(0, offsetY + 30, `Preis: ${item.price} Coins`, {
+                const priceText = this.add.text(0, offsetY + 30, `Preis: ${item.cost} Coins`, {
                     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00'
                 });
                 this.shopContainer.add([nameText, priceText]);
 
-                    // ─── Kaufen-Button ───
-                    const buyButton = this.add.text(400, offsetY + 15, 'KAUFEN', {
-                        fontFamily: 'Arial', fontSize: '24px', color: '#00ff00',
-                        backgroundColor: '#333', padding: { x: 10, y: 5 }
-                    })
+                // ─── Kaufen-Button ───
+                const buyButton = this.add.text(400, offsetY + 15, 'KAUFEN', {
+                    fontFamily: 'Arial', fontSize: '24px', color: '#00ff00',
+                    backgroundColor: '#333', padding: { x: 10, y: 5 }
+                })
                     .setInteractive({ useHandCursor: true })
                     .on('pointerdown', async () => {
-                            /* Dein Kauf-Logic hier */
+                        try {
+                            const res = await fetch(
+                                `${API_BASE2}/${type.toLowerCase()}s/buy?playerId=${this.playerId}&${type.toLowerCase()}Id=${item.id}`,
+                                { method: 'POST' }
+                            );
+                            if (res.ok) {
+                                alert(`Erfolgreich gekauft: ${item.name}`);
+                                await this._refreshCoinDisplay();
+                                await this._refreshShopItems();
+                            } else {
+                                const error = await res.text();
+                                alert(`Fehler beim Kauf: ${error}`);
+                            }
+                        } catch (err) {
+                            console.error('Fehler beim Kauf:', err);
+                        }
                     });
-                    this.shopContainer.add(buyButton);
+                this.shopContainer.add(buyButton);
 
                 // Höhe für nächstes Item reservieren
                 offsetY += rowHeight;
