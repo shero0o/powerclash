@@ -652,7 +652,7 @@ export default class GameScene extends Phaser.Scene {
             let bar = this.npcBars[npc.id];
             let label = this.npcLabels[npc.id];
 
-            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
+            if (!spr && npc.currentHealth > 0 && (npc.visible || me)) {
                 // a) main sprite
                 spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
                     .setOrigin(0.5);
@@ -674,8 +674,10 @@ export default class GameScene extends Phaser.Scene {
             }
 
             // 2) Update position & rotation
-            spr.setPosition(npc.position.x, npc.position.y)
-                .setRotation(npc.position.angle);
+            if (spr) {
+                spr.setPosition(npc.position.x, npc.position.y)
+                    .setRotation(npc.position.angle);
+            }
 
             // 3) Redraw health bar above the sprite
             const maxHp = 50; // or pull from npc.maxHealth if you have it
@@ -696,16 +698,18 @@ export default class GameScene extends Phaser.Scene {
                 );
 
             // 4) Position the “NPC” label just above the bar
-            label.setPosition(
-                npc.position.x,
-                npc.position.y - spr.displayHeight / 2 - bh - 16
-            );
+            if (label) {
+                label.setPosition(
+                    npc.position.x,
+                    npc.position.y - spr.displayHeight/2 - bh - 16
+                );
+            }
 
             // 5) Hide if dead
             const visible = npc.currentHealth > 0;
-            spr.setVisible(visible);
-            bar.setVisible(visible);
-            label.setVisible(visible);
+            if (spr)   spr.setVisible(visible);
+            if (bar)   bar.setVisible(visible);
+            if (label) label.setVisible(visible);
         });
 
 // 6) Cleanup any despawned NPCs
