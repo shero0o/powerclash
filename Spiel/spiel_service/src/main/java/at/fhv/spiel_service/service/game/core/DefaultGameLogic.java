@@ -11,6 +11,8 @@ import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.messaging.CrateState;
 import at.fhv.spiel_service.messaging.PlayerState;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
+import at.fhv.spiel_service.service.game.manager.collision.CollisionManager;
+import at.fhv.spiel_service.service.game.manager.collision.CollisionManagerImpl;
 import at.fhv.spiel_service.service.game.manager.environmentalEffects.EnvironmentalEffectsManagerImpl;
 import at.fhv.spiel_service.service.game.manager.movement.MovementManagerImpl;
 import at.fhv.spiel_service.service.game.manager.NPC.NPCManagerImpl;
@@ -42,6 +44,8 @@ public class DefaultGameLogic implements GameLogic {
     private NPCManager npcManager;
     private ProjectileManager projectileManager;
     private IPlayerService playerService;
+    private CollisionManager collisionManager;
+
 
 
     @Override
@@ -70,10 +74,15 @@ public class DefaultGameLogic implements GameLogic {
                         coinsMap,
                         projectileManager);
 
-        this.movementManager = new MovementManagerImpl(gameMap, playerService.getPlayers(), crates);
-        this.envEffectsManager = new EnvironmentalEffectsManagerImpl(gameMap, playerService.getPlayers());
+        this.collisionManager = new CollisionManagerImpl(
+                        projectileManager,
+                        gameMap);
+
+        this.movementManager = new MovementManagerImpl(gameMap, playersMap, crates);
+        this.envEffectsManager = new EnvironmentalEffectsManagerImpl(gameMap, playersMap);
         this.zoneManager = new ZoneManagerImpl();
         this.npcManager  = new NPCManagerImpl(gameMap, npcs);
+
 
     }
 
@@ -151,7 +160,15 @@ public class DefaultGameLogic implements GameLogic {
         // 3) Zone-Shrink & Schaden außerhalb
         zoneManager.updateZone(delta, playerService.getPlayers());
         // 4) NPC-KI (Bewegung & melee)
-        npcManager.updateNPCs(delta, playerService.getPlayers(), npcs);
+        npcManager.updateNPCs(delta, playerService.getPlayers());
+
+        collisionManager.processCollisions(
+                projectileManager.getProjectiles(),
+                playerService.getPlayers(),
+                npcs,
+                crates,
+                playerService.getPlayerCoins()
+        );
     }
 
     @Override
@@ -170,6 +187,8 @@ public class DefaultGameLogic implements GameLogic {
         @Override
         public void updateProjectiles (float delta) {
             projectileManager.updateProjectiles(delta);
+
+            collisionManager.processCollisions(projectileManager.getProjectiles(), playerService.getPlayers(), npcs, crates, playerService.getPlayerCoins());
         }
 
     @Override
@@ -234,7 +253,7 @@ public class DefaultGameLogic implements GameLogic {
 
     @Override
     public Position getPlayerPosition (String playerId){
-        return playerService.getPlayerPosition(playerId).getPosition();
+        return playerService.getPlayerPosition(playerId);
     }
 
 }

@@ -17,36 +17,45 @@ public class NPCManagerImpl implements NPCManager {
         this.npcs    = npcs;
     }
 
+    /**
+     * Bewegt alle NPCs und führt Melee-Attacken aus.
+     *
+     * @param deltaSec Zeit seit letztem Frame in Sekunden.
+     * @param players  Map aller Spieler (id → Player).
+     */
     @Override
-    public void updateNPCs(float deltaSec, Map<String, Player> players, List<NPC> npcs) {
+    public void updateNPCs(float deltaSec, Map<String, Player> players) {
         long now = System.currentTimeMillis();
 
-        for (NPC npc : npcs) {
-            // 1) nächster lebender Spieler
+        for (NPC npc : this.npcs) {
+            if (npc.getCurrentHealth() <= 0) continue;
+
+            // --- 1) Nächster lebender Spieler finden ---
             Player target = null;
             float minDist = Float.MAX_VALUE;
             for (Player p : players.values()) {
                 if (p.getCurrentHealth() <= 0) continue;
                 float dx = p.getPosition().getX() - npc.getPosition().getX();
                 float dy = p.getPosition().getY() - npc.getPosition().getY();
-                float d = (float) Math.hypot(dx, dy);
+                float d  = (float) Math.hypot(dx, dy);
                 if (d < minDist) {
                     minDist = d;
-                    target = p;
+                    target  = p;
                 }
             }
             if (target == null) continue;
 
-            // 2) Blickwinkel berechnen
+            // --- 2) Richtung berechnen ---
             float dx = target.getPosition().getX() - npc.getPosition().getX();
             float dy = target.getPosition().getY() - npc.getPosition().getY();
             float angle = (float) Math.atan2(dy, dx);
 
-            // 3) Bewegung außerhalb Angriffsreichweite
+            // --- 3) Bewegung oder nur drehen ---
             if (minDist > npc.getAttackRadius()) {
                 float len = (float) Math.hypot(dx, dy);
                 if (len > 0) {
-                    float nx = dx / len, ny = dy / len;
+                    float nx = dx / len;
+                    float ny = dy / len;
                     float moveX = npc.getPosition().getX() + nx * npc.getSpeed() * deltaSec;
                     float moveY = npc.getPosition().getY() + ny * npc.getSpeed() * deltaSec;
                     int tx = (int) (moveX / gameMap.getTileWidth());
@@ -55,25 +64,22 @@ public class NPCManagerImpl implements NPCManager {
                         npc.setPosition(new Position(moveX, moveY, angle));
                     } else {
                         // Hindernis: nur drehen
-                        npc.setPosition(new Position(
-                                npc.getPosition().getX(),
+                        npc.setPosition(new Position(npc.getPosition().getX(),
                                 npc.getPosition().getY(),
-                                angle
-                        ));
+                                angle));
                     }
                 }
             } else {
                 // innerhalb Reichweite: nur drehen
-                npc.setPosition(new Position(
-                        npc.getPosition().getX(),
+                npc.setPosition(new Position(npc.getPosition().getX(),
                         npc.getPosition().getY(),
-                        angle
-                ));
+                        angle));
             }
 
-            // 4) Melee-Angriff, wenn in Reichweite und Cooldown vorbei
+            // --- 4) Melee-Angriff wenn Cooldown vorbei ---
             if (minDist <= npc.getAttackRadius()
                     && now - npc.getLastAttackTime() >= npc.getAttackCooldownMs()) {
+
                 int newHp = Math.max(0, target.getCurrentHealth() - npc.getDamage());
                 target.setCurrentHealth(newHp);
                 if (newHp == 0) {

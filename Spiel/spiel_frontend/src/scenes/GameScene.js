@@ -60,7 +60,7 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
         this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
         this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
-        this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
+        this.load.image('npc', '/assets/PNG/Survivor1/survivor1_hold.png');
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
 

@@ -32,6 +32,6 @@ public interface ProjectileManager {
     int getMaxAmmoForType(ProjectileType type);
 
     void initPlayer(String playerId, ProjectileType initialWeapon);
-    void removePlayer(String playerId);
+    void removeProjectile(String playerId);
     void setWeapon(String playerId, ProjectileType weapon);
 }

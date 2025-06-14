@@ -12,7 +12,7 @@ public interface NPCManager {
      *
      * @param deltaSec Zeit seit letztem Frame in Sekunden
      * @param players  Map aller lebenden Spieler (playerId → Player)
-     * @param npcs     Liste aller NPCs
+     *
      */
-    void updateNPCs(float deltaSec, Map<String, Player> players, List<NPC> npcs);
+    void updateNPCs(float deltaSec, Map<String, Player> players);
 }

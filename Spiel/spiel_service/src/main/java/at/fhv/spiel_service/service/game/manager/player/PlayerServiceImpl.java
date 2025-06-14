@@ -1,10 +1,7 @@
 package at.fhv.spiel_service.service.game.manager.player;
 
 import at.fhv.spiel_service.domain.*;
-import at.fhv.spiel_service.service.game.manager.player.IPlayerService;
-import at.fhv.spiel_service.service.game.manager.player.IPlayerService;
 import at.fhv.spiel_service.service.game.manager.projectile.ProjectileManager;
-import lombok.Data;
 import lombok.Getter;
 
 import java.util.*;
@@ -71,7 +68,7 @@ public class PlayerServiceImpl implements IPlayerService {
     @Override
     public void removePlayer(String playerId) {
         players.remove(playerId);
-        projectileManager.removePlayer(playerId);
+        projectileManager.removeProjectile(playerId);
         playerBrawler.remove(playerId);
         playerNames.remove(playerId);
         playerGadget.remove(playerId);

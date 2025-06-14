@@ -4,6 +4,7 @@ import at.fhv.spiel_service.domain.*;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 import static at.fhv.spiel_service.domain.ProjectileType.*;
 
@@ -70,8 +71,7 @@ public class ProjectileManagerImpl implements ProjectileManager {
     public void updateProjectiles(float delta) {
         long now = System.currentTimeMillis();
 
-
-        java.util.function.Function<String, Float> getSpeedFactor = shooterId -> {
+        Function<String, Float> getSpeedFactor = shooterId -> {
             Player shooter = getPlayer(shooterId);
             if (shooter != null
                     && shooter.isSpeedBoostActive()
@@ -84,7 +84,6 @@ public class ProjectileManagerImpl implements ProjectileManager {
         Iterator<Projectile> it = projectiles.values().iterator();
         while (it.hasNext()) {
             Projectile p = it.next();
-
             // --- Bewegung & Travelled ---
             if (p.getProjectileType() != MINE) {
                 // 1) Normierung
@@ -154,14 +153,14 @@ public class ProjectileManagerImpl implements ProjectileManager {
             }
 
             // --- Wand-Kollision ---
-            int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
-            int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
-            if (p.getProjectileType() != MINE) {
-                if (gameMap.isWallAt(tx, ty)) {
-                    it.remove();
-                    continue;
-                }
-            }
+//            int tx = (int) (p.getPosition().getX() / gameMap.getTileWidth());
+//            int ty = (int) (p.getPosition().getY() / gameMap.getTileHeight());
+//            if (p.getProjectileType() != MINE) {
+//                if (gameMap.isWallAt(tx, ty)) {
+//                    it.remove();
+//                    continue;
+//                }
+//            }
 
             // --- Treffer mit NPCs prüfen ---
 //            for (NPC npc : npcs) {
@@ -179,9 +178,9 @@ public class ProjectileManagerImpl implements ProjectileManager {
 //            }
 
 
-            int tileX = (int)(p.getPosition().getX() / gameMap.getTileWidth());
-            int tileY = (int)(p.getPosition().getY() / gameMap.getTileHeight());
-            String key = tileX + "," + tileY;
+//            int tileX = (int)(p.getPosition().getX() / gameMap.getTileWidth());
+//            int tileY = (int)(p.getPosition().getY() / gameMap.getTileHeight());
+//            String key = tileX + "," + tileY;
 
             //Crate crate = crates.get(key);
 //            if (crate != null) {
@@ -207,27 +206,27 @@ public class ProjectileManagerImpl implements ProjectileManager {
 //            }
 
             // --- Spieler-Kollision ---
-            for (Player target : players.values()) {
-                if (target.getId().equals(p.getPlayerId())) continue;
-                float dx = target.getPosition().getX() - p.getPosition().getX();
-                float dy = target.getPosition().getY() - p.getPosition().getY();
-                float radius = 32f;
-                if (Math.hypot(dx, dy) <= radius) {
-                    Player shooter = players.get(p.getPlayerId());
-                    int damage = p.getDamage();
-                    if (shooter.isDamageBoostActive()
-                            && System.currentTimeMillis() <= shooter.getDamageBoostEndTime()) {
-                        damage *= Player.DAMAGE_MULTIPLIER;
-                    }target.setCurrentHealth(
-                            Math.max(0, target.getCurrentHealth() - damage)
-                    );
-                    if (target.getCurrentHealth() <= 0) {
-                        target.setVisible(false);
-                    }
-                    it.remove();
-                    break;
-                }
-            }
+//            for (Player target : players.values()) {
+//                if (target.getId().equals(p.getPlayerId())) continue;
+//                float dx = target.getPosition().getX() - p.getPosition().getX();
+//                float dy = target.getPosition().getY() - p.getPosition().getY();
+//                float radius = 32f;
+//                if (Math.hypot(dx, dy) <= radius) {
+//                    Player shooter = players.get(p.getPlayerId());
+//                    int damage = p.getDamage();
+//                    if (shooter.isDamageBoostActive()
+//                            && System.currentTimeMillis() <= shooter.getDamageBoostEndTime()) {
+//                        damage *= Player.DAMAGE_MULTIPLIER;
+//                    }target.setCurrentHealth(
+//                            Math.max(0, target.getCurrentHealth() - damage)
+//                    );
+//                    if (target.getCurrentHealth() <= 0) {
+//                        target.setVisible(false);
+//                    }
+//                    it.remove();
+//                    break;
+//                }
+//            }
         }
 
         // --- Lifetime & Range Cleanup (non-mines) ---
@@ -329,7 +328,6 @@ public class ProjectileManagerImpl implements ProjectileManager {
 
     @Override
     public void initPlayer(String playerId, ProjectileType initialWeapon) {
-
         playerWeapon.put(playerId, initialWeapon);
 
         // Init Ammo-Maps
@@ -344,7 +342,7 @@ public class ProjectileManagerImpl implements ProjectileManager {
     }
 
     @Override
-    public void removePlayer(String playerId) {
+    public void removeProjectile(String playerId) {
 
         projectiles.values().removeIf(p -> p.getPlayerId().equals(playerId));
         // Ammo-Maps aufräumen
@@ -359,7 +357,6 @@ public class ProjectileManagerImpl implements ProjectileManager {
 
     @Override
     public void setWeapon(String playerId, ProjectileType weapon) {
-
         playerWeapon.put(playerId, weapon);
         long now = System.currentTimeMillis();
 
@@ -378,4 +375,5 @@ public class ProjectileManagerImpl implements ProjectileManager {
     public Player getPlayer(String playerId) {
         return players.get(playerId);
     }
+
 }

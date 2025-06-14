@@ -17,6 +17,7 @@ public class ZoneManagerImpl implements ZoneManager {
 
     @Override
     public void initZone(Position center, float startRadius, float shrinkRate) {
+
         this.zoneCenter = center;
         this.zoneRadius = startRadius;
         this.zoneShrinkRate = shrinkRate;
