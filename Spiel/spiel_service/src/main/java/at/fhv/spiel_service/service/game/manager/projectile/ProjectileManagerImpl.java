@@ -376,4 +376,9 @@ public class ProjectileManagerImpl implements ProjectileManager {
         return players.get(playerId);
     }
 
+    @Override
+    public void removeProjectileById(String projectileId) {
+        projectiles.remove(projectileId);
+    }
+
 }

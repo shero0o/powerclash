@@ -7,6 +7,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static at.fhv.spiel_service.domain.ProjectileType.MINE;
+
 public class CollisionManagerImpl implements CollisionManager {
     private final ProjectileManager projectileManager;
     private final GameMap gameMap;
@@ -37,7 +39,7 @@ public class CollisionManagerImpl implements CollisionManager {
                 float dy = npc.getPosition().getY() - p.getPosition().getY();
                 if (Math.hypot(dx, dy) < 40f) {
                     npc.setCurrentHealth(Math.max(0, npc.getCurrentHealth() - p.getDamage()));
-                    projectileManager.removeProjectile(p.getId());
+                    projectileManager.removeProjectileById(p.getId());
                     hit = true;
                     break;
                 }
@@ -52,7 +54,7 @@ public class CollisionManagerImpl implements CollisionManager {
             if (crate != null) {
                 crate.setWasHit(true);
                 crate.setCurrentHealth(Math.max(0, crate.getCurrentHealth() - p.getDamage()));
-                projectileManager.removeProjectile(p.getId());
+                projectileManager.removeProjectileById(p.getId());
                 if (crate.getCurrentHealth() <= 0) {
                     crates.remove(key);
                     playerCoins.merge(shooterId, 10, Integer::sum);
@@ -60,12 +62,11 @@ public class CollisionManagerImpl implements CollisionManager {
                 continue;
             }
 
-            if (gameMap.isWallAt(tx, ty)) {
-                // Projektil zerstören
-                projectileManager.removeProjectile(p.getId());
-                it.remove();
-                continue;
+            if (p.getProjectileType() != MINE && gameMap.isWallAt(tx, ty)) {
+                    projectileManager.removeProjectileById(p.getId());
+                    continue;
             }
+
 
             // 4) Spieler-Treffer
             for (Player target : players.values()) {
@@ -84,7 +85,7 @@ public class CollisionManagerImpl implements CollisionManager {
                     if (target.getCurrentHealth() == 0) {
                         target.setVisible(false);
                     }
-                    projectileManager.removeProjectile(p.getId());
+                    projectileManager.removeProjectileById(p.getId());
                     break;
                 }
             }

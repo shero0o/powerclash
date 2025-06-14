@@ -34,4 +34,6 @@ public interface ProjectileManager {
     void initPlayer(String playerId, ProjectileType initialWeapon);
     void removeProjectile(String playerId);
     void setWeapon(String playerId, ProjectileType weapon);
+
+    void removeProjectileById(String projectileId);
 }
