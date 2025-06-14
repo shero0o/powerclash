@@ -6,9 +6,9 @@ import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
 import at.fhv.spiel_service.dto.*;
 import at.fhv.spiel_service.service.game.logic.DefaultIGameLogic;
-import at.fhv.spiel_service.service.room.GameRoomImpl;
-import at.fhv.spiel_service.service.room.IGameRoom;
-import at.fhv.spiel_service.service.room.IRoomManager;
+import at.fhv.spiel_service.service.gameSession.GameSessionImpl;
+import at.fhv.spiel_service.service.gameSession.IGameSession;
+import at.fhv.spiel_service.service.room.IRoomService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ public class SocketIOConfig {
     private static final Logger log = LoggerFactory.getLogger(SocketIOConfig.class);
 
     @Bean(destroyMethod = "stop")
-    public SocketIOServer socketIOServer(@Lazy IRoomManager roomManager) {
+    public SocketIOServer socketIOServer(@Lazy IRoomService roomManager) {
         com.corundumstudio.socketio.Configuration config = new com.corundumstudio.socketio.Configuration();
         config.setHostname("localhost");
         config.setPort(8081);
@@ -34,17 +34,17 @@ public class SocketIOConfig {
 
         // joinRoom
         server.addEventListener("joinRoom", JoinRequestDTO.class, (client, data, ack) -> {
-            String roomId = roomManager.assignToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
+            String roomId = roomManager.assignPlayerToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
             client.joinRoom(roomId);
             // initial state
-            roomManager.getRoom(roomId).buildStateUpdate();
-            server.getRoomOperations(roomId).sendEvent("stateUpdate", roomManager.getRoom(roomId).buildStateUpdate());
+            roomManager.getGameRoom(roomId).buildStateUpdate();
+            server.getRoomOperations(roomId).sendEvent("stateUpdate", roomManager.getGameRoom(roomId).buildStateUpdate());
 
             if (data.getChosenWeapon() != null) {
-                roomManager.getRoom(roomId).getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getChosenWeapon());
+                roomManager.getGameRoom(roomId).getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getChosenWeapon());
             }
             if (data.getChosenGadget() != null) {
-                roomManager.getRoom(roomId).getGameLogic().setPlayerGadget(data.getPlayerId(), data.getChosenGadget());
+                roomManager.getGameRoom(roomId).getGameLogic().setPlayerGadget(data.getPlayerId(), data.getChosenGadget());
             }
             ack.sendAckData(new JoinResponseDTO(roomId));
         });
@@ -53,13 +53,13 @@ public class SocketIOConfig {
         server.addEventListener("waitingReady", WaitingReadyDTO.class,
                 (client, data, ack) -> {
                     String incoming = data.getRoomId();
-                    IGameRoom room = roomManager.getRoom(incoming);
+                    IGameSession room = roomManager.getGameRoom(incoming);
                     if (room == null) {
-                        String newId = roomManager.assignToRoom(
+                        String newId = roomManager.assignPlayerToRoom(
                                 data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
                         client.joinRoom(newId);
                         ack.sendAckData(new JoinResponseDTO(newId));
-                        room = roomManager.getRoom(newId);
+                        room = roomManager.getGameRoom(newId);
                         log.info("Auto-created room {} for player {}", newId, data.getPlayerId());
                     } else {
                         ack.sendAckData("ok");
@@ -75,7 +75,7 @@ public class SocketIOConfig {
         // move
         server.addEventListener("move", MoveRequestDTO.class,
                 (client, data, ack) -> {
-                    GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+                    GameSessionImpl room = (GameSessionImpl) roomManager.getGameRoom(data.getRoomId());
                     if (room == null) {
                         log.warn("Received MOVE for unknown room {}", data.getRoomId());
                         ack.sendAckData("error: room_not_found");
@@ -93,7 +93,7 @@ public class SocketIOConfig {
         // shootProjectile
         server.addEventListener("shootProjectile", ShootProjectileDTO.class,
                 (client, data, ack) -> {
-                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+                    IGameSession room = roomManager.getGameRoom(data.getRoomId());
                     if (room != null) {
                         room.getGameLogic().spawnProjectile(
                                 data.getPlayerId(),
@@ -109,7 +109,7 @@ public class SocketIOConfig {
         // changeWeapon
         server.addEventListener("changeWeapon", ChangeWeaponDTO.class,
                 (client, data, ack) -> {
-                    IGameRoom room = roomManager.getRoom(data.getRoomId());
+                    IGameSession room = roomManager.getGameRoom(data.getRoomId());
                     room.getGameLogic().setPlayerWeapon(data.getPlayerId(), data.getProjectileType());
                     ack.sendAckData("ok");
                 }
@@ -118,7 +118,7 @@ public class SocketIOConfig {
         // useGadget
         server.addEventListener("useGadget", UseGadgetDTO.class,
                 (client, data, ack) -> {
-                    GameRoomImpl room = (GameRoomImpl) roomManager.getRoom(data.getRoomId());
+                    GameSessionImpl room = (GameSessionImpl) roomManager.getGameRoom(data.getRoomId());
                     DefaultIGameLogic logic = (DefaultIGameLogic) room.getGameLogic();
                     Player p = logic.getPlayer(data.getPlayerId());
                     Gadget g = room.getGameLogic().getGadget(data.getPlayerId());
@@ -158,7 +158,7 @@ public class SocketIOConfig {
 
         // leaveRoom
         server.addEventListener("leaveRoom", LeaveRoomDTO.class, (client, data, ack) -> {
-            roomManager.removeFromRoom(data.getPlayerId());
+            roomManager.removePlayerFromRoom(data.getPlayerId());
             log.info("Player {} left the room", data.getPlayerId());
             ack.sendAckData("ok");
         });
@@ -173,7 +173,7 @@ public class SocketIOConfig {
         server.addDisconnectListener(client -> {
             String playerId = client.getHandshakeData().getSingleUrlParam("playerId");
             if (playerId != null) {
-                roomManager.removeFromRoom(playerId);
+                roomManager.removePlayerFromRoom(playerId);
                 log.info("Player {} disconnected and was removed from their room", playerId);
             }
         });

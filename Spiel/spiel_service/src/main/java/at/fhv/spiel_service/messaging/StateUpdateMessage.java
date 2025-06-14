@@ -20,5 +20,4 @@ public class StateUpdateMessage {
     private List<NPC> npcs = new ArrayList<>();
     private List<Gadget>      gadgets = new ArrayList<>();
 
-
 }
