@@ -71,11 +71,6 @@ public interface GameLogic {
     Position getPlayerPosition(String playerId);
 
     /**
-     * Retrieve all active projectiles for state updates
-     */
-    List<Projectile> getProjectiles();
-
-    /**
      * Change the current weapon & reset ammo
      */
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
@@ -84,6 +79,5 @@ public interface GameLogic {
 
     void applyEnvironmentalEffects();
 
-    List<Crate> getCrates();
 
 }

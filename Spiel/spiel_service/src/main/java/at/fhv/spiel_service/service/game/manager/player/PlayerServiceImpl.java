@@ -68,7 +68,7 @@ public class PlayerServiceImpl implements IPlayerService {
     @Override
     public void removePlayer(String playerId) {
         players.remove(playerId);
-        projectileManager.removeProjectile(playerId);
+        projectileManager.removeProjectileById(playerId);
         playerBrawler.remove(playerId);
         playerNames.remove(playerId);
         playerGadget.remove(playerId);

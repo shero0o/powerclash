@@ -726,31 +726,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
 
-// Cleanup despawned NPCs
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
-
-
-        // cleanup
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
-
 
         // ─── render players & health ───────────────────────
         const connected = this.latestState.players
@@ -987,43 +962,40 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-
         const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
 
 
-
-
         // 2) Wenn man selbst gerade gestorben ist
-        if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-            // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
-            // Platz des Verstorbenen = alivePlayers + 1
-            const place = alivePlayers + 1;
-
-            const baseCoins = me.coinCount ?? 0;
-
-            // Bonus-/Malus-Berechnung nach Platz
-            let bonus = 0;
-            switch (place) {
-                case 1:
-                    bonus = 10;
-                    break;
-                case 2:
-                    bonus = 5;
-                    break;
-                case 3:
-                    bonus = 0;
-                    break;
-                case 4:
-                    bonus = -10;
-                    break;
-                default:
-                    bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
-            }
-            const totalCoins = baseCoins + bonus;
-
-            this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
-            this.defeatShown = true;
-        }
+        // if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
+        //     // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
+        //     // Platz des Verstorbenen = alivePlayers + 1
+        //     const place = alivePlayers + 1;
+        //
+        //     const baseCoins = me.coinCount ?? 0;
+        //
+        //     // Bonus-/Malus-Berechnung nach Platz
+        //     let bonus = 0;
+        //     switch (place) {
+        //         case 1:
+        //             bonus = 10;
+        //             break;
+        //         case 2:
+        //             bonus = 5;
+        //             break;
+        //         case 3:
+        //             bonus = 0;
+        //             break;
+        //         case 4:
+        //             bonus = -10;
+        //             break;
+        //         default:
+        //             bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
+        //     }
+        //     const totalCoins = baseCoins + bonus;
+        //
+        //     this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
+        //     this.defeatShown = true;
+        // }
 
         console.log("KEYS:", {
             W: this.keys.up.isDown,

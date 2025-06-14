@@ -146,11 +146,6 @@ public class DefaultGameLogic implements GameLogic {
     }
 
     @Override
-    public List<Crate> getCrates () {
-        return new ArrayList<>(crates.values());
-    }
-
-    @Override
     public void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type) {
         projectileManager.spawnProjectile(playerId, position, direction, type);
         }
@@ -165,11 +160,6 @@ public class DefaultGameLogic implements GameLogic {
     @Override
     public StateUpdateMessage buildStateUpdate() {
         return stateUpdateManager.buildStateUpdate();
-    }
-
-    @Override
-    public List<Projectile> getProjectiles () {
-        return projectileManager.getProjectiles();
     }
 
     @Override
