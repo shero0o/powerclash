@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 
-const API_BASE = 'http://localhost:8092/api/shop_catalogue';
+const API_BASE = 'http://localhost:8091/api/shop_catalogue';
+const API_BASE2 = 'http://localhost:8092/api/wallet';
+
 
 export default class ShopScene extends Phaser.Scene {
     constructor() {
@@ -12,15 +14,12 @@ export default class ShopScene extends Phaser.Scene {
         this.graphics     = null;
         this.rectX        = 0;
         this.rectY        = 0;
-        this.rectWidth    = 100;
         this.rectHeight   = 40;
         this.cornerRadius = 4;
         this.strokeWidth  = 3;
-        this.coinX        = 1020;  // x-pos für Coin-Icon
-        this.coinY        = 50;  // y-pos für Coin-Icon
-        this.coinSize     = 60;  // Größe (60×60) für Coin-Icon
-        this.coinContainer= null;
-        this.settingsOpen = false;
+        this.settingsOpen = true;
+        this.shopContainer= null;
+        this.scrollMask   = null;
     }
 
     init() {
@@ -71,7 +70,7 @@ export default class ShopScene extends Phaser.Scene {
 
         this._createCoinDisplay();
 
-        const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
+        const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
             .setInteractive({ useHandCursor: true })
@@ -96,123 +95,18 @@ export default class ShopScene extends Phaser.Scene {
                 this.scene.start('LobbyScene');
             });
 
-        // --- NEU: Shop Items laden und anzeigen ---
         try {
-            const catalogueRes = await fetch(`http://localhost:8092/api/shop/catalogue`);
-            const catalogue = await catalogueRes.json();
-            this._showShopCatalogue(catalogue);
+            await this._refreshShopItems();
         } catch (err) {
             console.error('Fehler beim Laden der Shop-Items:', err);
         }
 
     }
 
-    _showShopCatalogue(catalogue) {
-        const { width, height } = this.scale;
-        const startX = 300;
-        const startY = 200;
-        const rowHeight = 120;
-
-        const brawlerImageMap = {
-            'sniper': 'avatar2',
-            'mage': 'avatar3',
-            'healer': 'avatar4',
-            'tank': 'avatar5'
-        };
-
-        const gadgetImageMap = {
-            'SPEED_BOOST': 'gadget_speed',
-            'DAMAGE_BOOST': 'gadget_damage',
-            'HEALTH_BOOST': 'gadget_health'
-        };
-
-        catalogue.forEach((item, index) => {
-            const y = startY + index * rowHeight;
-
-            // → Image Key ermitteln (nur für Brawler & Gadget)
-            let imageKey = null;
-            if (item.type === 'BRAWLER') {
-                imageKey = brawlerImageMap[item.id] || 'avatar2';
-            } else if (item.type === 'GADGET') {
-                imageKey = gadgetImageMap[item.id] || 'gadget_speed';
-            }
-
-            // → LEVEL → nur Text, KEIN Bild
-            if (item.type === 'LEVEL') {
-                this.add.text(startX, y, `${item.name} (${item.type})`, {
-                    fontFamily: 'Arial',
-                    fontSize: '24px',
-                    color: '#ffffff'
-                });
-
-                this.add.text(startX, y + 30, `Preis: ${item.price} Coins`, {
-                    fontFamily: 'Arial',
-                    fontSize: '20px',
-                    color: '#ffff00'
-                });
-            } else {
-                // → Brawler oder Gadget → Bild + Text
-                if (imageKey) {
-                    this.add.image(startX - 100, y, imageKey)
-                        .setOrigin(0.5)
-                        .setDisplaySize(80, 80);
-                }
-
-                this.add.text(startX, y, `${item.name} (${item.type})`, {
-                    fontFamily: 'Arial',
-                    fontSize: '24px',
-                    color: '#ffffff'
-                });
-
-                this.add.text(startX, y + 30, `Preis: ${item.price} Coins`, {
-                    fontFamily: 'Arial',
-                    fontSize: '20px',
-                    color: '#ffff00'
-                });
-            }
-
-            // → Kaufen-Button
-            const buyButton = this.add.text(startX + 500, y + 15, 'KAUFEN', {
-                fontFamily: 'Arial',
-                fontSize: '24px',
-                color: '#00ff00',
-                backgroundColor: '#333',
-                padding: { x: 10, y: 5 }
-            })
-                .setInteractive({ useHandCursor: true })
-                .on('pointerdown', async () => {
-                    try {
-                        const res = await fetch(`http://localhost:8092/api/wallet/purchase`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                playerId: this.playerId,
-                                shopItemId: item.id
-                            })
-                        });
-
-                        if (res.ok) {
-                            alert(`Erfolgreich gekauft: ${item.name}`);
-                            this._refreshCoinDisplay();
-                        } else {
-                            const error = await res.text();
-                            alert(`Fehler beim Kauf: ${error}`);
-                        }
-                    } catch (err) {
-                        console.error('Fehler beim Kauf:', err);
-                    }
-                });
-        });
-    }
-
-
-
-
     async _refreshCoinDisplay() {
-        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
+        const coins = await fetch(`${API_BASE2}/coins?playerId=${this.playerId}`).then(r => r.json());
         this.coinText.setText(`${coins}`);
     }
-
 
     async _createCoinDisplay() {
         const coinX = 1020;
@@ -233,7 +127,7 @@ export default class ShopScene extends Phaser.Scene {
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
 
         // Text
-        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
+        const coins = await fetch(`${API_BASE2}/coins?playerId=${this.playerId}`).then(r => r.json());
 
         const textX = rectX + rectWidth / 2;
         const textY = rectY + rectHeight / 2;
@@ -284,4 +178,112 @@ export default class ShopScene extends Phaser.Scene {
                 closeBtn.destroy();
             });
     }
-}
+
+    async _loadNotOwnedItems() {
+        const paths = [
+            ['BRAWLER', 'brawlers/player/notOwned'],
+            ['GADGET',  'gadgets/player/notOwned'],
+            ['LEVEL',   'levels/player/notOwned']
+        ];
+        const results = {};
+        await Promise.all(paths.map(async ([type, path]) => {
+            const res = await fetch(`${API_BASE2}/${path}?playerId=${this.playerId}`);
+            const data = await res.json();
+            results[type] = data;
+        }));
+        return results;
+    }
+
+    _showShopItems(itemsByType) {
+        const { width, height } = this.scale;
+        const startX = 300;
+        const startY = 200;
+        const listWidth  = width - startX - 50;
+        const listHeight = height - startY - 50;
+
+        // Container positionieren
+        this.shopContainer.setPosition(startX, startY);
+
+        // Maske absolut positioniert
+        const maskShape = this.make.graphics();
+        maskShape.fillRect(0,0, listWidth, listHeight);
+        const mask = maskShape.createGeometryMask();
+        this.shopContainer.setMask(mask);
+
+        // Scroll-Bounds
+        let offsetY = 0;
+        const rowHeight = 120;
+
+        // Items rendern
+        Object.entries(itemsByType).forEach(([type, items]) => {
+            const title = this.add.text(0, offsetY, type, { fontSize: '28px', color: '#ffffff' })
+                .setOrigin(0, 0);
+            this.shopContainer.add(title);
+            offsetY += 40;
+
+            items.forEach(item => {
+            // ─── Bild des Items ───
+                const imageKey = (type === 'BRAWLER')
+                    ? { sniper:'avatar2', mage:'avatar3', healer:'avatar4', tank:'avatar5' }[item.id] || 'avatar2'
+                    : (type === 'GADGET')
+                        ? { SPEED_BOOST:'gadget_speed', DAMAGE_BOOST:'gadget_damage', HEALTH_BOOST:'gadget_health' }[item.id] || 'gadget_speed'
+                        : null;
+                if (imageKey) {
+                        const img = this.add.image(-100, offsetY + rowHeight/2, imageKey)
+                            .setOrigin(0.5)
+                            .setDisplaySize(80, 80);
+                        this.shopContainer.add(img);
+                    }
+
+                    // ─── Name und Preis ───
+                    const nameText = this.add.text(0, offsetY, `${item.name} (${type})`, {
+                    fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
+                });
+                const priceText = this.add.text(0, offsetY + 30, `Preis: ${item.price} Coins`, {
+                    fontFamily: 'Arial', fontSize: '20px', color: '#ffff00'
+                });
+                this.shopContainer.add([nameText, priceText]);
+
+                    // ─── Kaufen-Button ───
+                    const buyButton = this.add.text(400, offsetY + 15, 'KAUFEN', {
+                        fontFamily: 'Arial', fontSize: '24px', color: '#00ff00',
+                        backgroundColor: '#333', padding: { x: 10, y: 5 }
+                    })
+                    .setInteractive({ useHandCursor: true })
+                    .on('pointerdown', async () => {
+                            /* Dein Kauf-Logic hier */
+                    });
+                    this.shopContainer.add(buyButton);
+
+                // Höhe für nächstes Item reservieren
+                offsetY += rowHeight;
+            });
+        });
+
+        // Gesamt-Höhe für Scroll-Reichweite
+        this.shopContainer._totalHeight = offsetY;
+
+        // Wheel-Event nur im sichtbaren Bereich
+        this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+            // Prüfen, ob der Mauszeiger im Bereich ist
+            if (pointer.x < startX || pointer.x > startX + listWidth || pointer.y < startY || pointer.y > startY + listHeight) {
+                return;
+            }
+            const maxY = startY;
+            const minY = startY - (this.shopContainer._totalHeight - listHeight);
+            this.shopContainer.y = Phaser.Math.Clamp(this.shopContainer.y - deltaY, minY, maxY);
+        });
+    }
+
+    async _refreshShopItems() {
+        const { width, height } = this.scale;
+        const startX = 300;
+        const startY = 200;
+        const itemsByType = await this._loadNotOwnedItems();
+        if (this.shopContainer) {
+            this.shopContainer.removeAll(true);
+        }
+
+        this.shopContainer = this.add.container(300, 200);
+        this._showShopItems(itemsByType);
+}}

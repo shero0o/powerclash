@@ -48,8 +48,8 @@ public class AccountService {
                         .queryParam("playerId", p.getId())
                         .build())
                 .retrieve()
-                .bodyToMono(String.class);       // oder bodyToMono(Void.class)
-        String body = result.block();         // synchron warten :contentReference[oaicite:0]{index=0}
+                .bodyToMono(String.class);
+        String body = result.block();
 
         // optional: auf result prüfen oder loggen
         System.out.println("Assigned defaults for player " + p.getId() + ": " + body);

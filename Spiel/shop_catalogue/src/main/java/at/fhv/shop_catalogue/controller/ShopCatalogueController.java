@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "localhost:5173")
 @RestController
 @RequestMapping("/api/shop_catalogue")
 @RequiredArgsConstructor
@@ -21,26 +22,26 @@ public class ShopCatalogueController {
         return ResponseEntity.ok(shopCatalogueService.getAllShopItems(playerId));
     }
 
-    @PostMapping("/brawler/{brawlerId}/buy")
-    public ResponseEntity<Void> buyBrawler(@RequestParam Long playerId, @PathVariable Long brawlerId) {
+    @PostMapping("/brawler/buy")
+    public ResponseEntity<Void> buyBrawler(@RequestParam Long playerId, @RequestParam Long brawlerId) {
         shopCatalogueService.buyBrawler(playerId, brawlerId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/gadget/{gadgetId}/buy")
-    public ResponseEntity<Void> buyGadget(@RequestParam Long playerId, @PathVariable Long gadgetId) {
+    @PostMapping("/gadget/buy")
+    public ResponseEntity<Void> buyGadget(@RequestParam Long playerId, @RequestParam Long gadgetId) {
         shopCatalogueService.buyGadget(playerId, gadgetId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/level/{levelId}/buy")
-    public ResponseEntity<Void> buyLevel(@RequestParam Long playerId, @PathVariable Long levelId) {
+    @PostMapping("/level/buy")
+    public ResponseEntity<Void> buyLevel(@RequestParam Long playerId, @RequestParam Long levelId) {
         shopCatalogueService.buyLevel(playerId, levelId);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/player/{playerId}/purchases")
-    public ResponseEntity<List<Purchase>> getPurchases(@PathVariable Long playerId) {
+    @GetMapping("/player/purchases")
+    public ResponseEntity<List<Purchase>> getPurchases(@RequestParam Long playerId) {
         return ResponseEntity.ok(shopCatalogueService.getPurchasesForPlayer(playerId));
     }
 

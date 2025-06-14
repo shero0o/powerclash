@@ -20,6 +20,10 @@ export default class AccountScene extends Phaser.Scene {
         this.load.svg('home', '/assets/svg/btn-navigation.svg',{width:130,height:115})
         }
 
+    init() {
+        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerName = this.registry.get('playerName') || 'Not logged in';
+    }
 
     create() {
         const { width, height } = this.scale;
@@ -37,7 +41,7 @@ export default class AccountScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Statusanzeige
-        this.statusText = this.add.text(width / 2, 160, 'Not logged in', {
+        this.statusText = this.add.text(width / 2, 160, this.playerName, {
             fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
         }).setOrigin(0.5);
 

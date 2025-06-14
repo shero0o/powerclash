@@ -3,9 +3,12 @@ package at.fhv.shop_catalogue.service;
 import at.fhv.shop_catalogue.model.*;
 import at.fhv.shop_catalogue.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,39 +66,61 @@ public class ShopCatalogueService {
         return result;
     }
 
+    @Transactional
     public void buyBrawler(Long playerId, Long brawlerId) {
         Brawler brawler = brawlerRepo.findById(brawlerId)
                 .orElseThrow(() -> new RuntimeException("Brawler not found"));
 
-        // REST Call an WalletService → Brawler kaufen
-        String url = WALLET_BASE_URL + "/brawlers/buy?playerId=" + playerId + "&brawlerId=" + brawlerId;
-        restTemplate.postForEntity(url, null, Void.class);
-
+        WebClient client = WebClient.create("http://wallet-service:8092");
+        ResponseEntity<Void> result = client.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/wallet/brawlers/buy")
+                        .queryParam("playerId", playerId)
+                        .queryParam("brawlerId", brawlerId)
+                        .build())
+                .retrieve()
+                .toBodilessEntity()   // kein Body erwartet
+                .block();             // ohne block() passiert gar nichts
         // Purchase speichern
         Purchase purchase = new Purchase(playerId, ShopItemType.BRAWLER, brawlerId);
-        purchaseRepo.save(purchase);
     }
 
+    @Transactional
     public void buyGadget(Long playerId, Long gadgetId) {
         Gadget gadget = gadgetRepo.findById(gadgetId)
                 .orElseThrow(() -> new RuntimeException("Gadget not found"));
 
-        String url = WALLET_BASE_URL + "/gadgets/buy?playerId=" + playerId + "&gadgetId=" + gadgetId;
-        restTemplate.postForEntity(url, null, Void.class);
+        WebClient client = WebClient.create("http://wallet-service:8092");
+        ResponseEntity<Void> result = client.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/wallet/gadgets/buy")
+                        .queryParam("playerId", playerId)
+                        .queryParam("gadgetId", gadgetId)
+                        .build())
+                .retrieve()
+                .toBodilessEntity()
+                .block();
 
         Purchase purchase = new Purchase(playerId, ShopItemType.GADGET, gadgetId);
         purchaseRepo.save(purchase);
     }
 
+    @Transactional
     public void buyLevel(Long playerId, Long levelId) {
         Level level = levelRepo.findById(levelId)
                 .orElseThrow(() -> new RuntimeException("Level not found"));
 
-        // TODO: Aktuell KEIN buyLevel Endpoint im WalletService → später ergänzen!
-        // String url = WALLET_BASE_URL + "/levels/buy?playerId=" + playerId + "&levelId=" + levelId;
-        // restTemplate.postForEntity(url, null, Void.class);
+        WebClient client = WebClient.create("http://wallet-service:8092");
+        ResponseEntity<Void> result = client.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/api/wallet/levels/buy")
+                        .queryParam("playerId", playerId)
+                        .queryParam("levelId", levelId)
+                        .build())
+                .retrieve()
+                .toBodilessEntity()
+                .block();
 
-        // Jetzt nur Purchase speichern
         Purchase purchase = new Purchase(playerId, ShopItemType.LEVEL, levelId);
         purchaseRepo.save(purchase);
     }
