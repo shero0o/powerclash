@@ -3,6 +3,26 @@ import Phaser from 'phaser';
 
 const API_BASE = 'http://localhost:8092/api/wallet';
 
+const weaponAssetMap = {
+    RIFLE_BULLET: 'weapon_rifle',
+    SNIPER: 'weapon_sniper',
+    SHOTGUN_PELLET: 'weapon_shotgun',
+    MINE: 'weapon_mine'
+};
+
+const weaponLabels = {
+    RIFLE_BULLET: 'Rifle',
+    SNIPER: 'Sniper',
+    SHOTGUN_PELLET: 'Shotgun',
+    MINE: 'Mine'
+};
+
+const gadgetAssetMap = {
+    SPEED_BOOST: 'gadget_speed',
+    DAMAGE_BOOST: 'gadget_damage',
+    HEALTH_BOOST: 'gadget_health'
+};
+
 
 export default class InventoryScene extends Phaser.Scene {
     constructor() {
@@ -11,6 +31,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.brawlers = [];
         this.gadgets = [];
         this.levels = [];
+        this.weapons = [];
         this.selectedWeapon = null;
         this.selectedBrawler = null;
         this.selectedGadget = null;
@@ -21,6 +42,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.selectedWeapon  = data.weapon;
         this.selectedBrawler = data.brawler;
         this.selectedGadget  = data.gadget;
+        this.selectedLevel   = data.level;
         this.playerId   = this.registry.get('playerId')   || 1;
         this.playerName = this.registry.get('playerName') || 'Player';
     }
@@ -58,9 +80,9 @@ export default class InventoryScene extends Phaser.Scene {
         try {
             const [coinsRes, brawlersRes, gadgetsRes, levelsRes, weaponsRes, selectedRes] = await Promise.all([
                 fetch(`${API_BASE}/coins?playerId=${this.playerId}`),
-                fetch(`${API_BASE}/brawlers`),
-                fetch(`${API_BASE}/gadgets`),
-                fetch(`${API_BASE}/levels`),
+                fetch(`${API_BASE}/brawlers?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/gadgets?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/levels?playerId=${this.playerId}`),
                 fetch(`${API_BASE}/weapons`),
                 fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
             ]);
@@ -147,7 +169,6 @@ export default class InventoryScene extends Phaser.Scene {
         this._showWeaponOptions();
     }
 
-
     switchTab(label) {
         if (this.currentTab === label) return;
         // alte Inhalte löschen
@@ -202,6 +223,10 @@ export default class InventoryScene extends Phaser.Scene {
                     .setOrigin(0.5, 0)
                     .tabged = true;
             }
+
+            if (w.id === this.selectedWeapon) {
+                this._drawFrame(x, y, 120, 120);
+            }
         });
 
     }
@@ -241,9 +266,15 @@ export default class InventoryScene extends Phaser.Scene {
                     .setOrigin(0.5, 0)
                     .tabged = true;
             }
-        });
-    }
 
+            if (info.id === this.selectedBrawler) {
+                const displayWidth = spr.displayWidth;
+                const displayHeight = spr.displayHeight;
+                this._drawFrame(x, y, displayWidth, displayHeight);
+            }
+        });
+
+    }
 
     _showGadgetOptions() {
         const { width, height } = this.scale;
@@ -279,20 +310,44 @@ export default class InventoryScene extends Phaser.Scene {
                     .setOrigin(0.5, 0)
                     .tabged = true;
             }
+
+            if (g.id === this.selectedGadget) {
+                const displayWidth = spr.displayWidth;
+                const displayHeight = spr.displayHeight;
+                this._drawFrame(x, y, displayWidth, displayHeight);
+            }
         });
     }
 
-    finish() {
+    async finish() {
+        // Auswahl speichern auf Server
+        try {
+            await fetch(`${API_BASE}/selected`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    playerId: this.playerId,
+                    weaponId: this.selectedWeapon,
+                    brawlerId: this.selectedBrawler,
+                    gadgetId: this.selectedGadget,
+                    levelId: this.selectedLevel
+                })
+            });
+        } catch (err) {
+            console.error('Save selection error:', err);
+        }
+
         // persist all three selections
-        this.registry.set('weapon',  this.selectedWeapon);
+        this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
-        this.registry.set('gadget',  this.selectedGadget);
+        this.registry.set('gadget', this.selectedGadget);
 
         // notify lobby and close
         this.scene.get('LobbyScene').events.emit('inventoryDone');
         this.scene.stop();
         this.scene.resume('LobbyScene');
     }
+
     async _createCoinDisplay() {
         const coinX = 1020;
         const coinY = 50;
@@ -475,6 +530,13 @@ export default class InventoryScene extends Phaser.Scene {
             });
 
 
+    }
+
+    _drawFrame(x, y, width, height) {
+        const gfx = this.add.graphics();
+        gfx.lineStyle(4, 0xffff00);
+        gfx.strokeRect(x - width/2, y - height/2, width, height);
+        gfx.tabged = true;
     }
 
 
