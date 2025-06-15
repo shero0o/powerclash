@@ -57,11 +57,11 @@ export default class GameScene extends Phaser.Scene {
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
 
         // brawlers
-        this.load.image('brawler_sniper', '/assets/PNG/Hitman_1/hitman1_gun.png');
-        this.load.image('brawler_tank',   '/assets/PNG/Robot_1/robot1_machine.png');
-        this.load.image('brawler_mage',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
-        this.load.image('brawler_healer', '/assets/PNG/Woman_Green/womanGreen_machine.png');
-        this.load.image('npc', '/assets/PNG/Zombie/zoimbie1_hold.png');
+        this.load.image('hitman1', '/assets/PNG/Hitman_1/hitman1_gun.png');
+        this.load.image('robot1',   '/assets/PNG/Robot_1/robot1_machine.png');
+        this.load.image('soldier1',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
+        this.load.image('womanGreen', '/assets/PNG/Woman_Green/womanGreen_machine.png');
+        this.load.image('npc', '/assets/PNG/Survivor1/survivor1_hold.png');
 
         this.load.svg("exitButtonSvg", "assets/svg/btn-exit.svg", { width: 190, height: 90 })
 
@@ -453,7 +453,8 @@ export default class GameScene extends Phaser.Scene {
         if (!meSprite || !meState || meState.ammo <= 0) return;
 
         const emitShot = () => {
-            const dir = new Phaser.Math.Vector2(pointer.worldX - meSprite.x, pointer.worldY - meSprite.y).normalize();
+            const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            const dir = new Phaser.Math.Vector2(worldPoint.x - meSprite.x, worldPoint.y - meSprite.y).normalize();
             this.socket.emit('shootProjectile', {
                 roomId: this.roomId,
                 playerId: this.playerId,
@@ -484,10 +485,10 @@ export default class GameScene extends Phaser.Scene {
 
     getBrawlerSpriteName(brawlerId) {
         switch (brawlerId) {
-            case 'tank':   return 'brawler_tank';
-            case 'mage':   return 'brawler_mage';
-            case 'healer': return 'brawler_healer';
-            default:       return 'brawler_sniper';
+            case 'robot':   return 'robot1';
+            case 'soldier':   return 'soldier1';
+            case 'woman': return 'womanGreen';
+            default:       return 'hitman1';
         }
     }
 
@@ -653,7 +654,7 @@ export default class GameScene extends Phaser.Scene {
             let bar = this.npcBars[npc.id];
             let label = this.npcLabels[npc.id];
 
-            if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
+            if (!spr && npc.currentHealth > 0 && (npc.visible || me)) {
                 // a) main sprite
                 spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
                     .setOrigin(0.5);
@@ -675,8 +676,10 @@ export default class GameScene extends Phaser.Scene {
             }
 
             // 2) Update position & rotation
-            spr.setPosition(npc.position.x, npc.position.y)
-                .setRotation(npc.position.angle);
+            if (spr) {
+                spr.setPosition(npc.position.x, npc.position.y)
+                    .setRotation(npc.position.angle);
+            }
 
             // 3) Redraw health bar above the sprite
             const maxHp = 50; // or pull from npc.maxHealth if you have it
@@ -697,16 +700,18 @@ export default class GameScene extends Phaser.Scene {
                 );
 
             // 4) Position the “NPC” label just above the bar
-            label.setPosition(
-                npc.position.x,
-                npc.position.y - spr.displayHeight / 2 - bh - 16
-            );
+            if (label) {
+                label.setPosition(
+                    npc.position.x,
+                    npc.position.y - spr.displayHeight/2 - bh - 16
+                );
+            }
 
             // 5) Hide if dead
             const visible = npc.currentHealth > 0;
-            spr.setVisible(visible);
-            bar.setVisible(visible);
-            label.setVisible(visible);
+            if (spr)   spr.setVisible(visible);
+            if (bar)   bar.setVisible(visible);
+            if (label) label.setVisible(visible);
         });
 
 // 6) Cleanup any despawned NPCs
@@ -721,31 +726,6 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-
-// Cleanup despawned NPCs
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
-
-
-        // cleanup
-        Object.keys(this.npcSprites).forEach(id => {
-            if (!aliveNpcIds.has(id)) {
-                this.npcSprites[id].destroy();
-                this.npcBars[id].destroy();
-                this.npcLabels[id].destroy();
-                delete this.npcSprites[id];
-                delete this.npcBars[id];
-                delete this.npcLabels[id];
-            }
-        });
 
 
         // ─── render players & health ───────────────────────
@@ -983,43 +963,40 @@ export default class GameScene extends Phaser.Scene {
             }
         }
 
-
         const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
 
 
-
-
         // 2) Wenn man selbst gerade gestorben ist
-        if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-            // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
-            // Platz des Verstorbenen = alivePlayers + 1
-            const place = alivePlayers + 1;
-
-            const baseCoins = me.coinCount ?? 0;
-
-            // Bonus-/Malus-Berechnung nach Platz
-            let bonus = 0;
-            switch (place) {
-                case 1:
-                    bonus = 10;
-                    break;
-                case 2:
-                    bonus = 5;
-                    break;
-                case 3:
-                    bonus = 0;
-                    break;
-                case 4:
-                    bonus = -10;
-                    break;
-                default:
-                    bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
-            }
-            const totalCoins = baseCoins + bonus;
-
-            this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
-            this.defeatShown = true;
-        }
+        // if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
+        //     // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
+        //     // Platz des Verstorbenen = alivePlayers + 1
+        //     const place = alivePlayers + 1;
+        //
+        //     const baseCoins = me.coinCount ?? 0;
+        //
+        //     // Bonus-/Malus-Berechnung nach Platz
+        //     let bonus = 0;
+        //     switch (place) {
+        //         case 1:
+        //             bonus = 10;
+        //             break;
+        //         case 2:
+        //             bonus = 5;
+        //             break;
+        //         case 3:
+        //             bonus = 0;
+        //             break;
+        //         case 4:
+        //             bonus = -10;
+        //             break;
+        //         default:
+        //             bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
+        //     }
+        //     const totalCoins = baseCoins + bonus;
+        //
+        //     this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
+        //     this.defeatShown = true;
+        // }
 
         console.log("KEYS:", {
             W: this.keys.up.isDown,
