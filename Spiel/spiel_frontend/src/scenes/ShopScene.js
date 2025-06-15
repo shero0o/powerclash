@@ -216,7 +216,7 @@ export default class ShopScene extends Phaser.Scene {
 
         // Items rendern
         Object.entries(itemsByType).forEach(([type, items]) => {
-            const title = this.add.text(0, offsetY, type, { fontSize: '28px', color: '#ffffff' })
+            const title = this.add.text(0, offsetY, type, { fontSize: '40px', color: '#0ffff0' })
                 .setOrigin(0, 0);
             this.shopContainer.add(title);
             offsetY += 40;
@@ -246,7 +246,7 @@ export default class ShopScene extends Phaser.Scene {
 
                 // ─── Kaufen-Button ───
                 const buyButton = this.add.text(400, offsetY + 15, 'KAUFEN', {
-                    fontFamily: 'Arial', fontSize: '24px', color: '#00ff00',
+                    fontFamily: 'Arial', fontSize: '24px', color: '#ffffff',
                     backgroundColor: '#333', padding: { x: 10, y: 5 }
                 })
                     .setInteractive({ useHandCursor: true })
