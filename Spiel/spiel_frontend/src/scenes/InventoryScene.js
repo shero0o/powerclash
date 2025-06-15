@@ -4,24 +4,18 @@ import Phaser from 'phaser';
 const API_BASE = 'http://localhost:8092/api/wallet';
 
 const weaponAssetMap = {
-    RIFLE_BULLET: 'weapon_rifle',
-    SNIPER: 'weapon_sniper',
-    SHOTGUN_PELLET: 'weapon_shotgun',
-    MINE: 'weapon_mine'
-};
-
-const weaponLabels = {
-    RIFLE_BULLET: 'Rifle',
-    SNIPER: 'Sniper',
-    SHOTGUN_PELLET: 'Shotgun',
-    MINE: 'Mine'
+    Rifle: 'weapon_rifle',
+    Sniper: 'weapon_sniper',
+    Shotgun: 'weapon_shotgun',
+    Mine: 'weapon_mine'
 };
 
 const gadgetAssetMap = {
-    SPEED_BOOST: 'gadget_speed',
-    DAMAGE_BOOST: 'gadget_damage',
-    HEALTH_BOOST: 'gadget_health'
+    "Speed Boost": 'gadget_speed',
+    "Damage Boost": 'gadget_damage',
+    "HP Boost": 'gadget_health'
 };
+
 
 
 export default class InventoryScene extends Phaser.Scene {
@@ -80,9 +74,9 @@ export default class InventoryScene extends Phaser.Scene {
         try {
             const [coinsRes, brawlersRes, gadgetsRes, levelsRes, weaponsRes, selectedRes] = await Promise.all([
                 fetch(`${API_BASE}/coins?playerId=${this.playerId}`),
-                fetch(`${API_BASE}/brawlers?playerId=${this.playerId}`),
-                fetch(`${API_BASE}/gadgets?playerId=${this.playerId}`),
-                fetch(`${API_BASE}/levels?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/brawlers/player?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/gadgets/player?playerId=${this.playerId}`),
+                fetch(`${API_BASE}/levels/player?playerId=${this.playerId}`),
                 fetch(`${API_BASE}/weapons`),
                 fetch(`${API_BASE}/selected?playerId=${this.playerId}`)
             ]);
@@ -150,202 +144,149 @@ export default class InventoryScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.finish());
 
-        // — Tab-Leiste unter y=120 —
-        const tabs = ['Weapons','Brawlers','Gadgets'];
-        this.tabTexts = {};
-        tabs.forEach((label,i) => {
-            const x = width/2 - 200 + i*200;
-            this.tabTexts[label] = this.add.text(x, 180, label, {
-                fontFamily:'Arial', fontSize:'24px',
-                color: label==='Weapons' ? '#ffff00' : '#ffffff'
-            })
-                .setOrigin(0.5)
-                .setInteractive({ useHandCursor:true })
-                .on('pointerdown', ()=> this.switchTab(label));
-        });
-
-        // Erst-Tab
+        this._setupTabs();
         this.currentTab = 'Weapons';
         this._showWeaponOptions();
     }
 
     switchTab(label) {
         if (this.currentTab === label) return;
-        // alte Inhalte löschen
+        // Clear old content
         this.children.list.filter(ch => ch.tabged).forEach(ch => ch.destroy());
-        // Tab-Text färben
-        Object.entries(this.tabTexts).forEach(([l,txt]) => {
-            txt.setColor(l===label ? '#ffff00' : '#ffffff');
+        // Update tab colors
+        Object.entries(this.tabTexts).forEach(([l, txt]) => {
+            txt.setColor(l === label ? '#ffff00' : '#ffffff');
         });
         this.currentTab = label;
-        if (label==='Weapons') this._showWeaponOptions();
-        if (label==='Brawlers') this._showBrawlerOptions();
-        if (label==='Gadgets')  this._showGadgetOptions();
+
+        if (label === 'Weapons') this._showWeaponOptions();
+        if (label === 'Brawlers') this._showBrawlerOptions();
+        if (label === 'Gadgets') this._showGadgetOptions();
     }
 
     _showWeaponOptions() {
         const { width, height } = this.scale;
-        const weapons = [
-            { key:'weapon_rifle',   value:'RIFLE_BULLET',    label:'Rifle'   },
-            { key:'weapon_sniper',  value:'SNIPER',          label:'Sniper'  },
-            { key:'weapon_shotgun', value:'SHOTGUN_PELLET',  label:'Shotgun' },
-            { key:'weapon_mine',    value:'MINE',            label:'Mine'    }
-        ];
-        weapons.forEach((w,i) => {
-            const x = width/2 -300 + i*200, y = height/2;
-            const spr = this.add.image(x, y, w.key)
-                .setInteractive({useHandCursor:true})
-                .setDisplaySize(120,120)
-                .on('pointerdown', () => {
-                    // update local state
-                    this.selectedWeapon = w.value;
-                    this.finish();
+        this.weapons.forEach((w, i) => {
+            const x = width/2 - 300 + i*200;
+            const y = height/2;
+            console.log(w);
+            const assetKey = weaponAssetMap[w.weaponType] || 'weapon_rifle';
+
+            const spr = this.add.image(x, y, assetKey)
+                .setInteractive({ useHandCursor: true })
+                .setDisplaySize(120, 120)
+                .on('pointerdown', async () => {
+                    this.selectedWeapon = w.id;
+                    await this.finish();
                 });
             spr.tabged = true;
-            this.add.text(x, y+80, w.label, {
-                fontFamily:'Arial', fontSize:'20px', color:'#fff'
-            }).setOrigin(0.5).tabged = true;
 
-            // 1) Finde die zugehörigen Daten
-            const info = this.brawlers.find(b => b.id === w.value);
-            // 2) Erstelle den Infotext
-            if (info) {
-                const infoTxt = `
-                Damage: ${info.damage}
-                Proj.Speed:${info.projectileSpeed}
-                Range: ${info.range}
-                Cooldown: ${info.weaponCooldown}
-                Mag.Size: ${info.magazineSize}
-                `.trim();
-                this.add.text(x, y + 110, infoTxt, {
-                    fontFamily: 'Arial', fontSize: '14px', color: '#00ff00', align: 'center'
-                })
-                    .setOrigin(0.5, 0)
-                    .tabged = true;
-            }
+            // Info
+            const infoTxt = `Damage: ${w.damage}\nSpeed: ${w.projectileSpeed}\nRange: ${w.range}`;
+            this.add.text(x, y + 120, infoTxt, {
+                fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
+            }).setOrigin(0.5, 0).tabged = true;
 
             if (w.id === this.selectedWeapon) {
-                this._drawFrame(x, y, 120, 120);
+                this._drawFrame(x, y, 160, 220);
             }
         });
-
     }
 
     _showBrawlerOptions() {
         const { width, height } = this.scale;
-        // avatars enthält nur die Keys & Werte fürs Event-Handling
-        const avatars = [
-                       { key: 'avatar2', value: 'sniper' }, // Hitman
-                       { key: 'avatar3', value: 'mage'   }, // Soldier
-                       { key: 'avatar4', value: 'healer' }, // WomanGreen
-                       { key: 'avatar5', value: 'tank'   }  // Robot
-                   ];
-        avatars.forEach((entry,i) => {
-            const x = width/2 -300 + i*200, y = height/2;
-            const spr = this.add.image(x, y, entry.key)
-                .setInteractive({useHandCursor:true})
+        this.brawlers.forEach((b, i) => {
+            const x = width/2 - 300 + i*200;
+            const y = height/2;
+            const assetKey = `avatar${b.id+1}`;
+
+            const spr = this.add.image(x, y, assetKey)
+                .setInteractive({ useHandCursor: true })
                 .setScale(0.4)
-                .on('pointerdown', () => {
-                    this.selectedBrawler = entry.value;
-                    this.finish();
+                .on('pointerdown', async () => {
+                    this.selectedBrawler = b.id;
+                    await this.finish();
                 });
             spr.tabged = true;
 
-            // 1) Finde die zugehörigen Daten
-            const info = this.brawlers.find(b => b.id === entry.value);
-            // 2) Erstelle den Infotext
-            if (info) {
-                const txt = `
-                    Name: ${info.name}
-                    HP:   ${info.health}
-                    Speed:${info.speed}
-                    `;
-                this.add.text(x, y + 80, txt.trim(), {
-                    fontFamily:'Arial', fontSize:'16px', color:'#ffff00', align: 'center'
-                })
-                    .setOrigin(0.5, 0)
-                    .tabged = true;
-            }
+            // Info
+            const infoTxt = `Name: ${b.name}\nHP: ${b.healthPoints}\nCost: ${b.cost}`;
+            this.add.text(x, y + 120, infoTxt, {
+                fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
+            }).setOrigin(0.5, 0).tabged = true;
 
-            if (info.id === this.selectedBrawler) {
-                const displayWidth = spr.displayWidth;
-                const displayHeight = spr.displayHeight;
-                this._drawFrame(x, y, displayWidth, displayHeight);
+            if (b.id === this.selectedBrawler) {
+                this._drawFrame(x, y,160,220);
             }
         });
-
     }
 
     _showGadgetOptions() {
         const { width, height } = this.scale;
-        const gadgets = [
-            { key:'gadget_speed',  value:'SPEED_BOOST',  label:'Speed'  },
-            { key:'gadget_damage', value:'DAMAGE_BOOST', label:'Damage' },
-            { key:'gadget_health', value:'HEALTH_BOOST', label:'Health' }
-        ];
-        gadgets.forEach((g,i) => {
-            const x = width/2 -300 + i*200, y = height/2;
-            const spr = this.add.image(x, y, g.key)
-                .setInteractive({useHandCursor:true})
+        this.gadgets.forEach((g, i) => {
+            const x = width/2 - 300 + i*200;
+            const y = height/2;
+            console.log(g);
+            const assetKey = gadgetAssetMap[g.name];
+
+            const spr = this.add.image(x, y, assetKey)
+                .setInteractive({ useHandCursor: true })
                 .setScale(0.7)
-                .on('pointerdown', () => {
-                    this.selectedGadget = g.value;
-                    this.finish();
+                .on('pointerdown', async () => {
+                    this.selectedGadget = g.id;
+                    await this.finish();
                 });
             spr.tabged = true;
-            this.add.text(x, y+80, g.label, {
-                fontFamily:'Arial', fontSize:'20px', color:'#fff'
-            }).setOrigin(0.5).tabged = true;
 
-            // Gadget-Info aus this.gadgets holen
-            const info = this.gadgets.find(item => item.id === g.value);
-            if (info) {
-                const gadgetTxt = `
-                    Cooldown: ${info.cooldown}s
-                    Effect:   ${info.effect}
-                    `;
-                this.add.text(x, y + 110, gadgetTxt.trim(), {
-                    fontFamily:'Arial', fontSize:'16px', color:'#00ff00', align: 'center'
-                })
-                    .setOrigin(0.5, 0)
-                    .tabged = true;
-            }
+            // Info
+            const infoTxt = `Name: ${g.name}\nCost: ${g.cost}\nDescription: ${g.description}`;
+            this.add.text(x, y + 120, infoTxt, {
+                fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
+            }).setOrigin(0.5, 0).tabged = true;
 
             if (g.id === this.selectedGadget) {
-                const displayWidth = spr.displayWidth;
-                const displayHeight = spr.displayHeight;
-                this._drawFrame(x, y, displayWidth, displayHeight);
+                this._drawFrame(x, y, 160, 220);
             }
         });
     }
 
     async finish() {
-        // Auswahl speichern auf Server
+        // Save each selection via dedicated endpoints
         try {
-            await fetch(`${API_BASE}/selected`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    playerId: this.playerId,
-                    weaponId: this.selectedWeapon,
-                    brawlerId: this.selectedBrawler,
-                    gadgetId: this.selectedGadget,
-                    levelId: this.selectedLevel
+            await Promise.all([
+                fetch(`${API_BASE}/selected/weapon?playerId=${this.playerId}&weaponId=${this.selectedWeapon}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ playerId: this.playerId, weaponId: this.selectedWeapon })
+                }),
+                fetch(`${API_BASE}/selected/brawler?playerId=${this.playerId}&brawlerId=${this.selectedBrawler}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ playerId: this.playerId, brawlerId: this.selectedBrawler })
+                }),
+                fetch(`${API_BASE}/selected/gadget?playerId=${this.playerId}&gadgetId=${this.selectedGadget}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ playerId: this.playerId, gadgetId: this.selectedGadget })
+                }),
+                fetch(`${API_BASE}/selected/level?playerId=${this.playerId}&levelId=${this.selectedLevel}`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ playerId: this.playerId, levelId: this.selectedLevel })
                 })
-            });
+            ]);
         } catch (err) {
             console.error('Save selection error:', err);
         }
 
-        // persist all three selections
+        // Persist locally and close
         this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
         this.registry.set('gadget', this.selectedGadget);
+        this.registry.set('level', this.selectedLevel);
 
-        // notify lobby and close
-        this.scene.get('LobbyScene').events.emit('inventoryDone');
-        this.scene.stop();
+        // Resume LobbyScene first, then emit
         this.scene.resume('LobbyScene');
+        this.scene.get('LobbyScene').events.emit('inventoryDone');
+
+        // Stop InventoryScene last
+        this.scene.stop();
     }
 
     async _createCoinDisplay() {
@@ -538,6 +479,24 @@ export default class InventoryScene extends Phaser.Scene {
         gfx.strokeRect(x - width/2, y - height/2, width, height);
         gfx.tabged = true;
     }
+
+    _setupTabs() {
+        const { width } = this.scale;
+        const tabs = ['Weapons', 'Brawlers', 'Gadgets'];
+        this.tabTexts = {};
+
+        tabs.forEach((label, i) => {
+            const x = this.scale.width / 2 - 200 + i * 200;
+            this.tabTexts[label] = this.add.text(x, 180, label, {
+                fontFamily: 'Arial', fontSize: '24px',
+                color: label === this.currentTab ? '#ffff00' : '#ffffff'
+            })
+                .setOrigin(0.5)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => this.switchTab(label));
+        });
+    }
+
 
 
 }
