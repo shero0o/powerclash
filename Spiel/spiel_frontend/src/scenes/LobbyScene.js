@@ -12,12 +12,12 @@ export default class LobbyScene extends Phaser.Scene {
 
         // Level-Dropdown und aktuell gewählter Level
         this.levelDropdown = null;
-        this.selectedLevel = 'level1'; // Default Level
+        this.selectedLevel = null; // Default Level
 
-        this.selectedGadget = 'DAMAGE_BOOST'
+        this.selectedGadget = null;
         // Default-Werte für Waffe und Brawler (wie in SelectionScene)
-        this.selectedWeapon  = 'RIFLE_BULLET';
-        this.selectedBrawler = 'sniper';
+        this.selectedWeapon  = null;
+        this.selectedBrawler = null;
 
         // Label über dem PLAY-Button ("Level: X")
         this.levelLabel = null;
@@ -80,8 +80,20 @@ export default class LobbyScene extends Phaser.Scene {
         this.playerName = this.registry.get('playerName') || 'Player';
     }
 
-    create() {
-        const { width, height } = this.scale;
+    async create() {
+        const {width, height} = this.scale;
+
+        try {
+            const selRes = await fetch(`${API_BASE}/selected?playerId=${this.playerId}`);
+            const sel = await selRes.json();
+            // überschreibe die Defaults mit den gespeicherten Werten
+            this.selectedWeapon = sel.weaponId;
+            this.selectedBrawler = sel.brawlerId;
+            this.selectedGadget = sel.gadgetId;
+            this.selectedLevel = sel.levelId;
+        } catch (err) {
+            console.warn('Konnte Selection nicht laden, nutze Defaults', err);
+        }
 
         // --- Hintergrund ---
         this.add.image(width / 2, height / 2, 'lobby_bg')
@@ -90,7 +102,7 @@ export default class LobbyScene extends Phaser.Scene {
 
         // --- Avatar + Kreis/Schatten ---
         // --- Dynamisches Brawler‐Icon ---
-        this.brawlerIcon = this.add.image(width/2, height/2 + 140, this._mapBrawlerKey())
+        this.brawlerIcon = this.add.image(width / 2, height / 2 + 140, this._mapBrawlerKey())
             .setOrigin(0.5)
             .setDisplaySize(400, 600);
 
@@ -102,10 +114,11 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.image(60, 60, 'icon_profile')
             .setOrigin(0.5)
             .setScale(0.8)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive({useHandCursor: true})
             .on('pointerdown', () => {
                 this.scene.start('AccountScene');
-            });;
+            });
+        ;
 
         // --- Münzanzeige (Coin-Symbol + Box + Zahl) oben mittig ---
         this._createCoinDisplay();
@@ -114,7 +127,7 @@ export default class LobbyScene extends Phaser.Scene {
         const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({useHandCursor: true});
 
         btnShop.on('pointerdown', () => {
             this.scene.start('ShopScene');
@@ -124,7 +137,7 @@ export default class LobbyScene extends Phaser.Scene {
         const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive({useHandCursor: true})
             .setAlpha(1)
             .setDepth(1000);
 
@@ -136,7 +149,7 @@ export default class LobbyScene extends Phaser.Scene {
         const btnBrawlers = this.add.image(90, height / 2, 'icon_brawlers')
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({useHandCursor: true});
         btnBrawlers.on('pointerdown', () => console.log('Brawlers öffnen'));
 
         // --- Name-Text + Weapon/Gadget-Box (mittig oben) ---
@@ -145,7 +158,9 @@ export default class LobbyScene extends Phaser.Scene {
             currentGadgetKey = "healthGadget";
         } else if (this.selectedGadget === "SPEED_BOOST") {
             currentGadgetKey = "speedGadget";
-        }else{currentGadgetKey = "damageGadget"}
+        } else {
+            currentGadgetKey = "damageGadget"
+        }
 
         this.add.text(width / 2, 165, this.playerName, {
             fontFamily: 'Arial',
@@ -153,7 +168,7 @@ export default class LobbyScene extends Phaser.Scene {
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 8,
-            shadow: { offsetX: 4, offsetY: 4, color: '#000000', blur: 0, stroke: false, fill: false },
+            shadow: {offsetX: 4, offsetY: 4, color: '#000000', blur: 0, stroke: false, fill: false},
             resolution: 2
         }).setOrigin(0.5);
 
@@ -167,16 +182,16 @@ export default class LobbyScene extends Phaser.Scene {
         this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey)
             .setOrigin(0.5)
             .setDisplaySize(60, 60)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive({useHandCursor: true})
             .on('pointerdown', () => {
-                    this.scene.pause();
+                this.scene.pause();
                 this.scene.launch('InventoryScene', {
-                        weapon: this.selectedWeapon,
-                        brawler: this.selectedBrawler,
-                        gadget: this.selectedGadget
+                    weapon: this.selectedWeapon,
+                    brawler: this.selectedBrawler,
+                    gadget: this.selectedGadget
                 });
             });
-            ;
+        ;
 
         if (this.selectedWeapon === 'MINE') {
             this.weaponIcon.setDisplaySize(60, 60); // oder 90×90 je nach Bildgröße
@@ -187,16 +202,16 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.gadgetIcon = this.add.image(width/2 + 40, 220, this._mapGadgetKey())
+        this.gadgetIcon = this.add.image(width / 2 + 40, 220, this._mapGadgetKey())
             .setOrigin(0.5)
             .setDisplaySize(100, 50)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive({useHandCursor: true})
             .on('pointerdown', () => {
                 this.scene.pause();
                 this.scene.launch('InventoryScene', {
-                        weapon: this.selectedWeapon,
-                        brawler: this.selectedBrawler,
-                        gadget: this.selectedGadget
+                    weapon: this.selectedWeapon,
+                    brawler: this.selectedBrawler,
+                    gadget: this.selectedGadget
                 });
             });
         ;
@@ -205,7 +220,7 @@ export default class LobbyScene extends Phaser.Scene {
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')
             .setOrigin(0.5)
             .setScale(0.8)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({useHandCursor: true});
 
         this.playButton.on('pointerover', () => {
             // Mit tint abdunkeln (z.B. 0x999999 ist ein dunkleres Grau)
@@ -250,26 +265,26 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-            case 'mage':   return 'avatar3'; // Soldier → Character3
-            case 'healer': return 'avatar4'; // WomanGreen → Character4
-            case 'tank':   return 'avatar5'; // Robot → Character5
+            case 2:   return 'avatar3'; // Soldier → Character3
+            case 3: return 'avatar4'; // WomanGreen → Character4
+            case 4:   return 'avatar5'; // Robot → Character5
             default:       return 'avatar2'; // Hitman → Character2
         }
     }
 
     _mapWeaponKey() {
         switch (this.selectedWeapon) {
-            case 'SNIPER':         return 'weapon_sniper';
-            case 'SHOTGUN_PELLET': return 'weapon_shotgun';
-            case 'MINE':           return 'weapon_mine';
+            case 2:         return 'weapon_sniper';
+            case 3: return 'weapon_shotgun';
+            case 4:           return 'weapon_mine';
             default:               return 'weapon_rifle';
         }
     }
 
     _mapGadgetKey() {
         switch (this.selectedGadget) {
-            case 'SPEED_BOOST':  return 'gadget_speed';
-            case 'HEALTH_BOOST': return 'gadget_health';
+            case 2:  return 'gadget_speed';
+            case 3: return 'gadget_health';
             default:             return 'gadget_damage';
         }
     }
@@ -374,7 +389,7 @@ export default class LobbyScene extends Phaser.Scene {
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 0, stroke: false, fill: false },
             resolution: 2
         };
-        const numberOnly = this.selectedLevel.replace(/^level/, '');
+        const numberOnly = this.selectedLevel;
         this.levelLabel = this.add.text(levelBtnX, levelBtnY, `Level: ${numberOnly}`, labelStyle)
             .setOrigin(0.5);
 
