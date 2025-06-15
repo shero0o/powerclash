@@ -104,7 +104,7 @@ export default class LobbyScene extends Phaser.Scene {
         // --- Dynamisches Brawler‐Icon ---
         this.brawlerIcon = this.add.image(width / 2, height / 2 + 140, this._mapBrawlerKey())
             .setOrigin(0.5)
-            .setDisplaySize(400, 600);
+            .setScale(0.8);
 
         // Schatten-Kreis (leicht weiches Schwarz hinter dem Avatar)
 
