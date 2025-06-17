@@ -239,7 +239,7 @@ export default class InventoryScene extends Phaser.Scene {
             spr.tabged = true;
 
             // Info
-            const infoTxt = `Name: ${g.name}\nCost: ${g.cost}\nDescription: ${g.description}`;
+            const infoTxt = `Name: ${g.name}\nCost: ${g.cost}\nDescription:\n${this.addLineBreaks(g.description, 20)}`;
             this.add.text(x, y + 120, infoTxt, {
                 fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
             }).setOrigin(0.5, 0).tabged = true;
@@ -248,6 +248,25 @@ export default class InventoryScene extends Phaser.Scene {
                 this._drawFrame(x, y, 160, 220);
             }
         });
+    }
+
+    addLineBreaks(str, maxLen) {
+        const words = str.split(' ');
+        const lines = [];
+        let current = '';
+
+        for (const w of words) {
+            // if adding this word would push us over maxLen, start a new line
+            if ((current + ' ' + w).trim().length > maxLen) {
+                lines.push(current.trim());
+                current = w;
+            } else {
+                current += ' ' + w;
+            }
+        }
+        if (current) lines.push(current.trim());
+
+        return lines.join('\n');
     }
 
     async finish() {
