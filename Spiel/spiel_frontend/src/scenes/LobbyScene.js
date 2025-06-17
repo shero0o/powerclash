@@ -95,6 +95,19 @@ export default class LobbyScene extends Phaser.Scene {
             console.warn('Konnte Selection nicht laden, nutze Defaults', err);
         }
 
+        // ─── load which levels the player owns ─────────────
+        try {
+                const lvRes = await fetch(`${API_BASE}/levels/player?playerId=${this.playerId}`);
+                this.levels = await lvRes.json();
+            } catch (err) {
+                console.warn('Konnte Levels nicht laden, nutze Defaults', err);
+                this.levels = [];
+            }
+        // default to first owned level if none selected
+            if (!this.selectedLevel && this.levels.length) {
+                this.selectedLevel = this.levels[0].id;
+            }
+        
         // --- Hintergrund ---
         this.add.image(width / 2, height / 2, 'lobby_bg')
             .setOrigin(0.5)
@@ -424,34 +437,29 @@ export default class LobbyScene extends Phaser.Scene {
      * x/y sind die Koordinaten (oben links) des Dropdown-Rechtecks.
      */
     createLevelDropdown(x, y) {
+        // dynamically build a list based on what the player owns
         this.levelDropdown = this.add.container(x, y).setVisible(false);
+        const entryH   = 40;
+        const pad      = 10;
+        const boxWidth = 200;
+        const boxHeight= this.levels.length * entryH + pad * 2;
 
-        // Größe des Dropdowns (Breite, Höhe)
-        const boxWidth  = 200;
-        const boxHeight = 140; // Platz für 3 Einträge à ca. 40px + Puffer
+            // background of dropdown
+            let bgRect = null
 
-        // a) Halbtransparenter schwarzer Hintergrund
-        const bgRect = this.add.rectangle(0, 0, boxWidth, boxHeight, 0x000000, 0.8)
-            .setOrigin(0);
 
-        // b) Texte „Level 1“, „Level 2“, „Level 3“
         const textStyle = { fontFamily: 'Arial', fontSize: '18px', color: '#ffffff' };
-        const lineHeight = 40;
+        // one entry per owned level
+        this.levels.forEach((lvl, i) => {
+                    const yPos = pad + i * entryH+entryH*2-this.levels.length;
+                    bgRect = this.add.rectangle(0, yPos-20, boxWidth, boxHeight, 0x000000, 0.8).setOrigin(0);
+                    this.levelDropdown.add(bgRect);
 
-        const lvl1 = this.add.text(10, 10 + 0 * lineHeight, 'Level 1', textStyle)
-            .setInteractive({ useHandCursor: true });
-        const lvl2 = this.add.text(10, 10 + 1 * lineHeight, 'Level 2', textStyle)
-            .setInteractive({ useHandCursor: true });
-        const lvl3 = this.add.text(10, 10 + 2 * lineHeight, 'Level 3', textStyle)
-            .setInteractive({ useHandCursor: true });
-
-        // c) Klick-Handler: Wenn man einen Eintrag klickt, speichert er selectedLevel,
-        //    aktualisiert den Text oben („Level: X“) und blendet das Menü aus.
-        lvl1.on('pointerdown', () => this.selectLevel('level1'));
-        lvl2.on('pointerdown', () => this.selectLevel('level2'));
-        lvl3.on('pointerdown', () => this.selectLevel('level3'));
-
-        this.levelDropdown.add([ bgRect, lvl1, lvl2, lvl3 ]);
+            const txt  = this.add.text(10, yPos, `Level ${lvl.id}`, textStyle)
+                            .setInteractive({ useHandCursor: true })
+                        .on('pointerdown', () => this.selectLevel(lvl.id));
+                    this.levelDropdown.add(txt);
+                });
     }
 
     /**
@@ -470,8 +478,7 @@ export default class LobbyScene extends Phaser.Scene {
      */
     selectLevel(levelId) {
         this.selectedLevel = levelId;
-        const numberOnly = levelId.replace(/^level/, '');
-        this.levelLabel.setText(`Level: ${numberOnly}`);
+        this.levelLabel.setText(`Level: ${levelId}`);
         this.levelDropdown.setVisible(false);
         this.registry.set('levelId', levelId);
     }
