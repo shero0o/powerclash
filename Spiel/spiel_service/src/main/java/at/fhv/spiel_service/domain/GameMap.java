@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.util.*;
 
 public class GameMap {
-    private final String id;
+    private final Long id;
     private final int width;
     private final int height;
     private final int tileWidth;
@@ -21,13 +21,13 @@ public class GameMap {
     private final List<Crate> crates = new ArrayList<>();
 
 
-    public GameMap(String id) {
+    public GameMap(Long id) {
         this.id = id;
 
         // Dynamisch den richtigen Map-Dateinamen wählen
-        String mapFile = switch (id) {
-            case "level1" -> "map1.tmj";
-            case "level2", "level3" -> "map2.0.tmj";
+        String mapFile = switch (id.toString()) {
+            case "1" -> "map1.tmj";
+            case "2", "level3" -> "map2.0.tmj";
             default -> throw new IllegalArgumentException("Unknown Level: " + id);
         };
 
@@ -114,7 +114,7 @@ public class GameMap {
     }
 
 
-    public String getId()         { return id; }
+    public Long getId()         { return id; }
     public int     getTileWidth() { return tileWidth; }
     public int     getTileHeight(){ return tileHeight; }
     public Set<Position> getBushPositions() {

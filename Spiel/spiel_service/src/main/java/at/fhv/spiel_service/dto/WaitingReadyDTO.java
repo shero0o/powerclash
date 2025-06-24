@@ -14,6 +14,6 @@ public class WaitingReadyDTO {
     private String playerId;
     private String roomId;
     private String brawlerId;  // NEU
-    private String levelId;    // NEU
+    private Long levelId;    // NEU
     private String playerName;
 }

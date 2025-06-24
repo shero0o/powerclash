@@ -31,7 +31,7 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
-        this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
+        this.mapKey            = data.levelId || this.registry.get('levelId') || 1;
         this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 'RIFLE_BULLET';
         this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
         this.playerName        = this.registry.get('playerName') || 'Player';
@@ -84,7 +84,7 @@ export default class GameScene extends Phaser.Scene {
         // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
         let mapFile;
-        if (this.mapKey === 'level1') {
+        if (this.mapKey == 1) {
             mapFile = 'map1.tmj';
         } else {
             mapFile = 'map2.0.tmj'; // shared by level2 and level3
@@ -136,9 +136,9 @@ export default class GameScene extends Phaser.Scene {
         const map = this.make.tilemap({ key: 'map' });
         this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        if (this.mapKey === 'level1') {
+        if (this.mapKey === 1) {
             map.createLayer('Boden', tileset, 0, 0);
-            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
+            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        } else if (this.mapKey === 2|| this.mapKey === 3){
             map.createLayer('Boden', tileset, 0, 0);
             map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
             this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);

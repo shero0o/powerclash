@@ -524,7 +524,7 @@ export default class LobbyScene extends Phaser.Scene {
                 brawlerId:    this.selectedBrawler,
                 levelId:      levelToSend,
                 chosenWeapon: this.selectedWeapon,
-                chosenGadget: this.selectedGadget
+                chosenGadget: this.selectedGadget-1
             }, (response) => {
                 // Raum-ID zurück in die Registry schreiben …
                 this.registry.set('roomId', response.roomId);
