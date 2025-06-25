@@ -2,6 +2,9 @@ package at.fhv.wallet.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.UUID;
+
 @Entity
 @Table(name = "selected")
 @Getter
@@ -14,7 +17,7 @@ public class Selected {
     @Id
     @Column(name = "selected_id")
     @JoinColumn(name = "selected_id")
-    private Long selectedId;
+    private UUID selectedId;
 
     @Column(name = "brawler_id")
     private Long brawlerId;

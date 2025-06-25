@@ -3,6 +3,7 @@ package at.fhv.account.service;
 import at.fhv.account.model.Player;
 import at.fhv.account.repository.PlayerRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +32,7 @@ public class AccountService {
         return playerRepository.findAll();
     }
 
-    public  Optional<Player> getPlayerById(Long id) {
+    public  Optional<Player> getPlayerById(UUID id) {
         return playerRepository.findById(id);
     }
 
@@ -57,11 +59,16 @@ public class AccountService {
         return p;
     }
 
-    public Player updatePlayerName(Long playerId, String newName) {
+    public Player updatePlayerName(UUID playerId, String newName) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new EntityNotFoundException("Player mit ID " + playerId + " nicht gefunden"));
 
         player.setName(newName);
         return playerRepository.save(player);
     }
+
+    public Player getPlayerByName(String name) {
+        return playerRepository.findByName(name)
+                .orElseThrow(() -> new NotFoundException("Player not found"));
+        }
 }

@@ -6,6 +6,7 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "player")
@@ -17,7 +18,7 @@ public class Player {
 
     @Id
     @Column(name = "player_id")
-    private Long id;
+    private UUID id;
 
     private Integer coins;
 

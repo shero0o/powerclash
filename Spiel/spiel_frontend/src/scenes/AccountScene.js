@@ -95,7 +95,7 @@ export default class AccountScene extends Phaser.Scene {
 
     updateStatus() {
         if (this.playerId) {
-            this.statusText.setText(`Player: ${this.playerName} (ID: ${this.playerId})`);
+            this.statusText.setText(`Player: ${this.playerName}`);
             this.registry.set('playerId', this.playerId);
             this.registry.set('playerName', this.playerName);
         } else {
@@ -107,23 +107,32 @@ export default class AccountScene extends Phaser.Scene {
         const name = window.prompt('Enter your name:');
         if (!name) return;
         try {
-            const res = await fetch(`${API_BASE}/createPlayer?name=${encodeURIComponent(name)}`, {
+            const res = await fetch(`${API_BASE}/createPlayer?name=${name}`, {
                 method: 'POST'
             });
+            if (res.status === 409) {
+                window.alert('Name already in use');
+                return;
+            }
+            if (!res.ok) {
+                window.alert('Registration failed');
+                return;
+                }
             const player = await res.json();
             this.playerId = player.id;
             this.playerName = player.name;
             this.updateStatus();
         } catch (err) {
             console.error('Register error:', err);
+            window.alert('Could not register, please try again later');
         }
     }
 
     async login() {
-        const id = window.prompt('Enter your Player ID:');
-        if (!id) return;
+        const name = window.prompt('Enter your unique Player Name:');
+        if (!name) return;
         try {
-            const res = await fetch(`${API_BASE}/player?id=${id}`);
+            const res = await fetch(`${API_BASE}/playerByName?name=${name}`);
             if (!res.ok) {
                 window.alert('Player not found');
                 return;

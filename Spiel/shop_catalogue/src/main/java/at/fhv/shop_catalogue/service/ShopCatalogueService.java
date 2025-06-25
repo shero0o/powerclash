@@ -13,6 +13,7 @@ import reactor.core.publisher.Mono;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +34,7 @@ public class ShopCatalogueService {
     // BRAWLER-FUNKTIONEN
     // -----------------------
 
-    public List<ShopItemDTO> getAllShopItems(Long playerId) {
+    public List<ShopItemDTO> getAllShopItems(UUID playerId) {
         List<ShopItemDTO> result = new ArrayList<>();
 
         List<Purchase> purchases = purchaseRepo.findByPlayerId(playerId);
@@ -67,7 +68,7 @@ public class ShopCatalogueService {
     }
 
     @Transactional
-    public void buyBrawler(Long playerId, Long brawlerId) {
+    public void buyBrawler(UUID playerId, Long brawlerId) {
         Brawler brawler = brawlerRepo.findById(brawlerId)
                 .orElseThrow(() -> new RuntimeException("Brawler not found"));
 
@@ -86,7 +87,7 @@ public class ShopCatalogueService {
     }
 
     @Transactional
-    public void buyGadget(Long playerId, Long gadgetId) {
+    public void buyGadget(UUID playerId, Long gadgetId) {
         Gadget gadget = gadgetRepo.findById(gadgetId)
                 .orElseThrow(() -> new RuntimeException("Gadget not found"));
 
@@ -106,7 +107,7 @@ public class ShopCatalogueService {
     }
 
     @Transactional
-    public void buyLevel(Long playerId, Long levelId) {
+    public void buyLevel(UUID playerId, Long levelId) {
         Level level = levelRepo.findById(levelId)
                 .orElseThrow(() -> new RuntimeException("Level not found"));
 
@@ -125,7 +126,7 @@ public class ShopCatalogueService {
         purchaseRepo.save(purchase);
     }
 
-    public List<Purchase> getPurchasesForPlayer(Long playerId) {
+    public List<Purchase> getPurchasesForPlayer(UUID playerId) {
         return purchaseRepo.findByPlayerId(playerId);
     }
     public List<Brawler> getAllBrawlers() {

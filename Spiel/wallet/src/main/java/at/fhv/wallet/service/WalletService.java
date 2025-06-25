@@ -20,14 +20,14 @@ public class WalletService {
     private final PlayerRepository playerRepo;
     private final SelectedRepository selectedRepo;
 
-    public Player createPlayer(Long id) {
+    public Player createPlayer(UUID playerId) {
 
-        if (playerRepo.existsById(id)) {
+        if (playerRepo.existsById(playerId)) {
             throw new IllegalArgumentException("Ein Spieler mit dieser ID existiert bereits.");
         }
 
         Player player = new Player();
-        player.setId(id);
+        player.setId(playerId);
         player.setCoins(0);
         playerRepo.save(player);
 
@@ -40,12 +40,12 @@ public class WalletService {
         return brawlerRepo.findAll();
     }
 
-    public List<Brawler> getAllBrawlersOwnedByPlayer(Long playerId) {
+    public List<Brawler> getAllBrawlersOwnedByPlayer(UUID playerId) {
         Player player = playerRepo.findById(playerId).orElseThrow();
         return new ArrayList<>(player.getBrawlers());
     }
 
-    public void buyBrawler(Long playerId, Long brawlerId) {
+    public void buyBrawler(UUID playerId, Long brawlerId) {
         Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
         Brawler b = brawlerRepo.findById(brawlerId).orElseThrow(() -> new IllegalArgumentException("Brawler nicht gefunden."));
 
@@ -58,7 +58,7 @@ public class WalletService {
         playerRepo.save(player);
     }
 
-    public List<Brawler> getAllBrawlersNotOwnedByPlayer(Long playerId) {
+    public List<Brawler> getAllBrawlersNotOwnedByPlayer(UUID playerId) {
         List<Brawler> owned = getAllBrawlersOwnedByPlayer(playerId);
         List<Long> ownedIds = owned.stream().map(Brawler::getId).toList();
         return ownedIds.isEmpty() ? brawlerRepo.findAll() : brawlerRepo.findByIdNotIn(ownedIds);
@@ -68,12 +68,12 @@ public class WalletService {
         return gadgetRepo.findAll();
     }
 
-    public List<Gadget> getAllGadgetsOwnedByPlayer(Long playerId) {
+    public List<Gadget> getAllGadgetsOwnedByPlayer(UUID playerId) {
         Player player = playerRepo.findById(playerId).orElseThrow();
         return new ArrayList<>(player.getGadgets());
     }
 
-    public void buyGadget(Long playerId, Long gadgetId) {
+    public void buyGadget(UUID playerId, Long gadgetId) {
         Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
         Gadget g = gadgetRepo.findById(gadgetId).orElseThrow(() -> new IllegalArgumentException("Gadget nicht gefunden."));
 
@@ -86,19 +86,19 @@ public class WalletService {
         playerRepo.save(player);
     }
 
-    public List<Gadget> getAllGadgetsNotOwnedByPlayer(Long playerId) {
+    public List<Gadget> getAllGadgetsNotOwnedByPlayer(UUID playerId) {
         List<Gadget> owned = getAllGadgetsOwnedByPlayer(playerId);
         List<Long> ownedIds = owned.stream().map(Gadget::getId).toList();
         return ownedIds.isEmpty() ? gadgetRepo.findAll() : gadgetRepo.findByIdNotIn(ownedIds);
     }
 
-    public void addCoinsForPlayer(Long playerId, Integer amount) {
+    public void addCoinsForPlayer(UUID playerId, Integer amount) {
         Player player = playerRepo.findById(playerId).orElseThrow();
         player.setCoins(player.getCoins() + amount);
         playerRepo.save(player);
     }
 
-    public Integer getCoinsForPlayer(Long playerId) {
+    public Integer getCoinsForPlayer(UUID playerId) {
         return playerRepo.findById(playerId).map(Player::getCoins).orElse(0);
     }
 
@@ -110,12 +110,12 @@ public class WalletService {
         return levelRepo.findAll();
     }
 
-    public List<Level> getAllLevelsOwnedByPlayer(Long playerId) {
+    public List<Level> getAllLevelsOwnedByPlayer(UUID playerId) {
         Player player = playerRepo.findById(playerId).orElseThrow();
         return new ArrayList<>(player.getLevels());
     }
 
-    public void buyLevel(Long playerId, Long levelId) {
+    public void buyLevel(UUID playerId, Long levelId) {
         Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
         Level level = levelRepo.findById(levelId).orElseThrow(() -> new IllegalArgumentException("Level nicht gefunden."));
 
@@ -128,37 +128,37 @@ public class WalletService {
         playerRepo.save(player);
     }
 
-    public List<Level> getAllLevelsNotOwnedByPlayer(Long playerId) {
+    public List<Level> getAllLevelsNotOwnedByPlayer(UUID playerId) {
         List<Level> owned = getAllLevelsOwnedByPlayer(playerId);
         List<Long> ownedIds = owned.stream().map(Level::getId).toList();
         return ownedIds.isEmpty() ? levelRepo.findAll() : levelRepo.findByIdNotIn(ownedIds);
     }
 
-    public void selectBrawler(Long playerId, Long weaponId) {
+    public void selectBrawler(UUID playerId, Long weaponId) {
         Selected selected = selectedRepo.findById(playerId).orElseThrow();
         selected.setBrawlerId(weaponId);
         selectedRepo.save(selected);
     }
 
-    public void selectWeapon(Long playerId, Long weaponId) {
+    public void selectWeapon(UUID playerId, Long weaponId) {
         Selected selected = selectedRepo.findById(playerId).orElseThrow();
         selected.setWeaponId(weaponId);
         selectedRepo.save(selected);
     }
 
-    public void selectGadget(Long playerId, Long gadgetId) {
+    public void selectGadget(UUID playerId, Long gadgetId) {
         Selected selected = selectedRepo.findById(playerId).orElseThrow();
         selected.setGadgetId(gadgetId);
         selectedRepo.save(selected);
     }
 
-    public void selectLevel(Long playerId, Long levelId) {
+    public void selectLevel(UUID playerId, Long levelId) {
         Selected selected = selectedRepo.findById(playerId).orElseThrow();
         selected.setLevelId(levelId);
         selectedRepo.save(selected);
     }
 
-    public Selected getSelectedForPlayer(Long playerId) {
+    public Selected getSelectedForPlayer(UUID playerId) {
         return selectedRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
     }
 

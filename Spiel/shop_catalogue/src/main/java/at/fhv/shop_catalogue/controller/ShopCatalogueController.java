@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @CrossOrigin(origins = "localhost:5173")
 @RestController
@@ -18,31 +19,31 @@ public class ShopCatalogueController {
     private final ShopCatalogueService shopCatalogueService;
 
     @GetMapping("/items")
-    public ResponseEntity<List<ShopItemDTO>> getAllShopItems(@RequestParam Long playerId) {
-        return ResponseEntity.ok(shopCatalogueService.getAllShopItems(playerId));
+    public ResponseEntity<List<ShopItemDTO>> getAllShopItems(@RequestParam String playerId) {
+        return ResponseEntity.ok(shopCatalogueService.getAllShopItems(UUID.fromString(playerId)));
     }
 
     @PostMapping("/brawler/buy")
-    public ResponseEntity<Void> buyBrawler(@RequestParam Long playerId, @RequestParam Long brawlerId) {
-        shopCatalogueService.buyBrawler(playerId, brawlerId);
+    public ResponseEntity<Void> buyBrawler(@RequestParam String playerId, @RequestParam Long brawlerId) {
+        shopCatalogueService.buyBrawler(UUID.fromString(playerId), brawlerId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/gadget/buy")
-    public ResponseEntity<Void> buyGadget(@RequestParam Long playerId, @RequestParam Long gadgetId) {
-        shopCatalogueService.buyGadget(playerId, gadgetId);
+    public ResponseEntity<Void> buyGadget(@RequestParam String playerId, @RequestParam Long gadgetId) {
+        shopCatalogueService.buyGadget(UUID.fromString(playerId), gadgetId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/level/buy")
-    public ResponseEntity<Void> buyLevel(@RequestParam Long playerId, @RequestParam Long levelId) {
-        shopCatalogueService.buyLevel(playerId, levelId);
+    public ResponseEntity<Void> buyLevel(@RequestParam String playerId, @RequestParam Long levelId) {
+        shopCatalogueService.buyLevel(UUID.fromString(playerId), levelId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/player/purchases")
-    public ResponseEntity<List<Purchase>> getPurchases(@RequestParam Long playerId) {
-        return ResponseEntity.ok(shopCatalogueService.getPurchasesForPlayer(playerId));
+    public ResponseEntity<List<Purchase>> getPurchases(@RequestParam String playerId) {
+        return ResponseEntity.ok(shopCatalogueService.getPurchasesForPlayer(UUID.fromString(playerId)));
     }
 
     @GetMapping("/brawlers")

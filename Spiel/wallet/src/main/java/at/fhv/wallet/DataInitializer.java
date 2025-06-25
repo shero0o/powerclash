@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -143,7 +144,7 @@ public class DataInitializer implements CommandLineRunner {
 
         if (playerRepository.count() == 0) {
             Player defaultPlayer = new Player();
-            defaultPlayer.setId(0L);
+            defaultPlayer.setId(UUID.randomUUID());
             defaultPlayer.setCoins(0);
             defaultPlayer.getLevels().add(new Level(1L, "Level 1", 0));
             defaultPlayer.getBrawlers().add(new Brawler(1L, "Sniper",0,100));
