@@ -27,7 +27,7 @@ public class GameMap {
         // Dynamisch den richtigen Map-Dateinamen wählen
         String mapFile = switch (id.toString()) {
             case "1" -> "map1.tmj";
-            case "2", "level3" -> "map2.0.tmj";
+            case "2", "3" -> "map2.0.tmj";
             default -> throw new IllegalArgumentException("Unknown Level: " + id);
         };
 
