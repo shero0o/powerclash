@@ -20,6 +20,7 @@ export default class ShopScene extends Phaser.Scene {
         this.settingsOpen = true;
         this.shopContainer= null;
         this.scrollMask   = null;
+        this.currentModal = null;
     }
 
     init() {
@@ -239,35 +240,18 @@ export default class ShopScene extends Phaser.Scene {
                 const nameText = this.add.text(0, offsetY, `${item.name} (${type})`, {
                 fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
                 });
-                const priceText = this.add.text(0, offsetY + 30, `Preis: ${item.cost} Coins`, {
+                const priceText = this.add.text(0, offsetY + 30, `Price: ${item.cost} Coins`, {
                     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00'
                 });
                 this.shopContainer.add([nameText, priceText]);
 
                 // ─── Kaufen-Button ───
-                const buyButton = this.add.text(400, offsetY + 15, 'KAUFEN', {
+                const buyButton = this.add.text(400, offsetY + 15, 'BUY', {
                     fontFamily: 'Arial', fontSize: '24px', color: '#ffffff',
                     backgroundColor: '#333', padding: { x: 10, y: 5 }
                 })
                     .setInteractive({ useHandCursor: true })
-                    .on('pointerdown', async () => {
-                        try {
-                            const res = await fetch(
-                                `${API_BASE2}/${type.toLowerCase()}s/buy?playerId=${this.playerId}&${type.toLowerCase()}Id=${item.id}`,
-                                { method: 'POST' }
-                            );
-                            if (res.ok) {
-                                alert(`Erfolgreich gekauft: ${item.name}`);
-                                await this._refreshCoinDisplay();
-                                await this._refreshShopItems();
-                            } else {
-                                const error = await res.text();
-                                alert(`Fehler beim Kauf: ${error}`);
-                            }
-                        } catch (err) {
-                            console.error('Fehler beim Kauf:', err);
-                        }
-                    });
+                    .on('pointerdown', async () => this.showPurchaseConfirmation(item, type));
                 this.shopContainer.add(buyButton);
 
                 // Höhe für nächstes Item reservieren
@@ -291,9 +275,6 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     async _refreshShopItems() {
-        const { width, height } = this.scale;
-        const startX = 300;
-        const startY = 200;
         const itemsByType = await this._loadNotOwnedItems();
         if (this.shopContainer) {
             this.shopContainer.removeAll(true);
@@ -301,4 +282,59 @@ export default class ShopScene extends Phaser.Scene {
 
         this.shopContainer = this.add.container(300, 200);
         this._showShopItems(itemsByType);
-}}
+    }
+
+    showPurchaseConfirmation(item, type) {
+        const vw = this.scale.width, vh = this.scale.height;
+        const overlay = this.add.rectangle(vw/2, vh/2, vw, vh, 0x000000)
+            .setOrigin(0.5).setAlpha(0.8).setDepth(2000);
+        const dialog = this.add.rectangle(vw/2, vh/2, vw * 0.5, vh * 0.3, 0x111111)
+            .setOrigin(0.5).setDepth(2001);
+        const text = this.add.text(vw/2, vh/2 - 40, `Do you really want to buy ${item.name}?`, {
+            fontFamily: 'Arial', fontSize: '24px', color: '#ffffff', stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(2002);
+
+        const yesBtn = this.add.text(vw/2 - 60, vh/2 + 40, 'Yes', {
+            fontFamily: 'Arial', fontSize: '24px', color: '#ffffff', backgroundColor: '#333', padding: { x:10, y:5 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(2002);
+        yesBtn.on('pointerdown', async () => {
+            await this._confirmPurchase(item, type);
+            this._destroyModal();
+        });
+
+        const noBtn = this.add.text(vw/2 + 60, vh/2 + 40, 'No', {
+            fontFamily: 'Arial', fontSize: '24px', color: '#ffffff', backgroundColor: '#333', padding: { x:10, y:5 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(2002);
+        noBtn.on('pointerdown', () => this._destroyModal());
+
+        this.currentModal = { overlay, dialog, text, yesBtn, noBtn };
+    }
+
+    async _confirmPurchase(item, type) {
+        try {
+            const res = await fetch(
+                `${API_BASE2}/${type.toLowerCase()}s/buy?playerId=${this.playerId}&${type.toLowerCase()}Id=${item.id}`,
+                { method: 'POST' }
+            );
+            if (res.ok) {
+                alert(`Purchase successfull: ${item.name}`);
+                await this._refreshCoinDisplay();
+                await this._refreshShopItems();
+            } else {
+                const error = await res.text();
+                alert(`Not enough Coins`);
+            }
+        } catch (err) {
+            console.error('Purchasing Error:', err);
+        }
+    }
+
+    _destroyModal() {
+        if (!this.currentModal) return;
+        Object.values(this.currentModal).forEach(obj => obj.destroy());
+        this.currentModal = null;
+    }
+
+
+
+}
