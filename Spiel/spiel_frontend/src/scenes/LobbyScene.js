@@ -496,7 +496,7 @@ export default class LobbyScene extends Phaser.Scene {
         localStorage.setItem('playerId', playerId);
 
         // 2) PlayerName aus HTML-Input lesen (oder „Player“, falls leer)
-        const enteredName = this.nameInput?.value.trim() || 'Player';
+        const enteredName = this.playerName;
         localStorage.setItem('playerName', enteredName);
 
         // 3) Default-Waffen und Brawler verarbeiten (stehen schon in this.selectedWeapon, this.selectedBrawler)
