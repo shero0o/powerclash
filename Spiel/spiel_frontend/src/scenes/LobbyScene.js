@@ -427,40 +427,54 @@ export default class LobbyScene extends Phaser.Scene {
 
         // d) Dropdown-Menü erstellen (unsichtbar), direkt über dem Label
         const dropdownX = levelBtnX - levelBtnWidth / 2;
-        const dropdownY = levelBtnY - levelBtnHeight / 2 - 140; // 140px Höhe für 3 Einträge
+        const dropdownY = levelBtnY - levelBtnHeight / 2; // 140px Höhe für 3 Einträge
         this.createLevelDropdown(dropdownX, dropdownY);
     }
+
+    createLevelDropdown(x, y) {
+        // Eintrags-Höhe und Padding
+        const entryH   = 40;
+        const pad      = 10;
+        const boxWidth = 200;
+        // Gesamthöhe: Einträge + Padding oben/unten
+        const boxHeight = this.levels.length * entryH + pad * 2;
+
+        // Container so verschieben, dass er komplett oberhalb des Buttons sitzt
+        // (y ist aktuell der Top-Rand des Labels; wir ziehen hier die boxHeight drauf)
+        this.levelDropdown = this.add
+            .container(x, y - boxHeight)
+            .setVisible(false);
+
+        // 1) Einmalige Hintergrund-Box
+        const bg = this.add
+            .rectangle(0, 0, boxWidth, boxHeight, 0x000000, 0.8)
+            .setOrigin(0, 0);
+        this.levelDropdown.add(bg);
+
+        // Text-Stil
+        const textStyle = {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#ffffff'
+        };
+
+        // 2) Jeden Level-Eintrag einmal platzieren
+        this.levels.forEach((lvl, i) => {
+            const yPos = pad + i * entryH;
+            const txt = this.add
+                .text(pad, yPos, `Level ${lvl.id}`, textStyle)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => this.selectLevel(lvl.id));
+            this.levelDropdown.add(txt);
+        });
+    }
+
 
     /**
      * Erstellt das Dropdown-Menü mit den drei Level-Auswahlmöglichkeiten.
      * Das Menü ist in einem Container und startet als invisible.
      * x/y sind die Koordinaten (oben links) des Dropdown-Rechtecks.
      */
-    createLevelDropdown(x, y) {
-        // dynamically build a list based on what the player owns
-        this.levelDropdown = this.add.container(x, y).setVisible(false);
-        const entryH   = 40;
-        const pad      = 10;
-        const boxWidth = 200;
-        const boxHeight= this.levels.length * entryH + pad * 2;
-
-            // background of dropdown
-            let bgRect = null
-
-
-        const textStyle = { fontFamily: 'Arial', fontSize: '18px', color: '#ffffff' };
-        // one entry per owned level
-        this.levels.forEach((lvl, i) => {
-                    const yPos = pad + i * entryH+entryH*2-this.levels.length;
-                    bgRect = this.add.rectangle(0, yPos-20, boxWidth, boxHeight, 0x000000, 0.8).setOrigin(0);
-                    this.levelDropdown.add(bgRect);
-
-            const txt  = this.add.text(10, yPos, `Level ${lvl.id}`, textStyle)
-                            .setInteractive({ useHandCursor: true })
-                        .on('pointerdown', () => this.selectLevel(lvl.id));
-                    this.levelDropdown.add(txt);
-                });
-    }
 
     /**
      * Zeigt oder versteckt das Level-Dropdown.
