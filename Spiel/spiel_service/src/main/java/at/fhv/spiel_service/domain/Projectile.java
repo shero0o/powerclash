@@ -17,10 +17,10 @@ public class Projectile implements Entity {
     private int damage;
     private long creationTime;
     private ProjectileType projectileType;
-    private float maxRange;                 // max Distanz in px
-    private float travelled = 0f;
-    private boolean armed = false;
-    private long armTime = 0L;  // creationTime + 2000ms
+    private float maxRange;
+    private float travelled;
+    private boolean armed;
+    private long armTime;
 
     public Projectile(String id, String playerId, Position position, Position direction, float speed, int damage, long creationTime, ProjectileType projectileType, float maxRange, float travelled) {
         this.id = id;

@@ -3,9 +3,6 @@ package at.fhv.spiel_service.domain;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * A simple zombie‐style NPC with position, health, melee radius, damage, speed, and cooldown.
- */
 @Data
 @NoArgsConstructor
 public class NPC implements Entity {
@@ -16,13 +13,9 @@ public class NPC implements Entity {
     private int    damage;
     private float  speed;
     private long   attackCooldownMs;
+    private long lastAttackTime;
 
-    // tracks last attack time
-    private long lastAttackTime = 0;
 
-    /**
-     * Seven-arg ctor for addNpc(...)
-     */
     public NPC(String id,
                Position position,
                int currentHealth,

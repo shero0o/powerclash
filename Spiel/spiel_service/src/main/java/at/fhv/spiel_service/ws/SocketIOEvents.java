@@ -1,5 +1,6 @@
 package at.fhv.spiel_service.ws;
 
+import at.fhv.spiel_service.config.GameConstants;
 import at.fhv.spiel_service.domain.Gadget;
 import at.fhv.spiel_service.domain.Player;
 import at.fhv.spiel_service.domain.Position;
@@ -144,8 +145,8 @@ public class SocketIOEvents {
         switch (g.getType()) {
             case SPEED_BOOST -> p.setSpeedBoostActive(true);
             case HEALTH_BOOST -> {
-                p.setMaxHealth(p.getMaxHealth() + Player.HP_BOOST_AMOUNT);
-                p.setCurrentHealth(Math.min(p.getMaxHealth(), p.getCurrentHealth() + Player.HP_BOOST_AMOUNT));
+                p.setMaxHealth(p.getMaxHealth() + GameConstants.HP_BOOST_AMOUNT);
+                p.setCurrentHealth(Math.min(p.getMaxHealth(), p.getCurrentHealth() + GameConstants.HP_BOOST_AMOUNT));
             }
             case DAMAGE_BOOST -> p.setDamageBoostEndTime(now + 10_000);
         }

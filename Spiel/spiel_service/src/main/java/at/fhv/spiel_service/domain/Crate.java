@@ -1,20 +1,16 @@
 package at.fhv.spiel_service.domain;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.experimental.FieldDefaults;
 
 @Data
 @AllArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE)
-
 public class Crate implements Entity {
 
     private final String id;
     private final Position position;
-    private int currentHealth = 100;
-    private boolean wasHit = false;
+    private int currentHealth;
+    private boolean wasHit;
 
     public Crate(String id, Position position) {
         this.id = id;
@@ -22,7 +18,6 @@ public class Crate implements Entity {
         this.currentHealth = 100;
         this.wasHit = false;
     }
-
 
     @Override
     public String getId() {
@@ -32,10 +27,5 @@ public class Crate implements Entity {
     @Override
     public Position getPosition() {
         return position;
-    }
-
-    @Override
-    public void setPosition(Position position) {
-
     }
 }

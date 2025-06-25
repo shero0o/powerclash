@@ -1,5 +1,6 @@
 package at.fhv.spiel_service.service.game.manager.collision;
 
+import at.fhv.spiel_service.config.GameConstants;
 import at.fhv.spiel_service.domain.*;
 import at.fhv.spiel_service.service.game.manager.projectile.ProjectileManager;
 
@@ -79,7 +80,7 @@ public class CollisionManagerImpl implements CollisionManager {
                     if (shooter != null
                             && shooter.isDamageBoostActive()
                             && System.currentTimeMillis() <= shooter.getDamageBoostEndTime()) {
-                        dmg *= Player.DAMAGE_MULTIPLIER;
+                        dmg *= GameConstants.DAMAGE_MULTIPLIER;
                     }
                     target.setCurrentHealth(Math.max(0, target.getCurrentHealth() - dmg));
                     if (target.getCurrentHealth() == 0) {

@@ -1,32 +1,24 @@
 package at.fhv.spiel_service.service.game.gameLoop;
 
+import at.fhv.spiel_service.config.GameConstants;
 import at.fhv.spiel_service.domain.*;
 import at.fhv.spiel_service.messaging.EventPublisher;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.service.game.logic.IGameLogic;
-
+import lombok.Getter;
 import java.util.Map;
 import java.util.concurrent.*;
+import static at.fhv.spiel_service.config.GameConstants.MAX_SPEED;
+import static at.fhv.spiel_service.config.GameConstants.TICK_DT;
 
-/**
- * Kapselt die eigentliche Game‐Loop (60Hz) und macht:
- * 1) Input‐Verarbeitung
- * 2) Projektil‐ & Umwelteinflüsse‐Update
- * 3) State‐Broadcast
- */
 public class GameLoop {
-    private static final float TICK_DT   = 0.016f; // ~60 Hz
-    private static final float MAX_SPEED = 300f;
-
     private final String roomId;
     private final IGameLogic logic;
     private final EventPublisher publisher;
     private final GameMap map;
-
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    // statt Movement-Klasse: key → [dirX, dirY, angle]
     private final ConcurrentMap<String, float[]> movementBuffer = new ConcurrentHashMap<>();
-
+    @Getter
     private boolean running = false;
 
     public GameLoop(String roomId,
@@ -76,7 +68,7 @@ public class GameLoop {
                     } else if (g!=null && g.getTimeRemaining()==0) {
                         if (p.isHpBoostActive()) {
                             p.setHpBoostActive(false);
-                            p.setMaxHealth(p.getMaxHealth() - Player.HP_BOOST_AMOUNT);
+                            p.setMaxHealth(p.getMaxHealth() - GameConstants.HP_BOOST_AMOUNT);
                             if (p.getCurrentHealth()>p.getMaxHealth()) {
                                 p.setCurrentHealth(p.getMaxHealth());
                             }
@@ -109,11 +101,6 @@ public class GameLoop {
                 ex.printStackTrace();
             }
         }, 0, (long)(TICK_DT*1000), TimeUnit.MILLISECONDS);
-    }
-
-    /** Prüft, ob die Loop läuft */
-    public boolean isRunning() {
-        return running;
     }
 
     /** Puffer für nächsten Tick überschreiben */

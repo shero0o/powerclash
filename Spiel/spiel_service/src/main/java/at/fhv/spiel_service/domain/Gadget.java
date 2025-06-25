@@ -18,6 +18,5 @@ public class Gadget {
      this.type = type;
      timeRemaining = 0L;
      remainingUses = 3;
-     System.out.println("[INFO] New Gadget: " + id);
     }
 }

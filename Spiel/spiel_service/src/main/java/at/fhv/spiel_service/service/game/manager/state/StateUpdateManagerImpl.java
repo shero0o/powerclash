@@ -3,7 +3,7 @@ package at.fhv.spiel_service.service.game.manager.state;
 import at.fhv.spiel_service.domain.Crate;
 import at.fhv.spiel_service.domain.NPC;
 import at.fhv.spiel_service.domain.ProjectileType;
-import at.fhv.spiel_service.domain.ZoneState;
+import at.fhv.spiel_service.domain.Zone;
 import at.fhv.spiel_service.messaging.CrateState;
 import at.fhv.spiel_service.messaging.PlayerState;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
@@ -78,7 +78,7 @@ public class StateUpdateManagerImpl implements StateUpdateManager {
 
         if (zoneManager.isZoneActive()) {
             long rem = zoneManager.getRemainingTimeMs();
-            msg.setZoneState(new ZoneState(
+            msg.setZone(new Zone(
                     zoneManager.getCenter(),
                     zoneManager.getZoneRadius(),
                     rem
