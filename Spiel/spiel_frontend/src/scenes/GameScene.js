@@ -16,7 +16,7 @@ export default class GameScene extends Phaser.Scene {
         this.defeatShown      = false;
 
         // zone overlay
-        this.zoneState        = null;
+        this.zone        = null;
         this.graphicsZone      = null;
         this.textZoneTimer     = null;
         this.boostActive       = false;
@@ -30,15 +30,7 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
-        console.log("LevelId", data.levelId);
-        this.mapKey = data.levelId || (() => {
-            switch (this.registry.get('levelId')) {
-                case 1: return 'level1';
-                case 2: return 'level2';
-                case 3: return 'level3';
-                default: return 'level1';
-            }
-        })() || 'level1';
+        this.mapKey = this.registry.get('levelId');
 
         this.selectedWeapon = data.chosenWeapon || (() => {
             switch (this.registry.get('weapon')) {
@@ -107,11 +99,13 @@ export default class GameScene extends Phaser.Scene {
         // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
         let mapFile;
+        console.log("MAP KEY", this.mapKey);
         if (this.mapKey === 'level1') {
             mapFile = 'map1.tmj';
         } else {
             mapFile = 'map2.tmj'; // shared by level2 and level3
         }
+        console.log("MAP FILE", mapFile);
 
         this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
     }
@@ -163,7 +157,7 @@ export default class GameScene extends Phaser.Scene {
             map.createLayer('Boden', tileset, 0, 0);
 
             // 2) Zusätzliche Overlays nur für Level 2 & 3
-                if (this.mapKey === 'level2' || this.mapKey === 'level3') {
+            if (this.mapKey === 'level2' || this.mapKey === 'level3') {
                 map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
                 this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             }
@@ -400,7 +394,7 @@ export default class GameScene extends Phaser.Scene {
         this.socket.on('stateUpdate', state => {
             this.npcs = state.npcs || [];
             this.latestState = state;
-            this.zoneState   = state.zoneState || null;
+            this.zone   = state.zone || null;
             const myGadget = state.gadgets.find(g => g.playerId === this.playerId);
             if (myGadget) {
                 this.gadgetMaxUses      = myGadget.remainingUses;
@@ -563,8 +557,8 @@ export default class GameScene extends Phaser.Scene {
 
         this.graphicsZone.clear();
 
-        if (this.zoneState) {
-            const {center, radius, timeMsRemaining} = this.zoneState;
+        if (this.zone) {
+            const {center, radius, timeMsRemaining} = this.zone;
 
             // Draw a green circle outline at the true world coords
             this.graphicsZone
