@@ -1268,7 +1268,22 @@ export default class GameScene extends Phaser.Scene {
             exitBtn.setScale(1.0).setDepth(1001);
         });
 
-        exitBtn.on('pointerdown', () => {
+        exitBtn.on('pointerdown', async() => {
+            try {
+                const res = await fetch(
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
+                    { method: 'POST' }
+                );
+                if (!res.ok) {
+                    const err = await res.text();
+                    console.error('Error while adding coins: ', err);
+                    return;
+                }
+            } catch (e) {
+                console.error('Wallet-API not reachable:', e);
+                return;
+            }
+
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
