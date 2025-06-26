@@ -32,7 +32,7 @@ export default class GameScene extends Phaser.Scene {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
         this.mapKey            = data.levelId || this.registry.get('levelId') || 1;
-        this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 'RIFLE_BULLET';
+        this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 1;
         this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
         this.playerName        = this.registry.get('playerName') || 'Player';
 
@@ -77,8 +77,8 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
         this.load.svg("speedGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
-        for (let i = 0; i < 25; i++) {
-            this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
+        for (let i = 1; i < 26; i++) {
+            this.load.image(`${i}`, `/assets/PNG/explosion/${i}.png`);
         }
 
         // Map tileset & tilemap
@@ -329,7 +329,7 @@ export default class GameScene extends Phaser.Scene {
         // Explosion-Animation
         this.anims.create({
             key: 'explode',
-            frames: Array.from({ length: 25 }, (_, i) => ({ key: `explosion${i}` })),
+            frames: Array.from({ length: 25 }, (_, i) => ({ key: `${i}` })),
             frameRate: 25,
             repeat: 0,
             hideOnComplete: true
