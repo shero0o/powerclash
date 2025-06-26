@@ -27,15 +27,11 @@ public class MineBehavior implements ProjectileBehavior {
 
     @Override
     public void update(Projectile p, ProjectileContext ctx) {
-        float delta = ctx.deltaSec();
-        // wie bisher: Rolle bis range, dann arm/disarm
-        if (!p.isArmed()) {
-            if (ctx.now() >= p.getArmTime()) {
-                p.setArmed(true);
-                return;
-            }
+        if (!p.isArmed() && ctx.now() >= p.getArmTime()) {
+            p.setArmed(true);
+            return;
         }
-        // Bewegung wie bei Rifle
-        new RifleBulletBehavior().update(p, ctx);
+        // Bewegung wie bei Rifle (aber andere werte)
+        doMovementAndRange(p, ctx, SPEED, MAX_RANGE);
     }
 }

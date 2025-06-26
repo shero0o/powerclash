@@ -33,7 +33,6 @@ public class DefaultIGameLogic implements IGameLogic {
     private final List<NPC> npcs = new ArrayList<>();
     private GameMap gameMap;
     private long lastFrameTimeMs = System.currentTimeMillis();
-
     private final Map<String, Crate> crates = new ConcurrentHashMap<>();
 
     private MovementManager movementManager;
@@ -121,17 +120,12 @@ public class DefaultIGameLogic implements IGameLogic {
 
     @Override
     public void applyEnvironmentalEffects () {
-        // 1) Zeit berechnen
         long now     = System.currentTimeMillis();
         float delta  = (now - lastFrameTimeMs) / 1000f;
         lastFrameTimeMs = now;
-        // 2) Umwelteinflüsse aufs Spielfeld
         envEffectsManager.applyEnvironmentalEffects(delta);
-        // 3) Zone-Shrink & Schaden außerhalb
         zoneManager.updateZone(delta, playerService.getPlayers());
-        // 4) NPC-KI (Bewegung & melee)
         npcManager.updateNPCs(delta, playerService.getPlayers());
-
         collisionManager.processCollisions(
                 projectileManager.getProjectiles(),
                 playerService.getPlayers(),
@@ -149,7 +143,6 @@ public class DefaultIGameLogic implements IGameLogic {
         @Override
         public void updateProjectiles (float delta) {
             projectileManager.updateProjectiles(delta);
-
             collisionManager.processCollisions(projectileManager.getProjectiles(), playerService.getPlayers(), npcs, crates, playerService.getPlayerCoins());
         }
 

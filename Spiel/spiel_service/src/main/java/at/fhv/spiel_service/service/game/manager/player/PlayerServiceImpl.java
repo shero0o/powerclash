@@ -37,11 +37,11 @@ public class PlayerServiceImpl implements IPlayerService {
 
     @Override
     public void addPlayer(String playerId, String brawlerId, String playerName) {
-        // 1) Default Brawler
+        // Default Brawler
         if (brawlerId == null || brawlerId.isBlank()) {
             brawlerId = "hitman";
         }
-        // 2) Spawn-Logik
+        //
         int index = players.size();
         Position spawn;
         switch (index) {
@@ -52,16 +52,12 @@ public class PlayerServiceImpl implements IPlayerService {
             default -> spawn = new Position(3860, 2700, 0);
         }
         Brawler br = new Brawler(playerId, 1, 100, spawn);
-        Player p = new Player(br.getId(), br.getLevel(), br.getMaxHealth(), br.getPosition());
-        players.put(playerId, p);
-
-        // 3) Projectile-Subsystem initialisieren (Ammo + Weapon)
+        Player player = new Player(br.getId(), br.getLevel(), br.getMaxHealth(), br.getPosition());
+        players.put(playerId, player);
         projectileManager.initPlayer(playerId, RIFLE_BULLET);
-
-        // 4) Rest-Maps
         playerBrawler.put(playerId, brawlerId);
         playerNames.put(playerId, playerName);
-        playerGadget.put(playerId, new Gadget(null, playerId)); // kein Gadget initial
+        playerGadget.put(playerId, new Gadget(null, playerId));
         playerCoins.put(playerId, 0);
     }
 

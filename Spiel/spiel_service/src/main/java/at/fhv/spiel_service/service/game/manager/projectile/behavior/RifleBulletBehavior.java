@@ -25,23 +25,6 @@ public class RifleBulletBehavior implements ProjectileBehavior {
 
     @Override
     public void update(Projectile p, ProjectileContext ctx) {
-        // einfache Bewegung + Range-Cleanup
-        float delta = ctx.deltaSec();
-        float len = (float)Math.hypot(p.getDirection().getX(), p.getDirection().getY());
-        float nx = len>0? p.getDirection().getX()/len : 0;
-        float ny = len>0? p.getDirection().getY()/len : 0;
-        float dist = SPEED*delta;
-        p.getPosition().setX(p.getPosition().getX() + nx*dist);
-        p.getPosition().setY(p.getPosition().getY() + ny*dist);
-        p.setTravelled(p.getTravelled() + dist);
-        if (p.getTravelled() >= p.getMaxRange()) {
-            ctx.removeProjectileById(p.getId());
-        }
-        // Wand-Kollision
-        int tx = (int)(p.getPosition().getX()/ctx.getGameMap().getTileWidth());
-        int ty = (int)(p.getPosition().getY()/ctx.getGameMap().getTileHeight());
-        if (ctx.getGameMap().isWallAt(tx, ty)) {
-            ctx.removeProjectileById(p.getId());
-        }
+        doMovementAndRange(p, ctx, SPEED, MAX_RANGE);
     }
 }

@@ -8,8 +8,4 @@ public interface MovementManager {
      */
     void movePlayer(String playerId, float x, float y, float angle);
 
-    /**
-     * Wendet alle Umwelteinflüsse an (Giftfelder, Heal-Tiles, Busch-Sichtbarkeit).
-     */
-    void applyEnvironmentalEffects();
 }
