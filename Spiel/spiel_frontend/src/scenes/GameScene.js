@@ -561,7 +561,7 @@ export default class GameScene extends Phaser.Scene {
             if (!currIds.has(id)) {
                 const pos = this.previousMinePositions[id];
                 if (pos) {
-                    const expl = this.explosionGroup.create(pos.x, pos.y, 'explosion1').setOrigin(0.5);
+                    const expl = this.explosionGroup.create(pos.x, pos.y, '1').setOrigin(0.5);
                     expl.play('explode');
                 }
             }
