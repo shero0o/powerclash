@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class GameSessionImpl implements IGameSession {
     private final String id        = UUID.randomUUID().toString();
-    private final Long levelId;
+    private final String levelId;
     private final Map<String,Object> players      = new ConcurrentHashMap<>();
     private final Map<String,Object> readyPlayers = new ConcurrentHashMap<>();
 
@@ -34,7 +34,7 @@ public class GameSessionImpl implements IGameSession {
 
     private static final int MAX_PLAYERS = 2;
 
-    public GameSessionImpl(EventPublisher publisher, Long levelId) {
+    public GameSessionImpl(EventPublisher publisher, String levelId) {
         this.logic     = new DefaultIGameLogic();
         this.publisher = publisher;
         this.levelId   = levelId;
@@ -44,7 +44,7 @@ public class GameSessionImpl implements IGameSession {
     }
 
     @Override public String getId()              { return id; }
-    @Override public Long getLevelId()         { return levelId; }
+    @Override public String getLevelId()         { return levelId; }
     @Override public int    getPlayerCount()     { return players.size(); }
     @Override public boolean isFull()            { return players.size() >= MAX_PLAYERS; }
     @Override public int    getMaxPlayers()      { return MAX_PLAYERS; }
@@ -82,7 +82,7 @@ public class GameSessionImpl implements IGameSession {
     public void start() {
         if (hasGameStarted() || getPlayerCount() < MAX_PLAYERS) return;
         // Level-3-NPCs & Zone
-        if (3 == levelId && logic instanceof DefaultIGameLogic) {
+        if ("level3".equals(levelId) && logic instanceof DefaultIGameLogic) {
             DefaultIGameLogic lg = (DefaultIGameLogic) logic;
             float cx = gameMap.getWidthInPixels()/2f;
             float cy = gameMap.getHeightInPixels()/2f;

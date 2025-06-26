@@ -30,8 +30,24 @@ export default class GameScene extends Phaser.Scene {
     init(data) {
         this.roomId            = data.roomId;
         this.playerId          = data.playerId;
-        this.mapKey            = data.levelId || this.registry.get('levelId') || 'level1';
-        this.selectedWeapon    = data.chosenWeapon || this.registry.get('weapon') || 'RIFLE_BULLET';
+        console.log("LevelId", data.levelId);
+        this.mapKey = data.levelId || (() => {
+            switch (this.registry.get('levelId')) {
+                case 1: return 'level1';
+                case 2: return 'level2';
+                case 3: return 'level3';
+                default: return 'level1';
+            }
+        })() || 'level1';
+
+        this.selectedWeapon = data.chosenWeapon || (() => {
+            switch (this.registry.get('weapon')) {
+                case 2: return 'SNIPER';
+                case 3: return 'SHOTGUN_PELLET';
+                case 4: return 'MINE';
+                default: return 'RIFLE_BULLET';
+            }
+        })() || 'RIFLE_BULLET';
         this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
         this.playerName        = this.registry.get('playerName') || 'Player';
 
@@ -87,7 +103,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.mapKey === 'level1') {
             mapFile = 'map1.tmj';
         } else {
-            mapFile = 'map2.0.tmj'; // shared by level2 and level3
+            mapFile = 'map2.tmj'; // shared by level2 and level3
         }
 
         this.load.tilemapTiledJSON('map', `/assets/${mapFile}`);
@@ -136,14 +152,17 @@ export default class GameScene extends Phaser.Scene {
         const map = this.make.tilemap({ key: 'map' });
         this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        if (this.mapKey === 1) {
+        // 1) Boden immer zuerst
             map.createLayer('Boden', tileset, 0, 0);
-            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
-            map.createLayer('Boden', tileset, 0, 0);
-            map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
-            this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
-            this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        }
 
+            // 2) Zusätzliche Overlays nur für Level 2 & 3
+                if (this.mapKey === 'level2' || this.mapKey === 'level3') {
+                map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
+                this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
+            }
+
+            // 3) Mauern ganz zum Schluss
+                this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
 
         const controllerIcon = this.add.image(
             vw / 130,    // horizontal zentriert

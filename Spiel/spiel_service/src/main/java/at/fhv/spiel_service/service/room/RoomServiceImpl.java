@@ -20,7 +20,7 @@ public class RoomServiceImpl implements IRoomService {
     }
 
     @Override
-    public IGameSession createRoom(Long levelId) {
+    public IGameSession createRoom(String levelId) {
         IGameSession room = new GameSessionImpl(eventPublisher, levelId);
         rooms.add(room);
         return room;
@@ -34,7 +34,7 @@ public class RoomServiceImpl implements IRoomService {
     }
 
     @Override
-    public String assignPlayerToRoom(String playerId, String brawlerId, Long levelId, String playerName) {
+    public String assignPlayerToRoom(String playerId, String brawlerId, String levelId, String playerName) {
         for (IGameSession room : rooms) {
             if (!room.isFull() && room.getLevelId().equals(levelId) && !room.hasGameStarted()) {
                 room.addPlayer(playerId, brawlerId, playerName);

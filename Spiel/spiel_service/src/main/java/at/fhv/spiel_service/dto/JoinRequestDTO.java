@@ -15,7 +15,7 @@ import lombok.Setter;
 public class JoinRequestDTO {
     String playerId;
     private String brawlerId;
-    private Long levelId;
+    private String levelId;
     private ProjectileType chosenWeapon;
     private String playerName;
     private GadgetType chosenGadget;

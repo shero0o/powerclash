@@ -518,7 +518,14 @@ export default class LobbyScene extends Phaser.Scene {
 
         // 4) Gewählten Level in Registry/LocalStorage schreiben
         //    (wurde schon über selectLevel gesetzt)
-        const levelToSend = this.selectedLevel || 'level1';
+        const levelToSend = (() => {
+            switch (this.selectedLevel) {
+                case 1: return 'level1';
+                case 2: return 'level2';
+                case 3: return 'level3';
+                default: return 'level1';
+            }
+        })() || 'level1';
         localStorage.setItem('chosenMapLevel', levelToSend);
 
         // 5) Registry speichern (damit WaitingScene das auslesen kann)
