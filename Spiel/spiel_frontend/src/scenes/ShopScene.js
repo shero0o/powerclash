@@ -24,7 +24,7 @@ export default class ShopScene extends Phaser.Scene {
     }
 
     init() {
-        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerId   = this.registry.get('playerId');
         this.playerName = this.registry.get('playerName') || 'Player';
     }
 

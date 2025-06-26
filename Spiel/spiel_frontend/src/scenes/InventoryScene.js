@@ -37,7 +37,7 @@ export default class InventoryScene extends Phaser.Scene {
         this.selectedBrawler = data.brawler;
         this.selectedGadget  = data.gadget;
         this.selectedLevel   = data.level;
-        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerId   = this.registry.get('playerId');
         this.playerName = this.registry.get('playerName') || 'Player';
     }
 

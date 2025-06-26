@@ -21,7 +21,7 @@ export default class AccountScene extends Phaser.Scene {
         }
 
     init() {
-        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerId   = this.registry.get('playerId');
         this.playerName = this.registry.get('playerName') || 'Not logged in';
     }
 

@@ -76,7 +76,7 @@ export default class LobbyScene extends Phaser.Scene {
     }
 
     init() {
-        this.playerId   = this.registry.get('playerId')   || 1;
+        this.playerId   = this.registry.get('playerId');
         this.playerName = this.registry.get('playerName') || 'Player';
     }
 
@@ -506,7 +506,7 @@ export default class LobbyScene extends Phaser.Scene {
      */
     onPlayClicked() {
         // 1) PlayerID generieren/fetchen
-        const playerId = localStorage.getItem('playerId') || crypto.randomUUID();
+        const playerId = this.registry.get('playerId');
         localStorage.setItem('playerId', playerId);
 
         // 2) PlayerName aus HTML-Input lesen (oder „Player“, falls leer)
