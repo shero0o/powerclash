@@ -77,6 +77,9 @@ export default class LobbyScene extends Phaser.Scene {
 
     init() {
         this.playerId   = this.registry.get('playerId');
+        if (!this.playerId) {
+            this.scene.start('AccountScene');
+        }
         this.playerName = this.registry.get('playerName') || 'Player';
     }
 
