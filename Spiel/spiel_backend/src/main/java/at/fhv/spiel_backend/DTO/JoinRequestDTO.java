@@ -1,6 +1,7 @@
 package at.fhv.spiel_backend.DTO;
 
 
+import at.fhv.spiel_backend.model.GadgetType;
 import at.fhv.spiel_backend.model.ProjectileType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -16,5 +17,7 @@ public class JoinRequestDTO {
     private String brawlerId;
     private String levelId;
     private ProjectileType chosenWeapon;
+    private String playerName;
+    private GadgetType chosenGadget;
 
 }

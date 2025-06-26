@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/shop_catalogue_db
+    username: shop_catalogue_user
+    password: secret
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false

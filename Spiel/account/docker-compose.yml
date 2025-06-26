@@ -1,0 +1,49 @@
+services:
+  account-db:
+    image: postgres:15-alpine
+    container_name: account-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: account_db
+      POSTGRES_USER: account_user
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - account-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U account_user -d account_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared-backend
+
+  account-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: account-service:latest
+    container_name: account-service
+    depends_on:
+      account-db:
+        condition: service_healthy
+    ports:
+      - "8093:8093"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      WALLET_SERVICE_URL: http://wallet-service:8092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://account-db:5432/account_db
+      SPRING_DATASOURCE_USERNAME: account_user
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SERVER_PORT: 8093
+    networks:
+      - shared-backend
+
+volumes:
+  account-db-data:
+networks:
+  shared-backend:
+    external: true

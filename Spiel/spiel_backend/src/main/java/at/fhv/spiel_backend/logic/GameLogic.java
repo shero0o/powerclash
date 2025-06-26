@@ -1,12 +1,10 @@
 package at.fhv.spiel_backend.logic;
 
-import at.fhv.spiel_backend.model.Position;
-import at.fhv.spiel_backend.model.Projectile;
-import at.fhv.spiel_backend.model.ProjectileType;
-import at.fhv.spiel_backend.model.Player;
+import at.fhv.spiel_backend.model.*;
 import at.fhv.spiel_backend.server.map.GameMap;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,7 +37,7 @@ public interface GameLogic {
     /**
      * Register a new player with specific Brawler
      */
-    void addPlayer(String playerId, String brawlerId);
+    void addPlayer(String playerId, String brawlerId, String playerName);
 
     /**
      * Remove a player from the simulation
@@ -56,6 +54,8 @@ public interface GameLogic {
      */
     Player getPlayer(String playerId);
 
+    Gadget getGadget(String playerId);
+
     /**
      * Simple attack (legacy) for Bullet-based systems
      */
@@ -69,7 +69,7 @@ public interface GameLogic {
     /**
      * Update existing projectiles (movement, lifetime, collisions)
      */
-    void updateProjectiles();
+    void updateProjectiles(float delta);
 
     /**
      * Get raw player position (used for camera follow)
@@ -85,4 +85,11 @@ public interface GameLogic {
      * Change the current weapon & reset ammo
      */
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
+
+    void setPlayerGadget(String playerId, GadgetType chosenGadget);
+
+    void applyEnvironmentalEffects();
+
+    List<Crate> getCrates();
+
 }

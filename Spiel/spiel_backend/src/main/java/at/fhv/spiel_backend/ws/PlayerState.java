@@ -14,4 +14,8 @@ public class PlayerState {
     private boolean visible;
     private int ammo;
     private ProjectileType currentWeapon;
+    private String brawlerId;
+    private String playerName;
+    private int coinCount;
+    private int maxHealth;
 }

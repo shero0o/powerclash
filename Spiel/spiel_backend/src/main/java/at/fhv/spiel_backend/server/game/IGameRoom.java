@@ -1,8 +1,10 @@
 package at.fhv.spiel_backend.server.game;
 
 import at.fhv.spiel_backend.logic.GameLogic;
+import at.fhv.spiel_backend.model.Crate;
 import at.fhv.spiel_backend.ws.StateUpdateMessage;
 
+import java.util.List;
 import java.util.Map;
 
 public interface IGameRoom {
@@ -12,12 +14,13 @@ public interface IGameRoom {
      */
     String getId();
 
+    String getLevelId();
     /**
      * Adds a player to this room.
      * @param playerId unique identifier of the player
      */
 
-    void addPlayer(String playerId, String brawlerId);
+    void addPlayer(String playerId, String brawlerId, String playerName);
 
     /**
      * Removes a player from this room.

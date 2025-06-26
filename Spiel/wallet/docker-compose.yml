@@ -1,0 +1,47 @@
+services:
+  wallet-db:
+    image: postgres:15-alpine
+    container_name: wallet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wallet_db
+      POSTGRES_USER: wallet_user
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5444:5432"
+    volumes:
+      - wallet-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wallet_user -d wallet_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shared-backend
+
+  wallet-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wallet-service:latest
+    container_name: wallet-service
+    depends_on:
+      wallet-db:
+        condition: service_healthy
+    ports:
+      - "8092:8092"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://wallet-db:5432/wallet_db
+      SPRING_DATASOURCE_USERNAME: wallet_user
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+      SERVER_PORT: 8092
+    networks:
+      - shared-backend
+volumes:
+  wallet-db-data:
+networks:
+  shared-backend:
+    external: true
