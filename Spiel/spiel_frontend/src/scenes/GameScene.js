@@ -136,7 +136,7 @@ export default class GameScene extends Phaser.Scene {
         const map = this.make.tilemap({ key: 'map' });
         this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        if (this.mapKey === 'level1') {
+        if (this.mapKey === 1) {
             map.createLayer('Boden', tileset, 0, 0);
             this.obstacleLayer = this.map.createLayer('Wand', tileset, 0, 0);        } else if (this.mapKey === 'level2'|| this.mapKey === 'level3'){
             map.createLayer('Boden', tileset, 0, 0);
@@ -338,7 +338,6 @@ export default class GameScene extends Phaser.Scene {
             repeat: 0,
             hideOnComplete: true
         });
-
         this.explosionGroup = this.add.group();
         this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
@@ -1142,11 +1141,26 @@ export default class GameScene extends Phaser.Scene {
             exitBtn.setScale(1.0).setDepth(1001);
         });
 
-        exitBtn.on('pointerdown', () => {
+        exitBtn.on('pointerdown', async () => {
+            try {
+                const res = await fetch(
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
+                    { method: 'POST' }
+                );
+                if (!res.ok) {
+                    const err = await res.text();
+                    console.error('Error while adding coins: ', err);
+                    return;
+                }
+            } catch (e) {
+                console.error('Wallet-API not reachable:', e);
+                return;
+            }
+
             this.socket.emit('leaveRoom', { playerId: this.playerId });
 
             this.socket.disconnect();
-            this.scene.start('LobbyScene');;
+            this.scene.start('LobbyScene');
         });
 
 

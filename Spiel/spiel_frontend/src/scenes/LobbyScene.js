@@ -1,6 +1,8 @@
 // src/scenes/LobbyScene.js
 import Phaser from 'phaser';
 
+const API_BASE = 'http://localhost:8092/api/wallet';
+
 export default class LobbyScene extends Phaser.Scene {
     constructor() {
         super({ key: 'LobbyScene' });
@@ -10,12 +12,12 @@ export default class LobbyScene extends Phaser.Scene {
 
         // Level-Dropdown und aktuell gewählter Level
         this.levelDropdown = null;
-        this.selectedLevel = 'level1'; // Default Level
+        this.selectedLevel = null; // Default Level
 
-        this.selectedGadget = 'DAMAGE_BOOST'
+        this.selectedGadget = null;
         // Default-Werte für Waffe und Brawler (wie in SelectionScene)
-        this.selectedWeapon  = 'RIFLE_BULLET';
-        this.selectedBrawler = 'hitman';
+        this.selectedWeapon  = null;
+        this.selectedBrawler = null;
 
         // Label über dem PLAY-Button ("Level: X")
         this.levelLabel = null;
@@ -73,9 +75,39 @@ export default class LobbyScene extends Phaser.Scene {
 
     }
 
-    create() {
-        const { width, height } = this.scale;
+    init() {
+        this.playerId   = this.registry.get('playerId');
+        this.playerName = this.registry.get('playerName') || 'Player';
+    }
 
+    async create() {
+        const {width, height} = this.scale;
+
+        try {
+            const selRes = await fetch(`${API_BASE}/selected?playerId=${this.playerId}`);
+            const sel = await selRes.json();
+            // überschreibe die Defaults mit den gespeicherten Werten
+            this.selectedWeapon = sel.weaponId;
+            this.selectedBrawler = sel.brawlerId;
+            this.selectedGadget = sel.gadgetId;
+            this.selectedLevel = sel.levelId;
+        } catch (err) {
+            console.warn('Konnte Selection nicht laden, nutze Defaults', err);
+        }
+
+        // ─── load which levels the player owns ─────────────
+        try {
+                const lvRes = await fetch(`${API_BASE}/levels/player?playerId=${this.playerId}`);
+                this.levels = await lvRes.json();
+            } catch (err) {
+                console.warn('Konnte Levels nicht laden, nutze Defaults', err);
+                this.levels = [];
+            }
+        // default to first owned level if none selected
+            if (!this.selectedLevel && this.levels.length) {
+                this.selectedLevel = this.levels[0].id;
+            }
+        
         // --- Hintergrund ---
         this.add.image(width / 2, height / 2, 'lobby_bg')
             .setOrigin(0.5)
@@ -83,9 +115,9 @@ export default class LobbyScene extends Phaser.Scene {
 
         // --- Avatar + Kreis/Schatten ---
         // --- Dynamisches Brawler‐Icon ---
-        this.brawlerIcon = this.add.image(width/2, height/2 + 140, this._mapBrawlerKey())
+        this.brawlerIcon = this.add.image(width / 2, height / 2 + 140, this._mapBrawlerKey())
             .setOrigin(0.5)
-            .setDisplaySize(400, 600);
+            .setScale(0.8);
 
         // Schatten-Kreis (leicht weiches Schwarz hinter dem Avatar)
 
@@ -94,7 +126,12 @@ export default class LobbyScene extends Phaser.Scene {
         // --- Profil-Icon oben links ---
         this.add.image(60, 60, 'icon_profile')
             .setOrigin(0.5)
-            .setScale(0.8);
+            .setScale(0.8)
+            .setInteractive({useHandCursor: true})
+            .on('pointerdown', () => {
+                this.scene.start('AccountScene');
+            });
+        ;
 
         // --- Münzanzeige (Coin-Symbol + Box + Zahl) oben mittig ---
         this._createCoinDisplay();
@@ -103,13 +140,17 @@ export default class LobbyScene extends Phaser.Scene {
         const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
-            .setInteractive({ useHandCursor: true });
-        btnShop.on('pointerdown', () => console.log('Shop öffnen'));
+            .setInteractive({useHandCursor: true});
 
-        const settingsBtn = this.add.image(1400, height / 2 - 330, 'btn-settings')
+        btnShop.on('pointerdown', () => {
+            this.scene.start('ShopScene');
+        });
+
+
+        const settingsBtn = this.add.image(1400, 52, 'btn-settings')
             .setOrigin(0.5)
             .setDisplaySize(140, 70)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive({useHandCursor: true})
             .setAlpha(1)
             .setDepth(1000);
 
@@ -121,7 +162,7 @@ export default class LobbyScene extends Phaser.Scene {
         const btnBrawlers = this.add.image(90, height / 2, 'icon_brawlers')
             .setOrigin(0.5)
             .setDisplaySize(200, 80)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({useHandCursor: true});
         btnBrawlers.on('pointerdown', () => console.log('Brawlers öffnen'));
 
         // --- Name-Text + Weapon/Gadget-Box (mittig oben) ---
@@ -130,15 +171,17 @@ export default class LobbyScene extends Phaser.Scene {
             currentGadgetKey = "healthGadget";
         } else if (this.selectedGadget === "SPEED_BOOST") {
             currentGadgetKey = "speedGadget";
-        }else{currentGadgetKey = "damageGadget"}
+        } else {
+            currentGadgetKey = "damageGadget"
+        }
 
-        this.add.text(width / 2, 165, 'Player', {
+        this.add.text(width / 2, 165, this.playerName, {
             fontFamily: 'Arial',
             fontSize: '28px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 8,
-            shadow: { offsetX: 4, offsetY: 4, color: '#000000', blur: 0, stroke: false, fill: false },
+            shadow: {offsetX: 4, offsetY: 4, color: '#000000', blur: 0, stroke: false, fill: false},
             resolution: 2
         }).setOrigin(0.5);
 
@@ -149,7 +192,19 @@ export default class LobbyScene extends Phaser.Scene {
         const weaponX = width / 2 - 40;
         const weaponY = 220;
 
-        this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey).setOrigin(0.5);
+        this.weaponIcon = this.add.image(weaponX, weaponY, weaponKey)
+            .setOrigin(0.5)
+            .setDisplaySize(60, 60)
+            .setInteractive({useHandCursor: true})
+            .on('pointerdown', () => {
+                this.scene.pause();
+                this.scene.launch('InventoryScene', {
+                    weapon: this.selectedWeapon,
+                    brawler: this.selectedBrawler,
+                    gadget: this.selectedGadget
+                });
+            });
+        ;
 
         if (this.selectedWeapon === 'MINE') {
             this.weaponIcon.setDisplaySize(60, 60); // oder 90×90 je nach Bildgröße
@@ -160,13 +215,25 @@ export default class LobbyScene extends Phaser.Scene {
         this.add.rectangle(width / 2 + 45, 220, 90, 55, 0x000000, 0.5)
             .setStrokeStyle(2, 0xffff00)
             .setOrigin(0.5);
-        this.gadgetIcon = this.add.image(width/2 + 40, 220, this._mapGadgetKey()).setOrigin(0.5).setDisplaySize(100, 50);
+        this.gadgetIcon = this.add.image(width / 2 + 40, 220, this._mapGadgetKey())
+            .setOrigin(0.5)
+            .setDisplaySize(100, 50)
+            .setInteractive({useHandCursor: true})
+            .on('pointerdown', () => {
+                this.scene.pause();
+                this.scene.launch('InventoryScene', {
+                    weapon: this.selectedWeapon,
+                    brawler: this.selectedBrawler,
+                    gadget: this.selectedGadget
+                });
+            });
+        ;
 
         // --- Großer PLAY-Button unten rechts ---
         this.playButton = this.add.image(width - 180, height - 110, 'btn_play')
             .setOrigin(0.5)
             .setScale(0.8)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({useHandCursor: true});
 
         this.playButton.on('pointerover', () => {
             // Mit tint abdunkeln (z.B. 0x999999 ist ein dunkleres Grau)
@@ -211,26 +278,26 @@ export default class LobbyScene extends Phaser.Scene {
      */
     _mapBrawlerKey() {
         switch (this.selectedBrawler) {
-            case 'soldier':   return 'avatar3'; // Soldier → Character3
-            case 'woman': return 'avatar4'; // WomanGreen → Character4
-            case 'robot':   return 'avatar5'; // Robot → Character5
+            case 2:   return 'avatar3'; // Soldier → Character3
+            case 3: return 'avatar4'; // WomanGreen → Character4
+            case 4:   return 'avatar5'; // Robot → Character5
             default:       return 'avatar2'; // Hitman → Character2
         }
     }
 
     _mapWeaponKey() {
         switch (this.selectedWeapon) {
-            case 'SNIPER':         return 'weapon_sniper';
-            case 'SHOTGUN_PELLET': return 'weapon_shotgun';
-            case 'MINE':           return 'weapon_mine';
+            case 2:         return 'weapon_sniper';
+            case 3: return 'weapon_shotgun';
+            case 4:           return 'weapon_mine';
             default:               return 'weapon_rifle';
         }
     }
 
     _mapGadgetKey() {
         switch (this.selectedGadget) {
-            case 'SPEED_BOOST':  return 'gadget_speed';
-            case 'HEALTH_BOOST': return 'gadget_health';
+            case 2:  return 'gadget_speed';
+            case 3: return 'gadget_health';
             default:             return 'gadget_damage';
         }
     }
@@ -253,54 +320,40 @@ export default class LobbyScene extends Phaser.Scene {
             this.weaponIcon.setDisplaySize(60, 60);
         }
     }
-    _createCoinDisplay() {
-        const { coinX, coinY, coinSize, rectHeight, cornerRadius, strokeWidth } = this;
+    async _createCoinDisplay() {
+        const {coinX, coinY, coinSize, rectWidth, rectHeight, cornerRadius, strokeWidth} = this;
 
         // 1) Coin-Icon
         const coinImage = this.add.image(coinX, coinY, 'icon_coin')
             .setOrigin(0, 0.5)
             .setDisplaySize(coinSize, coinSize);
 
-        // 2) Schwarzes Rechteck daneben
-        this.rectX = coinX + coinSize -12;
+        // 2) Schwarzes Rechteck
+        this.rectX = coinX + coinSize - 12;
         this.rectY = coinY - rectHeight / 2;
 
         this.graphics = this.add.graphics();
         this.graphics.fillStyle(0x000000, 1);
-        this.graphics.fillRoundedRect(
-            this.rectX,
-            this.rectY,
-            this.rectWidth,
-            this.rectHeight,
-            cornerRadius
-        );
+        this.graphics.fillRoundedRect(this.rectX, this.rectY, rectWidth, rectHeight, cornerRadius);
         this.graphics.lineStyle(strokeWidth, 0x000000, 1);
-        this.graphics.strokeRoundedRect(
-            this.rectX,
-            this.rectY,
-            this.rectWidth,
-            this.rectHeight,
-            cornerRadius
-        );
+        this.graphics.strokeRoundedRect(this.rectX, this.rectY, rectWidth, rectHeight, cornerRadius);
 
-        // 3) Text „596“ (Startwert)
-        const initialCoins = 596;
-        const textStyle = {
-            fontFamily: 'Arial, sans-serif',
-            fontSize: '28px',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 4,
-            align: 'center',
-            resolution: 2
-        };
-        const textX = this.rectX + this.rectWidth / 2;
-        const textY = this.rectY + this.rectHeight / 2;
-        this.coinText = this.add.text(textX, textY, `${initialCoins}`, textStyle)
-            .setOrigin(0.5);
+        // 3) Text mit initialem Münzwert
+        const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`)
+            .then(r => r.json());
+        this.coinText = this.add.text(
+            this.rectX + rectWidth/2,
+            this.rectY + rectHeight/2,
+            `${coins}`,
+            { fontFamily: 'Arial', fontSize: '28px', color: '#ffffff', stroke: '#000000', strokeThickness: 4 }
+        ).setOrigin(0.5);
 
-        // 4) Container (optional), um all diese Elemente zusammenzuhalten
-        this.coinContainer = this.add.container(0, 0, [ this.graphics, this.coinText, coinImage ]);
+        // 4) Container mit allen Elementen
+        this.coinContainer = this.add.container(0, 0, [
+            this.graphics,
+            this.coinText,
+            coinImage
+        ]);
     }
 
     /**
@@ -349,7 +402,7 @@ export default class LobbyScene extends Phaser.Scene {
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 0, stroke: false, fill: false },
             resolution: 2
         };
-        const numberOnly = this.selectedLevel.replace(/^level/, '');
+        const numberOnly = this.selectedLevel;
         this.levelLabel = this.add.text(levelBtnX, levelBtnY, `Level: ${numberOnly}`, labelStyle)
             .setOrigin(0.5);
 
@@ -374,45 +427,54 @@ export default class LobbyScene extends Phaser.Scene {
 
         // d) Dropdown-Menü erstellen (unsichtbar), direkt über dem Label
         const dropdownX = levelBtnX - levelBtnWidth / 2;
-        const dropdownY = levelBtnY - levelBtnHeight / 2 - 140; // 140px Höhe für 3 Einträge
+        const dropdownY = levelBtnY - levelBtnHeight / 2; // 140px Höhe für 3 Einträge
         this.createLevelDropdown(dropdownX, dropdownY);
     }
+
+    createLevelDropdown(x, y) {
+        // Eintrags-Höhe und Padding
+        const entryH   = 40;
+        const pad      = 10;
+        const boxWidth = 200;
+        // Gesamthöhe: Einträge + Padding oben/unten
+        const boxHeight = this.levels.length * entryH + pad * 2;
+
+        // Container so verschieben, dass er komplett oberhalb des Buttons sitzt
+        // (y ist aktuell der Top-Rand des Labels; wir ziehen hier die boxHeight drauf)
+        this.levelDropdown = this.add
+            .container(x, y - boxHeight)
+            .setVisible(false);
+
+        // 1) Einmalige Hintergrund-Box
+        const bg = this.add
+            .rectangle(0, 0, boxWidth, boxHeight, 0x000000, 0.8)
+            .setOrigin(0, 0);
+        this.levelDropdown.add(bg);
+
+        // Text-Stil
+        const textStyle = {
+            fontFamily: 'Arial',
+            fontSize: '18px',
+            color: '#ffffff'
+        };
+
+        // 2) Jeden Level-Eintrag einmal platzieren
+        this.levels.forEach((lvl, i) => {
+            const yPos = pad + i * entryH;
+            const txt = this.add
+                .text(pad, yPos, `Level ${lvl.id}`, textStyle)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerdown', () => this.selectLevel(lvl.id));
+            this.levelDropdown.add(txt);
+        });
+    }
+
 
     /**
      * Erstellt das Dropdown-Menü mit den drei Level-Auswahlmöglichkeiten.
      * Das Menü ist in einem Container und startet als invisible.
      * x/y sind die Koordinaten (oben links) des Dropdown-Rechtecks.
      */
-    createLevelDropdown(x, y) {
-        this.levelDropdown = this.add.container(x, y).setVisible(false);
-
-        // Größe des Dropdowns (Breite, Höhe)
-        const boxWidth  = 200;
-        const boxHeight = 140; // Platz für 3 Einträge à ca. 40px + Puffer
-
-        // a) Halbtransparenter schwarzer Hintergrund
-        const bgRect = this.add.rectangle(0, 0, boxWidth, boxHeight, 0x000000, 0.8)
-            .setOrigin(0);
-
-        // b) Texte „Level 1“, „Level 2“, „Level 3“
-        const textStyle = { fontFamily: 'Arial', fontSize: '18px', color: '#ffffff' };
-        const lineHeight = 40;
-
-        const lvl1 = this.add.text(10, 10 + 0 * lineHeight, 'Level 1', textStyle)
-            .setInteractive({ useHandCursor: true });
-        const lvl2 = this.add.text(10, 10 + 1 * lineHeight, 'Level 2', textStyle)
-            .setInteractive({ useHandCursor: true });
-        const lvl3 = this.add.text(10, 10 + 2 * lineHeight, 'Level 3', textStyle)
-            .setInteractive({ useHandCursor: true });
-
-        // c) Klick-Handler: Wenn man einen Eintrag klickt, speichert er selectedLevel,
-        //    aktualisiert den Text oben („Level: X“) und blendet das Menü aus.
-        lvl1.on('pointerdown', () => this.selectLevel('level1'));
-        lvl2.on('pointerdown', () => this.selectLevel('level2'));
-        lvl3.on('pointerdown', () => this.selectLevel('level3'));
-
-        this.levelDropdown.add([ bgRect, lvl1, lvl2, lvl3 ]);
-    }
 
     /**
      * Zeigt oder versteckt das Level-Dropdown.
@@ -430,8 +492,7 @@ export default class LobbyScene extends Phaser.Scene {
      */
     selectLevel(levelId) {
         this.selectedLevel = levelId;
-        const numberOnly = levelId.replace(/^level/, '');
-        this.levelLabel.setText(`Level: ${numberOnly}`);
+        this.levelLabel.setText(`Level: ${levelId}`);
         this.levelDropdown.setVisible(false);
         this.registry.set('levelId', levelId);
     }
@@ -445,11 +506,11 @@ export default class LobbyScene extends Phaser.Scene {
      */
     onPlayClicked() {
         // 1) PlayerID generieren/fetchen
-        const playerId = localStorage.getItem('playerId') || crypto.randomUUID();
+        const playerId = this.registry.get('playerId');
         localStorage.setItem('playerId', playerId);
 
         // 2) PlayerName aus HTML-Input lesen (oder „Player“, falls leer)
-        const enteredName = this.nameInput?.value.trim() || 'Player';
+        const enteredName = this.playerName;
         localStorage.setItem('playerName', enteredName);
 
         // 3) Default-Waffen und Brawler verarbeiten (stehen schon in this.selectedWeapon, this.selectedBrawler)
@@ -468,8 +529,6 @@ export default class LobbyScene extends Phaser.Scene {
         this.registry.set('brawler', this.selectedBrawler);
         this.registry.set('gadget', this.selectedGadget);
 
-
-
         // 6) Socket-Emit an den Spiel-Server mit allen Auswahlparametern
         this.socket.connect();
         this.socket.once('connect', () => {
@@ -478,8 +537,8 @@ export default class LobbyScene extends Phaser.Scene {
                 playerName:   enteredName,
                 brawlerId:    this.selectedBrawler,
                 levelId:      levelToSend,
-                chosenWeapon: this.selectedWeapon,
-                chosenGadget: this.selectedGadget
+                chosenWeapon: this.selectedWeapon-1,
+                chosenGadget: this.selectedGadget-1
             }, (response) => {
                 // Raum-ID zurück in die Registry schreiben …
                 this.registry.set('roomId', response.roomId);

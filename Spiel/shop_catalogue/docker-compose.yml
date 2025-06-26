@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: shop_catalogue_user
       POSTGRES_PASSWORD: secret
     ports:
-      - "5433:5433"
+      - "5433:5432"
     volumes:
       - shop_catalogue-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - shared-backend
 
   shop_catalogue-service:
     build:
@@ -35,6 +37,11 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_SHOW_SQL: "true"
       SERVER_PORT: 8091
+    networks:
+      - shared-backend
 
 volumes:
   shop_catalogue-db-data:
+networks:
+  shared-backend:
+    external: true

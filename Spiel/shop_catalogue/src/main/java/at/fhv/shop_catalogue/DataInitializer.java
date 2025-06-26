@@ -2,8 +2,10 @@ package at.fhv.shop_catalogue;
 
 import at.fhv.shop_catalogue.model.Brawler;
 import at.fhv.shop_catalogue.model.Gadget;
+import at.fhv.shop_catalogue.model.Level;
 import at.fhv.shop_catalogue.repository.BrawlerRepository;
 import at.fhv.shop_catalogue.repository.GadgetRepository;
+import at.fhv.shop_catalogue.repository.LevelRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +17,15 @@ public class DataInitializer implements CommandLineRunner {
 
     private final BrawlerRepository brawlerRepository;
     private final GadgetRepository gadgetRepository;
+    private final LevelRepository levelRepository;
+
 
     public DataInitializer(BrawlerRepository brawlerRepository,
-                           GadgetRepository gadgetRepository) {
+                           GadgetRepository gadgetRepository,
+                           LevelRepository levelRepository) {
         this.brawlerRepository = brawlerRepository;
         this.gadgetRepository = gadgetRepository;
+        this.levelRepository = levelRepository;
     }
 
     @Override
@@ -57,7 +63,7 @@ public class DataInitializer implements CommandLineRunner {
             List<Gadget> defaultGadgets = Arrays.asList(
                 new Gadget(null,
                            "Damage Boost",
-                           100, 
+                           0,
                            "Gives a temporary damage buff to take down opponents faster."
                 ),
                 new Gadget(null,
@@ -76,5 +82,17 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             System.out.println("Gadgets already initialized (count = " + gadgetRepository.count() + ")");
         }
+
+        if (levelRepository.count() == 0) {
+            levelRepository.saveAll(Arrays.asList(
+                    new Level("Level 1", 0),      // Kostenlos
+                    new Level("Level 2", 500),    // Kostenpflichtig
+                    new Level("Level 3", 1000)    // Kostenpflichtig
+            ));
+            System.out.println("Initialized default levels: 3");
+        } else {
+            System.out.println("Levels already initialized (count = " + levelRepository.count() + ")");
+        }
+
     }
 }

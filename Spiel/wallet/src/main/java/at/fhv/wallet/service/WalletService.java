@@ -6,8 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -16,133 +15,175 @@ public class WalletService {
 
     private final BrawlerRepository brawlerRepo;
     private final GadgetRepository gadgetRepo;
-    private final PlayerCoinsRepository coinsRepo;
-    private final PlayerBrawlerRepository playerBrawlerRepo;
-    private final PlayerGadgetRepository playerGadgetRepo;
+    private final LevelRepository levelRepo;
+    private final WeaponRepository weaponRepo;
+    private final PlayerRepository playerRepo;
+    private final SelectedRepository selectedRepo;
 
-    // -----------------------
-    // BRAWLER-FUNKTIONEN
-    // -----------------------
+    public Player createPlayer(UUID playerId) {
+
+        if (playerRepo.existsById(playerId)) {
+            throw new IllegalArgumentException("Ein Spieler mit dieser ID existiert bereits.");
+        }
+
+        Player player = new Player();
+        player.setId(playerId);
+        player.setCoins(0);
+        playerRepo.save(player);
+
+        assignDefaults(player);
+
+        return player;
+    }
 
     public List<Brawler> getAllBrawlers() {
         return brawlerRepo.findAll();
     }
 
-    public List<Brawler> getAllBrawlersOwnedByPlayer(Long playerId) {
-        List<PlayerBrawler> owned = playerBrawlerRepo.findByPlayerId(playerId);
-        List<Long> ownedIds = owned.stream()
-                                   .map(PlayerBrawler::getBrawlerId)
-                                   .collect(Collectors.toList());
-        return brawlerRepo.findAllById(ownedIds);
+    public List<Brawler> getAllBrawlersOwnedByPlayer(UUID playerId) {
+        Player player = playerRepo.findById(playerId).orElseThrow();
+        return new ArrayList<>(player.getBrawlers());
     }
 
-    public boolean isBrawlerOwnedByPlayer(Long playerId, Long brawlerId) {
-        return playerBrawlerRepo.existsByPlayerIdAndBrawlerId(playerId, brawlerId);
-    }
+    public void buyBrawler(UUID playerId, Long brawlerId) {
+        Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
+        Brawler b = brawlerRepo.findById(brawlerId).orElseThrow(() -> new IllegalArgumentException("Brawler nicht gefunden."));
 
-    public void buyBrawler(Long playerId, Long brawlerId) {
-        PlayerCoins pc = coinsRepo.findById(playerId)
-                .orElseThrow(() -> new IllegalArgumentException("Player nicht gefunden: " + playerId));
-        Brawler b = brawlerRepo.findById(brawlerId)
-                .orElseThrow(() -> new IllegalArgumentException("Brawler nicht gefunden: " + brawlerId));
-
-        if (pc.getCoins() < b.getCost()) {
+        if (player.getCoins() < b.getCost()) {
             throw new IllegalStateException("Nicht genug Münzen, um den Brawler zu kaufen.");
         }
 
-        pc.setCoins(pc.getCoins() - b.getCost());
-        coinsRepo.save(pc);
-
-        if (!playerBrawlerRepo.existsByPlayerIdAndBrawlerId(playerId, brawlerId)) {
-            PlayerBrawler pb = new PlayerBrawler(playerId, brawlerId);
-            playerBrawlerRepo.save(pb);
-        }
+        player.setCoins(player.getCoins() - b.getCost());
+        player.getBrawlers().add(b);
+        playerRepo.save(player);
     }
 
-    public List<Brawler> getAllBrawlersNotOwnedByPlayer(Long playerId) {
-        List<PlayerBrawler> owned = playerBrawlerRepo.findByPlayerId(playerId);
-        List<Long> ownedIds = owned.stream()
-                                   .map(PlayerBrawler::getBrawlerId)
-                                   .collect(Collectors.toList());
-        if (ownedIds.isEmpty()) {
-            return brawlerRepo.findAll();
-        } else {
-            return brawlerRepo.findByIdNotIn(ownedIds);
-        }
+    public List<Brawler> getAllBrawlersNotOwnedByPlayer(UUID playerId) {
+        List<Brawler> owned = getAllBrawlersOwnedByPlayer(playerId);
+        List<Long> ownedIds = owned.stream().map(Brawler::getId).toList();
+        return ownedIds.isEmpty() ? brawlerRepo.findAll() : brawlerRepo.findByIdNotIn(ownedIds);
     }
-
-    // -----------------------
-    // GADGET-FUNKTIONEN
-    // -----------------------
 
     public List<Gadget> getAllGadgets() {
         return gadgetRepo.findAll();
     }
 
-    public List<Gadget> getAllGadgetsOwnedByPlayer(Long playerId) {
-        List<PlayerGadget> owned = playerGadgetRepo.findByPlayerId(playerId);
-        List<Long> ownedIds = owned.stream()
-                                   .map(PlayerGadget::getGadgetId)
-                                   .collect(Collectors.toList());
-        return gadgetRepo.findAllById(ownedIds);
+    public List<Gadget> getAllGadgetsOwnedByPlayer(UUID playerId) {
+        Player player = playerRepo.findById(playerId).orElseThrow();
+        return new ArrayList<>(player.getGadgets());
     }
 
-    public boolean isGadgetOwnedByPlayer(Long playerId, Long gadgetId) {
-        return playerGadgetRepo.existsByPlayerIdAndGadgetId(playerId, gadgetId);
-    }
+    public void buyGadget(UUID playerId, Long gadgetId) {
+        Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
+        Gadget g = gadgetRepo.findById(gadgetId).orElseThrow(() -> new IllegalArgumentException("Gadget nicht gefunden."));
 
-    public void buyGadget(Long playerId, Long gadgetId) {
-        PlayerCoins pc = coinsRepo.findById(playerId)
-                .orElseThrow(() -> new IllegalArgumentException("Player nicht gefunden: " + playerId));
-        Gadget g = gadgetRepo.findById(gadgetId)
-                .orElseThrow(() -> new IllegalArgumentException("Gadget nicht gefunden: " + gadgetId));
-
-        if (pc.getCoins() < g.getCost()) {
+        if (player.getCoins() < g.getCost()) {
             throw new IllegalStateException("Nicht genug Münzen, um das Gadget zu kaufen.");
         }
 
-        pc.setCoins(pc.getCoins() - g.getCost());
-        coinsRepo.save(pc);
+        player.setCoins(player.getCoins() - g.getCost());
+        player.getGadgets().add(g);
+        playerRepo.save(player);
+    }
 
-        if (!playerGadgetRepo.existsByPlayerIdAndGadgetId(playerId, gadgetId)) {
-            PlayerGadget pg = new PlayerGadget(playerId, gadgetId);
-            playerGadgetRepo.save(pg);
+    public List<Gadget> getAllGadgetsNotOwnedByPlayer(UUID playerId) {
+        List<Gadget> owned = getAllGadgetsOwnedByPlayer(playerId);
+        List<Long> ownedIds = owned.stream().map(Gadget::getId).toList();
+        return ownedIds.isEmpty() ? gadgetRepo.findAll() : gadgetRepo.findByIdNotIn(ownedIds);
+    }
+
+    public void addCoinsForPlayer(UUID playerId, Integer amount) {
+        Player player = playerRepo.findById(playerId).orElseThrow();
+        player.setCoins(player.getCoins() + amount);
+        playerRepo.save(player);
+    }
+
+    public Integer getCoinsForPlayer(UUID playerId) {
+        return playerRepo.findById(playerId).map(Player::getCoins).orElse(0);
+    }
+
+    public List<Weapon> getAllWeapons() {
+        return weaponRepo.findAll();
+    }
+
+    public List<Level> getAllLevels() {
+        return levelRepo.findAll();
+    }
+
+    public List<Level> getAllLevelsOwnedByPlayer(UUID playerId) {
+        Player player = playerRepo.findById(playerId).orElseThrow();
+        return new ArrayList<>(player.getLevels());
+    }
+
+    public void buyLevel(UUID playerId, Long levelId) {
+        Player player = playerRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
+        Level level = levelRepo.findById(levelId).orElseThrow(() -> new IllegalArgumentException("Level nicht gefunden."));
+
+        if (player.getCoins() < level.getCost()) {
+            throw new IllegalStateException("Nicht genug Münzen, um das Level zu kaufen.");
         }
+
+        player.setCoins(player.getCoins() - level.getCost());
+        player.getLevels().add(level);
+        playerRepo.save(player);
     }
 
-    public List<Gadget> getAllGadgetsNotOwnedByPlayer(Long playerId) {
-        List<PlayerGadget> owned = playerGadgetRepo.findByPlayerId(playerId);
-        List<Long> ownedIds = owned.stream()
-                                   .map(PlayerGadget::getGadgetId)
-                                   .collect(Collectors.toList());
-        if (ownedIds.isEmpty()) {
-            return gadgetRepo.findAll();
-        } else {
-            return gadgetRepo.findByIdNotIn(ownedIds);
-        }
+    public List<Level> getAllLevelsNotOwnedByPlayer(UUID playerId) {
+        List<Level> owned = getAllLevelsOwnedByPlayer(playerId);
+        List<Long> ownedIds = owned.stream().map(Level::getId).toList();
+        return ownedIds.isEmpty() ? levelRepo.findAll() : levelRepo.findByIdNotIn(ownedIds);
     }
 
-    // -----------------------
-    // COIN-FUNKTIONEN
-    // -----------------------
-
-    public void addCoinsForPlayer(Long playerId, Integer amount) {
-        PlayerCoins pc = coinsRepo.findById(playerId)
-                .orElseGet(() -> {
-                    PlayerCoins neu = new PlayerCoins(playerId, 0);
-                    return neu;
-                });
-        pc.setCoins(pc.getCoins() + amount);
-        coinsRepo.save(pc);
+    public void selectBrawler(UUID playerId, Long weaponId) {
+        Selected selected = selectedRepo.findById(playerId).orElseThrow();
+        selected.setBrawlerId(weaponId);
+        selectedRepo.save(selected);
     }
 
-    public Integer getCoinsForPlayer(Long playerId) {
-        return coinsRepo.findById(playerId)
-                .map(PlayerCoins::getCoins)
-                .orElse(0);
+    public void selectWeapon(UUID playerId, Long weaponId) {
+        Selected selected = selectedRepo.findById(playerId).orElseThrow();
+        selected.setWeaponId(weaponId);
+        selectedRepo.save(selected);
     }
 
-    public List<PlayerCoins> getAllCoins() {
-        return coinsRepo.findAll();
+    public void selectGadget(UUID playerId, Long gadgetId) {
+        Selected selected = selectedRepo.findById(playerId).orElseThrow();
+        selected.setGadgetId(gadgetId);
+        selectedRepo.save(selected);
+    }
+
+    public void selectLevel(UUID playerId, Long levelId) {
+        Selected selected = selectedRepo.findById(playerId).orElseThrow();
+        selected.setLevelId(levelId);
+        selectedRepo.save(selected);
+    }
+
+    public Selected getSelectedForPlayer(UUID playerId) {
+        return selectedRepo.findById(playerId).orElseThrow(() -> new IllegalArgumentException("Spieler nicht gefunden."));
+    }
+
+    public void assignDefaults(Player player) {
+
+        Level lvl = levelRepo.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Standard-Level mit ID 1 nicht gefunden!"));
+        Brawler brawler = brawlerRepo.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Standard-Brawler mit ID 1 nicht gefunden!"));
+        Gadget gadget = gadgetRepo.findById(1L)
+                .orElseThrow(() -> new IllegalStateException("Standard-Gadget mit ID 1 nicht gefunden!"));
+
+
+        player.setLevels(List.of(lvl));
+        player.setBrawlers(List.of(brawler));
+        player.setGadgets(List.of(gadget));
+        playerRepo.save(player);
+
+        Selected s = new Selected();
+        s.setSelectedId(player.getId());
+        s.setSelectedId(player.getId());
+        s.setBrawlerId(1L);
+        s.setWeaponId(1L);
+        s.setGadgetId(1L);
+        s.setLevelId(1L);
+        selectedRepo.save(s);
     }
 }

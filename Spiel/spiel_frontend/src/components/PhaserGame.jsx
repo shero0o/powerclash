@@ -7,6 +7,8 @@ import InventoryScene from "../scenes/InventoryScene.js";
 import WaitingScene   from '../scenes/WaitingScene';
 import GameScene      from '../scenes/GameScene';
 import LobbyScene from "../scenes/LobbyScene.js";
+import ShopScene from "../scenes/ShopScene.js";
+import AccountScene from "../scenes/AccountScene.js";
 
 export default function PhaserGame() {
     const containerRef = useRef(null);
@@ -18,7 +20,7 @@ export default function PhaserGame() {
         const roomId   = localStorage.getItem('roomId');
 
         const socket = io('http://localhost:8081', {
-            autoConnect:false,
+            autoConnect: false,
             query: { playerId, roomId }
         });
         console.log('Setting up socket connection...');
@@ -36,7 +38,9 @@ export default function PhaserGame() {
             new LobbyScene(),
             new InventoryScene(),
             new WaitingScene(),
-            new GameScene()
+            new GameScene(),
+            new ShopScene(),
+            new AccountScene()
         ];
         scenes.forEach(s => s.socket = socket);
 

@@ -8,7 +8,7 @@ import java.util.Map;
 public interface IGameSession {
 
     String getId();
-    String getLevelId();
+    Long getLevelId();
     void addPlayer(String playerId, String brawlerId, String playerName);
     void removePlayer(String playerId);
     int getPlayerCount();

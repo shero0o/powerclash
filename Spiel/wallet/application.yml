@@ -1,9 +1,6 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/wallet_db
-    username: wallet_user
-    password: secret
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: false
+    fetch-registry: false

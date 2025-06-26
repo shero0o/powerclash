@@ -13,7 +13,7 @@ import lombok.Setter;
 public class WaitingReadyDTO {
     private String playerId;
     private String roomId;
-    private String brawlerId;
-    private String levelId;
+    private String brawlerId;  // NEU
+    private Long levelId;    // NEU
     private String playerName;
 }

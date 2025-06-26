@@ -4,20 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "brawler")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @ToString
 public class Brawler {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(nullable = false, unique = true)
     private String name;
-
-    @Column(nullable = false)
-    private Integer cost;
-
-    @Column(nullable = false)
+    private Integer price;
     private Integer healthPoints;
 
 }
