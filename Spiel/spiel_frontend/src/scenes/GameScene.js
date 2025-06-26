@@ -76,8 +76,9 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("damageGadget", "assets/svg/damageGadget.svg", { width: 400, height: 200 });
         this.load.svg("speedGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
-        for (let i = 0; i < 25; i++) {
-            this.load.image(`explosion${i}`, `/assets/PNG/explosion/explosion${i}.png`);
+        for (let i = 1; i <= 25; i++) {
+            const frame = i.toString().padStart(4, '0');  // "0001", "0002", …, "0010", …, "0025"
+            this.load.image(frame, `/assets/PNG/explosion/${frame}.png`);
         }
 
         // Map tileset & tilemap
@@ -328,11 +329,16 @@ export default class GameScene extends Phaser.Scene {
         // Explosion-Animation
         this.anims.create({
             key: 'explode',
-            frames: Array.from({ length: 25 }, (_, i) => ({ key: `explosion${i}` })),
+            frames: Array.from({ length: 25 }, (_, idx) => {
+                // idx läuft von 0–24, also +1 und auf 4 Stellen auffüllen
+                const frame = (idx + 1).toString().padStart(4, '0');
+                return { key: frame };
+            }),
             frameRate: 25,
             repeat: 0,
             hideOnComplete: true
         });
+
         this.explosionGroup = this.add.group();
         this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
