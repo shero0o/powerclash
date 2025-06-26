@@ -38,7 +38,7 @@ public class DataInitializer implements CommandLineRunner {
                             100
                 ),
                 new Brawler(null,   
-                            "Tank",   
+                            "Armor",
                             100,         
                             100
                 ),
