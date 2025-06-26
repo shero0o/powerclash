@@ -144,8 +144,8 @@ export default class InventoryScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.finish());
 
-        this._setupTabs();
         this.currentTab = 'Weapons';
+        this._setupTabs();
         this._showWeaponOptions();
     }
 
