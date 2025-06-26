@@ -48,6 +48,13 @@ export default class GameScene extends Phaser.Scene {
                 default: return 'RIFLE_BULLET';
             }
         })() || 'RIFLE_BULLET';
+        this.gadgetType = (() => {
+            switch (this.registry.get('gadget')) {
+                case 1: return 'DAMAGE_BOOST';
+                case 2: return 'SPEED_BOOST';
+                default: return 'HEALTH_BOOST';
+            }
+        })() || 'HEALTH_BOOST';
         this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
         this.playerName        = this.registry.get('playerName') || 'Player';
 
@@ -414,7 +421,6 @@ export default class GameScene extends Phaser.Scene {
 
 
         //Gadget:
-        this.gadgetType = this.registry.get('gadget') || 'HEALTH_BOOST';
         //    In Lobby hast du offenbar mit Werten wie 'DAMAGE_BOOST' o. Ä. gearbeitet.
         //    Wir definieren nun eine Hilfsfunktion, die daraus den passenden Texture-Key macht:
 

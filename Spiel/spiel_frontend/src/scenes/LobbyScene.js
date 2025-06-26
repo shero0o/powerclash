@@ -296,8 +296,8 @@ export default class LobbyScene extends Phaser.Scene {
 
     _mapGadgetKey() {
         switch (this.selectedGadget) {
-            case 3:  return 'gadget_speed';
-            case 2: return 'gadget_health';
+            case 2:  return 'gadget_speed';
+            case 3: return 'gadget_health';
             default:             return 'gadget_damage';
         }
     }
