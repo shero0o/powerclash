@@ -31,7 +31,6 @@ public class MineBehavior implements ProjectileBehavior {
             p.setArmed(true);
             return;
         }
-        // Bewegung wie bei Rifle (aber andere werte)
         doMovementAndRange(p, ctx, SPEED, MAX_RANGE);
     }
 }

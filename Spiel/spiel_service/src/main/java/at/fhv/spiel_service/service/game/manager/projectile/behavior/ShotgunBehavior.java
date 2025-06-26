@@ -32,7 +32,6 @@ public class ShotgunBehavior implements ProjectileBehavior {
 
     @Override
     public void update(Projectile p, ProjectileContext ctx) {
-        // Bewegung wie bei Rifle (aber andere werte)
         doMovementAndRange(p, ctx, SPEED, MAX_RANGE);
     }
 }
