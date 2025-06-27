@@ -32,7 +32,7 @@ public class GameSessionImpl implements IGameSession {
     private final GameMap       gameMap;
     private final GameLoop loop;
 
-    private static final int MAX_PLAYERS = 4;
+    private static final int MAX_PLAYERS = 2;
 
     public GameSessionImpl(EventPublisher publisher, String levelId) {
         this.logic     = new DefaultIGameLogic();

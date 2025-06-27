@@ -1031,9 +1031,11 @@ export default class GameScene extends Phaser.Scene {
         // 2) Nur Gewinner zeigt Victory
         if (!this.hasWon && alivePlayers === 1 && me?.currentHealth > 0) {
             const base = me.coinCount ?? 0, bonus = 10;
+            const newCount = me.coinCount ?? 0;
+            const gain = newCount - this.lastCoinCount;
             try {
                 const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus}`,
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                     {method: 'POST'}
                 );
                 if (!res.ok) {
@@ -1081,10 +1083,12 @@ export default class GameScene extends Phaser.Scene {
                 const place = alive + 1;
                 const base  = me?.coinCount ?? 0;
                 const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
+                const newCount = me.coinCount ?? 0;
+                const gain = newCount - this.lastCoinCount;
 
                 try {
                     const res = await fetch(
-                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus}`,
+                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                         { method: 'POST' }
                     );
                     if (!res.ok) {
