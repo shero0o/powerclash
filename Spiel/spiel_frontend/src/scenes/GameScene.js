@@ -117,17 +117,6 @@ export default class GameScene extends Phaser.Scene {
 
 
         // ─── 1) matchOver-Listener einmalig registrieren ───
-        this.socket.on('matchOver', () => {
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
-            if (!me || me.currentHealth <= 0) {
-                const alive = this.latestState.players.filter(p => p.currentHealth > 0).length;
-                const place = alive + 1;
-                const base  = me?.coinCount ?? 0;
-                const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
-                this.showDefeatScreen(place, base, bonus, base + bonus);
-                this.defeatShown = true;
-            }
-        });
 
         this.exitButtonSvg = this.add.image(
             this.cameras.main.width / 2,
@@ -552,7 +541,7 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    update() {
+    async update() {
         if (!this.latestState) return;
 
         this.graphicsZone.clear();
@@ -573,7 +562,6 @@ export default class GameScene extends Phaser.Scene {
         } else {
             this.textZoneTimer.setText('');
         }
-
 
 
         // ─── handle mines/explosions ────────────────────────
@@ -607,17 +595,15 @@ export default class GameScene extends Phaser.Scene {
                 this.boostActive = false;
             }
             const baseX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-            const baseY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
+            const baseY = (this.keys.up.isDown ? -1 : 0) + (this.keys.down.isDown ? 1 : 0);
             const speedFactor = this.boostActive ? this.boostMultiplier : 1;
             const dirX = baseX * speedFactor;
             const dirY = baseY * speedFactor;
             const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
             const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+            this.socket.emit('move', {roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle});
 
             const remMs = Math.max(0, this.cooldownExpireTime - this.time.now);
-
-
 
 
             if (remMs > 0) {
@@ -625,28 +611,26 @@ export default class GameScene extends Phaser.Scene {
                 const cdSec = `${Math.ceil(remMs / 1000)}s`;
                 this.gadgetText
                     .setText(`Cooldown: ${cdSec}`)
-                    .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+                    .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
             } else {
-                if (this.gadgetMaxUses <= 0){
+                if (this.gadgetMaxUses <= 0) {
                     // nicht Bereit
                     this.gadgetText
                         .setText(`0 Uses: ${this.gadgetType}`)
-                        .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
-                }
-                else{
+                        .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
+                } else {
                     // Bereit
                     this.gadgetText
                         .setText(this.gadgetKey)
-                        .setStyle({ fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3 });
+                        .setStyle({fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3});
                 }
             }
 
 
-
             const cdBarX = 10, cdBarY = 65, cdBarW = 100, cdBarH = 10;
-            const now    = this.time.now;
-            const remCd  = Math.max(0, this.cooldownExpireTime - now);
-            const ratio  = remCd > 0 ? (remCd / 10_000) : 1;
+            const now = this.time.now;
+            const remCd = Math.max(0, this.cooldownExpireTime - now);
+            const ratio = remCd > 0 ? (remCd / 10_000) : 1;
 
             // Hintergrund
             this.cooldownBarBg
@@ -726,14 +710,14 @@ export default class GameScene extends Phaser.Scene {
             if (label) {
                 label.setPosition(
                     npc.position.x,
-                    npc.position.y - spr.displayHeight/2 - bh - 16
+                    npc.position.y - spr.displayHeight / 2 - bh - 16
                 );
             }
 
             // 5) Hide if dead
             const visible = npc.currentHealth > 0;
-            if (spr)   spr.setVisible(visible);
-            if (bar)   bar.setVisible(visible);
+            if (spr) spr.setVisible(visible);
+            if (bar) bar.setVisible(visible);
             if (label) label.setVisible(visible);
         });
 
@@ -748,7 +732,6 @@ export default class GameScene extends Phaser.Scene {
                 delete this.npcLabels[id];
             }
         });
-
 
 
         // ─── render players & health ───────────────────────
@@ -812,24 +795,24 @@ export default class GameScene extends Phaser.Scene {
 
 
                     // Health Bar zeichnen
-                    const barW       = 40;
-                    const barH       = 6;
-                    const pct        = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
+                    const barW = 40;
+                    const barH = 6;
+                    const pct = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
 
 // Segment-Größe in HP und Abstand in px lassen sich hier anpassen:
-                    const segmentHP  = 20;     // jedes Segment entspricht 20 HP
-                    const gap        = 1;      // Abstand zwischen Segmenten in px
+                    const segmentHP = 20;     // jedes Segment entspricht 20 HP
+                    const gap = 1;      // Abstand zwischen Segmenten in px
 
 // Anzahl der Segmente ergibt sich aus der Max-HP des Brawlers:
-                    const segments   = Math.ceil(p.maxHealth / segmentHP);
-                    const segW       = barW / segments;
+                    const segments = Math.ceil(p.maxHealth / segmentHP);
+                    const segW = barW / segments;
                     const fillPixels = barW * pct;
 
                     spr.healthBar.clear();
 
 // 1) Äußerer Rahmen (2px schwarz)
-                    const bgX = p.position.x - barW/2 - 1;
-                    const bgY = p.position.y - spr.height/2 - barH - 9;
+                    const bgX = p.position.x - barW / 2 - 1;
+                    const bgY = p.position.y - spr.height / 2 - barH - 9;
                     spr.healthBar
                         .lineStyle(2, 0x000000)
                         .strokeRect(bgX, bgY, barW + 2, barH + 2);
@@ -842,10 +825,10 @@ export default class GameScene extends Phaser.Scene {
 // 3) Grüne Segmente entsprechend gefüllter HP
                     spr.healthBar.fillStyle(0x00ff00);
                     for (let i = 0; i < segments; i++) {
-                        const x      = bgX + 1 + i * segW;
+                        const x = bgX + 1 + i * segW;
                         const remain = fillPixels - i * segW;
                         if (remain <= 0) break;
-                        const w      = Math.min(segW - gap, remain);
+                        const w = Math.min(segW - gap, remain);
                         spr.healthBar.fillRect(x, bgY + 1, w, barH);
                     }
                     spr.healthBar.setVisible(p.visible);
@@ -1041,13 +1024,29 @@ export default class GameScene extends Phaser.Scene {
 
         // 1) matchOver EINMALIG senden
         if (!this.matchOverEmitted && alivePlayers === 1) {
-            this.socket.emit('matchOver', { roomId: this.roomId });
+            this.socket.emit('matchOver', {roomId: this.roomId});
             this.matchOverEmitted = true;
         }
 
         // 2) Nur Gewinner zeigt Victory
         if (!this.hasWon && alivePlayers === 1 && me?.currentHealth > 0) {
             const base = me.coinCount ?? 0, bonus = 10;
+            try {
+                const res = await fetch(
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus}`,
+                    {method: 'POST'}
+                );
+                if (!res.ok) {
+                    const err = res.text();
+                    console.error('Error while adding coins: ', err);
+                    return;
+                }
+            } catch (e) {
+                console.error('Wallet-API not reachable:', e);
+                return;
+            }
+
+            this.socket.emit('leaveRoom', {playerId: this.playerId});
             this.showVictoryScreen(1, base, bonus, base + bonus);
             this.hasWon = true;
         }
@@ -1062,20 +1061,47 @@ export default class GameScene extends Phaser.Scene {
 
         // 4) Bewegungs-Emit IMMER senden (auch wenn jemand gestorben ist)
         const dirX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
-        const dirY = (this.keys.down.isDown  ? 1 : 0) - (this.keys.up.isDown   ? 1 : 0);
+        const dirY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
         const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
         const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-        this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+        this.socket.emit('move', {roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle});
 
         // Ende von update()
-
-
 
 
     }
 
 
     showVictoryScreen(place, baseCoins, bonus, totalCoins) {
+
+        this.socket.on('matchOver', async() => {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (!me || me.currentHealth <= 0) {
+                const alive = this.latestState.players.filter(p => p.currentHealth > 0).length;
+                const place = alive + 1;
+                const base  = me?.coinCount ?? 0;
+                const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
+
+                try {
+                    const res = await fetch(
+                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus}`,
+                        { method: 'POST' }
+                    );
+                    if (!res.ok) {
+                        const err = res.text();
+                        console.error('Error while adding coins: ', err);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Wallet-API not reachable:', e);
+                    return;
+                }
+
+                this.socket.emit('leaveRoom', { playerId: this.playerId });
+            }
+        });
+
+
         const {width, height} = this.scale;
 
         this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
@@ -1161,23 +1187,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', async () => {
-            try {
-                const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
-                    { method: 'POST' }
-                );
-                if (!res.ok) {
-                    const err = await res.text();
-                    console.error('Error while adding coins: ', err);
-                    return;
-                }
-            } catch (e) {
-                console.error('Wallet-API not reachable:', e);
-                return;
-            }
-
-            this.socket.emit('leaveRoom', { playerId: this.playerId });
-
             this.socket.disconnect();
             this.scene.start('LobbyScene');
         });
@@ -1193,7 +1202,7 @@ export default class GameScene extends Phaser.Scene {
             .setScrollFactor(0).setAlpha(0.8).setDepth(1000);
 
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80,  `You placed: ${place}!`, {
+            width / 2, height / 2 - 80,  `You placed: ${place === 1 ? 2 : place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#ff0000', stroke: '#000000',
                 strokeThickness: 6
@@ -1269,23 +1278,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', async() => {
-            try {
-                const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
-                    { method: 'POST' }
-                );
-                if (!res.ok) {
-                    const err = await res.text();
-                    console.error('Error while adding coins: ', err);
-                    return;
-                }
-            } catch (e) {
-                console.error('Wallet-API not reachable:', e);
-                return;
-            }
-
-            this.socket.emit('leaveRoom', { playerId: this.playerId });
-
             this.socket.disconnect();
             this.scene.start('LobbyScene');
         });
