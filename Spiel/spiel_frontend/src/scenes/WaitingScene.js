@@ -22,36 +22,29 @@ export default class WaitingScene extends Phaser.Scene {
                 fontWeight: 'bold',
                 fontFamily: 'Impact',
                 color: '#ffffff',
-                stroke: '#000000',         // schwarze Umrandung
+                stroke: '#000000',
                 strokeThickness: 4
             })
             .setOrigin(0.5);
 
         const ellipses = ['', '.', '..', '...'];
         let idx = 0;
-
-// Timer‐Event, das alle 500 ms die Punkt‐Anzahl hochzählt
         this.time.addEvent({
             delay: 500,
             loop: true,
             callback: () => {
-                // idx rotiert durch 0,1,2,3
                 idx = (idx + 1) % ellipses.length;
                 waitingText.setText('WAITING FOR PLAYERS' + ellipses[idx]);
             }
         });
 
         console.log('[WaitingScene] Listening for startGame');
-
-        // 1) Listener registrieren
         this.socket.on('startGame', () => {
             this.scene.start('GameScene', {
                 roomId: this.registry.get('roomId'),
                 playerId: localStorage.getItem('playerId')
             });
         });
-
-        // 2) Sobald WaitingScene aktiv ist -> Bestätigung an Server
         const roomId = this.registry.get('roomId');
         const playerId = localStorage.getItem('playerId');
         console.log('[WaitingScene] Sending waitingReady to server');

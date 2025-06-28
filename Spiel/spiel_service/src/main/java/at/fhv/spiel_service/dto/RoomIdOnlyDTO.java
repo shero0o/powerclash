@@ -1,4 +1,3 @@
-// New DTO: RoomIdOnlyDTO
 package at.fhv.spiel_service.dto;
 
 import lombok.AllArgsConstructor;

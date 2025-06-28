@@ -1,15 +1,30 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
-
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+## 1.	Installation process
+Install docker desktop.
+
+## 2.	Software dependencies
+## 3.	Latest releases
+## 4.	API references
+
 
 # Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+````
+start "C:\Program Files\Docker\Docker\Docker Desktop.exe"
+docker network create shared-backend
+cd Spiel/wallet
+docker-compose up -d --build
+cd ../shop_catalogue
+docker-compose up -d --build
+cd ../account
+docker-compose up -d --build
+cd ../spiel_frontend
+npm install
+npm run dev
+cd ../spiel_service
+./mvnw spring-boot:run
+````
+Hinweis: Manchmal schlägt docker-compose up --build fehl, dann muss man das einfach nochmal ausführen
+
 
 # Contribute
 TODO: Explain how other users and developers can contribute to make your code better. 

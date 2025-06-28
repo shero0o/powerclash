@@ -19,10 +19,6 @@ public class AccountController {
 
     private final AccountService accountService;
 
-    // -----------------------
-    // Player-Endpunkte
-    // -----------------------
-
     @GetMapping("/players")
     public ResponseEntity<List<Player>> getAllPlayers() {
         return ResponseEntity.ok(accountService.getAllPlayers());

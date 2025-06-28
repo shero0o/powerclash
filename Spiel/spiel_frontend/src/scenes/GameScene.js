@@ -15,7 +15,6 @@ export default class GameScene extends Phaser.Scene {
         this.exitButtonGame   = null;
         this.defeatShown      = false;
 
-        // zone overlay
         this.zone        = null;
         this.graphicsZone      = null;
         this.textZoneTimer     = null;
@@ -63,14 +62,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        // Player & projectiles
         this.load.image('player',         '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
 
-        // brawlers
         this.load.image('hitman1', '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('robot1',   '/assets/PNG/Robot_1/robot1_machine.png');
         this.load.image('soldier1',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
@@ -92,11 +89,10 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("speedGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
         for (let i = 1; i <= 25; i++) {
-            const frame = i.toString().padStart(4, '0');  // "0001", "0002", …, "0010", …, "0025"
+            const frame = i.toString().padStart(4, '0');
             this.load.image(frame, `/assets/PNG/explosion/${frame}.png`);
         }
 
-        // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
         let mapFile;
         console.log("MAP KEY", this.mapKey);
@@ -111,12 +107,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        const vw = this.scale.width;   // Breite des Viewports in Pixeln
-        const vh = this.scale.height;  // Höhe des Viewports in Pixeln
-        // fest am Bildschirm haften
-
-
-        // ─── 1) matchOver-Listener einmalig registrieren ───
+        const vw = this.scale.width;
+        const vh = this.scale.height;
 
         this.exitButtonSvg = this.add.image(
             this.cameras.main.width / 2,
@@ -126,42 +118,35 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setInteractive({ useHandCursor: true })
-            .setVisible(false)   // zunächst wegstecken
+            .setVisible(false)
             .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', { playerId: this.playerId });
                 this.socket.disconnect();
                 this.scene.start('LobbyScene');
             });
 
-        // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
         this.tileSize = 64;
 
-        // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
         this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        // 1) Boden immer zuerst
             map.createLayer('Boden', tileset, 0, 0);
-
-            // 2) Zusätzliche Overlays nur für Level 2 & 3
             if (this.mapKey === 'level2' || this.mapKey === 'level3') {
                 map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
                 this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             }
-
-            // 3) Mauern ganz zum Schluss
-                this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
+            this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
 
         const controllerIcon = this.add.image(
-            vw / 130,    // horizontal zentriert
-            vh + 10,  // 50px oberhalb der unteren Bildschirmkante
+            vw / 130,
+            vh + 10,
             'controller'
         )
             .setOrigin(0.5)
             .setScale(0.8)
-            .setScrollFactor(0).setAlpha(0.5)       // 0.0 = komplett durchsichtig, 1.0 = voll sichtbar
+            .setScrollFactor(0).setAlpha(0.5)
             .setDepth(1000);
 
         const offset = 80;
@@ -180,8 +165,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "S" unterhalb
         this.add.text(
             controllerIcon.x,
             controllerIcon.y + offset,
@@ -197,8 +180,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "A" links
         this.add.text(
             controllerIcon.x - offset,
             controllerIcon.y,
@@ -214,8 +195,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "D" rechts
         this.add.text(
             controllerIcon.x + offset,
             controllerIcon.y,
@@ -245,12 +224,12 @@ export default class GameScene extends Phaser.Scene {
         this.healthValueText = this.add.text(
             vw / 2 + 44,
             this.healthIcon.y + 25,
-            '0', // Startwert; wird in update() überschrieben
+            '0',
             {
                 fontSize: '28px',
                 fontFamily: 'Arial Black',
-                color: '#ffffff',       // weiße Schrift
-                stroke: '#000000',      // schwarzer Rand
+                color: '#ffffff',
+                stroke: '#000000',
                 strokeThickness: 4,
                 align: 'center'
             }
@@ -258,17 +237,10 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-
-
-
-        // Physik-Welt & Kamera
         const width  = map.widthInPixels;
         const height = map.heightInPixels;
         this.physics.world.setBounds(0, 0, width, height);
         this.cameras.main.setBounds(0, 0, width, height);
-
-        // zoom to fit
         const fitZoom = Math.min(
             this.cameras.main.width  / width,
             this.cameras.main.height / height
@@ -276,9 +248,6 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setZoom(fitZoom)
             .centerOn(width/2, height/2);
         this.input.topOnly = true;
-
-        // ─── zone overlay setup ──────────────────────────────
-        // AFTER: no scrollFactor → it's in world‐space
         this.graphicsZone = this.add.graphics();
 
         this.textZoneTimer   = this.add.text(15, 120, '', {
@@ -286,17 +255,10 @@ export default class GameScene extends Phaser.Scene {
             color: '#ffffff', stroke: '#000000',
             strokeThickness: 3
         }).setScrollFactor(0);
-
-        // ammo UI
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
-
-        // UI: Gadget-Cooldown
         this.cooldownBarBg   = this.add.graphics().setScrollFactor(0);
         this.cooldownBarFill = this.add.graphics().setScrollFactor(0);
-
-
-        // UI: Spielerzahl
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
             fontFamily: 'Arial', fontSize: '24px',
             fontStyle: 'bold', color: '#ffffff',
@@ -309,37 +271,32 @@ export default class GameScene extends Phaser.Scene {
 
         const coinX = vw - 200;
         const coinY = 16;
-
-        // 1) Erstelle das Coin‐Icon
         this.coinIcon = this.add.image(coinX, coinY, 'icon_coin')
-            .setOrigin(0, 0)      // links‐oben am Icon
-            .setScrollFactor(0)   // bleibt fest am HUD
-            .setDisplaySize(60, 60) // skaliere auf 32×32px (oder so, wie es optisch passt)
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setDisplaySize(60, 60)
             .setDepth(1000);
 
 
         this.coinText = this.add.text(
-            coinX + 90,  // 36px nach rechts, damit Text hinter dem 32px‐Icon beginnt + 4px Abstand
-            coinY + 25,   // 8px nach unten, sodass Text mittig zum Icon sitzt
-            '0',         // Startwert; wird in update() überschrieben
+            coinX + 90,
+            coinY + 25,
+            '0',
             {
                 fontSize: '28px',
                 fontFamily: 'Arial Black',
-                color: '#ffff00',       // Gelb
-                stroke: '#000000',      // Schwarzer Rand
+                color: '#ffff00',
+                stroke: '#000000',
                 strokeThickness: 3,
                 align: 'left'
             }
         )
-            .setOrigin(0.5)   // linke Mitte des Texts
+            .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // Explosion-Animation
         this.anims.create({
             key: 'explode',
             frames: Array.from({ length: 25 }, (_, idx) => {
-                // idx läuft von 0–24, also +1 und auf 4 Stellen auffüllen
                 const frame = (idx + 1).toString().padStart(4, '0');
                 return { key: frame };
             }),
@@ -350,10 +307,6 @@ export default class GameScene extends Phaser.Scene {
         this.explosionGroup = this.add.group();
         this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
-
-
-
-        // Eingabe: WASD
         this.keys = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
             down: Phaser.Input.Keyboard.KeyCodes.S,
@@ -362,14 +315,9 @@ export default class GameScene extends Phaser.Scene {
         });
 
         console.log("KEY OBJECTS", this.keys);
-
-
-        // Eingabe: Schuss
         this.input.on('pointerdown', pointer => this.startFiring(pointer));
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
-
-// Eingabe: Q -> Gadget
         const gadgetKey = this.registry.get('gadgetKey') || localStorage.getItem('gadgetKey') || 'Q';
         this.gadgetKey = gadgetKey;
 
@@ -378,8 +326,6 @@ export default class GameScene extends Phaser.Scene {
             if (this.gadgetMaxUses <= 0 || now < this.cooldownExpireTime) return;
             this.useGadget();
         });
-
-        // Socket-Update
         this.socket.on('stateUpdate', state => {
             this.npcs = state.npcs || [];
             this.latestState = state;
@@ -419,7 +365,7 @@ export default class GameScene extends Phaser.Scene {
             .setDepth(1000);
 
         this.gadgetText = this.add.text(
-            this.gadgetIcon.x + 0,   // z. B. direkt unter dem Icon
+            this.gadgetIcon.x + 0,
             this.gadgetIcon.y + 55,
             '',
             {
@@ -508,7 +454,6 @@ export default class GameScene extends Phaser.Scene {
             playerId: this.playerId
         }, (response) => {
             if (response === 'ok') {
-                // Cooldown lokal starten (10 000 ms ab jetzt)
                 this.cooldownExpireTime = this.time.now + 10_000;
                 this.boostActive = true;
                 this.boostEndTime = this.time.now + 2_000;
@@ -526,13 +471,9 @@ export default class GameScene extends Phaser.Scene {
 
         if (this.zone) {
             const {center, radius, timeMsRemaining} = this.zone;
-
-            // Draw a green circle outline at the true world coords
             this.graphicsZone
-                .lineStyle(4, 0x00aa00)          // 4px thick, green
+                .lineStyle(4, 0x00aa00)
                 .strokeCircle(center.x, center.y, radius);
-
-            // Update the timer text (screen‐locked)
             const secs = Math.ceil(timeMsRemaining / 1000);
             const mm = String(Math.floor(secs / 60)).padStart(2, '0');
             const ss = String(secs % 60).padStart(2, '0');
@@ -582,19 +523,16 @@ export default class GameScene extends Phaser.Scene {
 
 
             if (remMs > 0) {
-                // Noch im Cooldown
                 const cdSec = `${Math.ceil(remMs / 1000)}s`;
                 this.gadgetText
                     .setText(`Cooldown: ${cdSec}`)
                     .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
             } else {
                 if (this.gadgetMaxUses <= 0) {
-                    // nicht Bereit
                     this.gadgetText
                         .setText(`0 Uses: ${this.gadgetType}`)
                         .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
                 } else {
-                    // Bereit
                     this.gadgetText
                         .setText(this.gadgetKey)
                         .setStyle({fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3});
@@ -649,15 +587,11 @@ export default class GameScene extends Phaser.Scene {
                 this.npcBars[npc.id] = bar;
                 this.npcLabels[npc.id] = label;
             }
-
-            // 2) Update position & rotation
             if (spr) {
                 spr.setPosition(npc.position.x, npc.position.y)
                     .setRotation(npc.position.angle);
             }
-
-            // 3) Redraw health bar above the sprite
-            const maxHp = 50; // or pull from npc.maxHealth if you have it
+            const maxHp = 50;
             const pct = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
             const bw = 40, bh = 6;
             bar.clear()
@@ -673,23 +607,17 @@ export default class GameScene extends Phaser.Scene {
                     npc.position.y - spr.displayHeight / 2 - bh - 7,
                     bw * pct, bh
                 );
-
-            // 4) Position the “NPC” label just above the bar
             if (label) {
                 label.setPosition(
                     npc.position.x,
                     npc.position.y - spr.displayHeight / 2 - bh - 16
                 );
             }
-
-            // 5) Hide if dead
             const visible = npc.currentHealth > 0;
             if (spr) spr.setVisible(visible);
             if (bar) bar.setVisible(visible);
             if (label) label.setVisible(visible);
         });
-
-// 6) Cleanup any despawned NPCs
         Object.keys(this.npcSprites).forEach(id => {
             if (!aliveNpcIds.has(id)) {
                 this.npcSprites[id].destroy();
@@ -700,9 +628,6 @@ export default class GameScene extends Phaser.Scene {
                 delete this.npcLabels[id];
             }
         });
-
-
-        // ─── render players & health ───────────────────────
         const connected = this.latestState.players
             .filter(p => p.currentHealth > 0).length;
         const total = this.latestState.players.length;
@@ -711,14 +636,10 @@ export default class GameScene extends Phaser.Scene {
         this.latestState.players.forEach(p => {
             const isMe = p.playerId === this.playerId;
             let spr = this.playerSprites[p.playerId];
-
-            // 🟢 Spawn: nur wenn noch kein Sprite vorhanden
             if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
                 const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
                 spr = this.physics.add.sprite(p.position.x, p.position.y, key)
                     .setOrigin(0.5);
-
-                // 🟡 OUTLINE-SPRITES ERZEUGEN
                 spr.outline = this.add.sprite(p.position.x, p.position.y, key)
                     .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
                     .setDepth(10).setVisible(false);
@@ -742,7 +663,6 @@ export default class GameScene extends Phaser.Scene {
 
                 this.playerSprites[p.playerId] = spr;
             }
-            // Kollision gegen Wände
             if (spr) {
                 this.physics.add.collider(spr, this.obstacleLayer);
             }
@@ -760,37 +680,24 @@ export default class GameScene extends Phaser.Scene {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
                     spr.setVisible(p.visible);
-
-
-                    // Health Bar zeichnen
                     const barW = 40;
                     const barH = 6;
                     const pct = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
-
-// Segment-Größe in HP und Abstand in px lassen sich hier anpassen:
-                    const segmentHP = 20;     // jedes Segment entspricht 20 HP
-                    const gap = 1;      // Abstand zwischen Segmenten in px
-
-// Anzahl der Segmente ergibt sich aus der Max-HP des Brawlers:
+                    const segmentHP = 20;
+                    const gap = 1;
                     const segments = Math.ceil(p.maxHealth / segmentHP);
                     const segW = barW / segments;
                     const fillPixels = barW * pct;
 
                     spr.healthBar.clear();
-
-// 1) Äußerer Rahmen (2px schwarz)
                     const bgX = p.position.x - barW / 2 - 1;
                     const bgY = p.position.y - spr.height / 2 - barH - 9;
                     spr.healthBar
                         .lineStyle(2, 0x000000)
                         .strokeRect(bgX, bgY, barW + 2, barH + 2);
-
-// 2) Schwarzer Hintergrund innen
                     spr.healthBar
                         .fillStyle(0x000000)
                         .fillRect(bgX + 1, bgY + 1, barW, barH);
-
-// 3) Grüne Segmente entsprechend gefüllter HP
                     spr.healthBar.fillStyle(0x00ff00);
                     for (let i = 0; i < segments; i++) {
                         const x = bgX + 1 + i * segW;
@@ -828,10 +735,7 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
         });
-        // Exit anzeigen, wenn tot
         if (me && me.currentHealth <= 0) this.exitButtonSvg.setVisible(true);
-
-        // Projektile rendern
         const alive = new Set();
         this.latestState.projectiles.forEach(p => {
             const key = p.projectileType === 'SNIPER' ? 'sniper'
@@ -850,16 +754,12 @@ export default class GameScene extends Phaser.Scene {
                 spr.setPosition(p.position.x, p.position.y);
             }
         });
-
-        // Entfernen
         Object.keys(this.projectileSprites).forEach(id => {
             if (!alive.has(id)) {
                 this.projectileSprites[id].destroy();
                 delete this.projectileSprites[id];
             }
         });
-
-        // Ammo-Bar
         if (me) {
             const weapon = me.currentWeapon;
             const ammo = me?.ammo ?? 0;
@@ -882,9 +782,6 @@ export default class GameScene extends Phaser.Scene {
             }
             this.lastCoinCount = newCount;
         }
-
-
-        // ========== KISTEN VERARBEITEN ==========
         if (this.latestState.crates) {
             const currentCrateIds = new Set();
 
@@ -899,8 +796,6 @@ export default class GameScene extends Phaser.Scene {
                 }
 
                 spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
-
-                // Healthbar anzeigen
                 spr.healthBar.clear();
                 if (crate.crateHp < 100) {
                     const pct = Phaser.Math.Clamp(crate.crateHp / 100, 0, 1);
@@ -912,16 +807,12 @@ export default class GameScene extends Phaser.Scene {
                         .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
                 }
             });
-
-            // Entferne verschwundene Crates
             Object.keys(this.crateSprites).forEach(crateId => {
                 if (!currentCrateIds.has(crateId)) {
                     const spr = this.crateSprites[crateId];
                     spr.healthBar?.destroy();
                     spr.destroy();
                     delete this.crateSprites[crateId];
-
-                    // 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
                     const tileX = Math.floor(spr.x / this.tileSize);
                     const tileY = Math.floor(spr.y / this.tileSize);
                     this.crateLayer.putTileAt(401, tileX, tileY);
@@ -954,16 +845,10 @@ export default class GameScene extends Phaser.Scene {
                 this.cameras.main.setZoom(this.initialZoom);
             }
         }
-
-        // … dein bestehender Code bis zum Schluss …
-
-        // 1) matchOver EINMALIG senden
         if (!this.matchOverEmitted && alivePlayers === 1) {
             this.socket.emit('matchOver', {roomId: this.roomId});
             this.matchOverEmitted = true;
         }
-
-        // 2) Nur Gewinner zeigt Victory
         if (!this.hasWon && alivePlayers === 1 && me?.currentHealth > 0) {
             const base = me.coinCount ?? 0, bonus = 10;
             const newCount = me.coinCount ?? 0;
@@ -987,23 +872,17 @@ export default class GameScene extends Phaser.Scene {
             this.showVictoryScreen(1, base, bonus, base + bonus);
             this.hasWon = true;
         }
-
-        // 3) Nur der Gestorbene zeigt Defeat
         if (!this.defeatShown && me && me.currentHealth <= 0) {
             const place = alivePlayers + 1, base = me.coinCount ?? 0;
             const bonus = place === 2 ? 5 : place === 3 ? 0 : place === 4 ? -10 : 0;
             this.showDefeatScreen(place, base, bonus, base + bonus);
             this.defeatShown = true;
         }
-
-        // 4) Bewegungs-Emit IMMER senden (auch wenn jemand gestorben ist)
         const dirX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
         const dirY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
         const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
         const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
         this.socket.emit('move', {roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle});
-
-        // Ende von update()
 
 
     }
@@ -1074,8 +953,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
         this.add.text(
             width / 2,
@@ -1091,8 +968,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 4) Gesamt-Coins
         this.add.text(
             width / 2,
             height / 2 + 70,
@@ -1100,7 +975,7 @@ export default class GameScene extends Phaser.Scene {
             {
                 fontSize: '32px',
                 fontFamily: 'Arial',
-                color: '#ffd700', // Gold-Farbton
+                color: '#ffd700',
                 stroke: '#000000',
                 strokeThickness: 4
             }
@@ -1150,8 +1025,6 @@ export default class GameScene extends Phaser.Scene {
 
 
         this.add.image(width/2 - 50, height / 2 -200, "defeat").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-
-        // 2) Coins im Spiel
         this.add.text(
             width / 2,
             height / 2 - 30,
@@ -1166,8 +1039,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
         this.add.text(
             width / 2,
@@ -1183,8 +1054,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 4) Gesamt-Coins
         this.add.text(
             width / 2,
             height / 2 + 70,

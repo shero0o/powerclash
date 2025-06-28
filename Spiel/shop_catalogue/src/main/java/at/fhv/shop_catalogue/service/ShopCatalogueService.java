@@ -7,8 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.reactive.function.client.WebClient; // Die Dependencykonflikte werden beim docker-compose up --build resolved
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,9 +79,8 @@ public class ShopCatalogueService {
                         .queryParam("brawlerId", brawlerId)
                         .build())
                 .retrieve()
-                .toBodilessEntity()   // kein Body erwartet
-                .block();             // ohne block() passiert gar nichts
-        // Purchase speichern
+                .toBodilessEntity()
+                .block();
         Purchase purchase = new Purchase(playerId, ShopItemType.BRAWLER, brawlerId);
     }
 

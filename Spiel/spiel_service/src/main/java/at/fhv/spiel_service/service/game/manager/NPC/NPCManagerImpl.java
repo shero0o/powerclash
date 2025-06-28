@@ -26,7 +26,7 @@ public class NPCManagerImpl implements NPCManager {
             if (target == null) continue;
             float dx = target.getPosition().getX() - npc.getPosition().getX();
             float dy = target.getPosition().getY() - npc.getPosition().getY();
-            float distSq = dx*dx + dy*dy;               // Quadrat der Distanz
+            float distSq = dx*dx + dy*dy;
             float attackRadius = npc.getAttackRadius();
             float radiusSq = attackRadius * attackRadius;
             float angle = (float) Math.atan2(dy, dx);

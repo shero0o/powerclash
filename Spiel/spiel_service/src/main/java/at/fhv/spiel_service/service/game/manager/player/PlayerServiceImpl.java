@@ -37,11 +37,9 @@ public class PlayerServiceImpl implements IPlayerService {
 
     @Override
     public void addPlayer(String playerId, String brawlerId, String playerName) {
-        // Default Brawler
         if (brawlerId == null || brawlerId.isBlank()) {
             brawlerId = "hitman";
         }
-        //
         int index = players.size();
         Position spawn;
         switch (index) {

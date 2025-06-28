@@ -1,4 +1,3 @@
-// at.fhv.spiel_backend.server.EventPublisher.java
 package at.fhv.spiel_service.messaging;
 
 import com.corundumstudio.socketio.SocketIOServer;

@@ -1,4 +1,3 @@
-// GameMap.java
 package at.fhv.spiel_service.domain;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -54,7 +53,7 @@ public class GameMap {
                     case "wand" -> parseWalls(data);
                     case "kisten" -> parseCrates(data);
                     case "gebüsch, giftzone, energiezone" -> parseZones(data);
-                    default -> { /* */ }
+                    default -> {}
                 }
             }
         } catch (Exception e) {

@@ -24,9 +24,6 @@ public class AccountService {
     private final PlayerRepository playerRepository;
 
 
-    // -----------------------
-    // ACCOUNT-FUNKTIONEN
-    // -----------------------
 
     public List<Player> getAllPlayers() {
         return playerRepository.findAll();
@@ -39,10 +36,8 @@ public class AccountService {
 
     @Transactional
     public Player createPlayer(String name) {
-        // 1) Spieler in der Account-DB anlegen
         Player p = playerRepository.save(new Player(null, name));
 
-        // 2) WebClient-Aufruf an den Wallet-Service
         WebClient client = WebClient.create("http://wallet-service:8092");
         Mono<String> result = client.post()
                 .uri(uriBuilder -> uriBuilder
@@ -53,7 +48,6 @@ public class AccountService {
                 .bodyToMono(String.class);
         String body = result.block();
 
-        // optional: auf result prüfen oder loggen
         System.out.println("Assigned defaults for player " + p.getId() + ": " + body);
 
         return p;

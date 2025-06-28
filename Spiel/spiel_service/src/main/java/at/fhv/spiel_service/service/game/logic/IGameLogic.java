@@ -4,73 +4,43 @@ import at.fhv.spiel_service.domain.GameMap;
 import at.fhv.spiel_service.messaging.StateUpdateMessage;
 import at.fhv.spiel_service.domain.*;
 
-/**
- * Kombinierte GameLogic-Schnittstelle, die
- * - Player- & Brawler-Management,
- * - Bewegung mit und ohne Winkel,
- * - Map-Initialisierung,
- * - Projectile- und Waffen-Logik
- * - State-Updates
- * zusammenführt.
- */
+
 public interface IGameLogic {
 
-    /**
-     * Build a snapshot of the current game state for clients
-     */
+
     StateUpdateMessage buildStateUpdate();
 
 
-    /**
-     * Move the specified player to (x, y) with rotation angle
-     */
+
     void movePlayer(String playerId, float x, float y, float angle);
 
-    /**
-     * Register a new player in the simulation (default Brawler)
-     */
 
 
-    /**
-     * Register a new player with specific Brawler
-     */
+
+
     void addPlayer(String playerId, String brawlerId, String playerName);
 
-    /**
-     * Remove a player from the simulation
-     */
+
     void removePlayer(String playerId);
 
-    /**
-     * Set the GameMap for collision checks
-     */
+
     void setGameMap(GameMap gameMap);
 
-    /**
-     * Expose the internal Player object
-     */
+
     Player getPlayer(String playerId);
 
     Gadget getGadget(String playerId);
 
-    /**
-     * Spawn a projectile with full weapon logic
-     */
+
     void spawnProjectile(String playerId, Position position, Position direction, ProjectileType type);
 
-    /**
-     * Update existing projectiles (movement, lifetime, collisions)
-     */
+
     void updateProjectiles(float delta);
 
-    /**
-     * Get raw player position (used for camera follow)
-     */
+
     Position getPlayerPosition(String playerId);
 
-    /**
-     * Change the current weapon & reset ammo
-     */
+
     void setPlayerWeapon(String playerId, ProjectileType projectileType);
 
     void setPlayerGadget(String playerId, GadgetType chosenGadget);

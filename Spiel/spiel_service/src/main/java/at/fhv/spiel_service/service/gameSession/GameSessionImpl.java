@@ -50,7 +50,6 @@ public class GameSessionImpl implements IGameSession {
         if (isFull())            throw new IllegalStateException("Room is full");
         logic.addPlayer(playerId, brawlerId, playerName);
         players.put(playerId, new Object());
-        // Sofort ersten State senden
         StateUpdateMessage init = logic.buildStateUpdate();
         publisher.publish(id, init);
     }
@@ -72,7 +71,6 @@ public class GameSessionImpl implements IGameSession {
     @Override
     public void start() {
         if (hasGameStarted() || getPlayerCount() < MAX_PLAYERS) return;
-        // Level-3-NPCs & Zone
         if ("level3".equals(levelId) && logic instanceof DefaultIGameLogic) {
             DefaultIGameLogic lg = (DefaultIGameLogic) logic;
             float cx = gameMap.getWidthInPixels()/2f;

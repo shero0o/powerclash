@@ -26,7 +26,6 @@ public class CollisionManagerImpl implements CollisionManager {
             Map<String, Crate> crates,
             Map<String, Integer> playerCoins
     ) {
-        // Kopie, damit entfernte Projektile die Original-Liste nicht stören
         for (Projectile p : new ArrayList<>(projectiles)) {
             if (!handleNpcHit(p, npcs)
                     && !handleCrateHit(p, crates, playerCoins)

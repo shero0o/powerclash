@@ -37,15 +37,10 @@ export default class ShopScene extends Phaser.Scene {
         this.load.svg('icon_coin', '/assets/svg/coin-icon.svg', { width:100, height:100 });
         this.load.svg('home', '/assets/svg/btn-navigation.svg', { width:130, height:115 });
         this.load.svg('exitButtonSvg', '/assets/svg/btn-exit.svg', { width:190, height:90 });
-
-        // — Brawler-Avatare —
         this.load.image('avatar2','/assets/PNG/Characters/Character2.png');
         this.load.image('avatar3','/assets/PNG/Characters/Character3.png');
         this.load.image('avatar4','/assets/PNG/Characters/Character4.png');
         this.load.image('avatar5','/assets/PNG/Characters/Character5.png');
-
-
-        // — Gadget-Icons —
         this.load.svg('gadget_speed',  '/assets/svg/speedGadget.svg',{ width:400, height:200 });
         this.load.svg('gadget_damage', '/assets/svg/damageGadget.svg',{ width:400, height:200 });
         this.load.svg('gadget_health', '/assets/svg/healthGadget.svg',{ width:400, height:200 });
@@ -55,8 +50,6 @@ export default class ShopScene extends Phaser.Scene {
 
     async create() {
         const { width, height } = this.scale;
-
-        // --- dein bestehender Code ---
         this.add.image(width / 2, height / 2, 'lobby_bg')
             .setOrigin(0.5)
             .setDisplaySize(width, height);
@@ -117,8 +110,6 @@ export default class ShopScene extends Phaser.Scene {
         const rectWidth = 100;
         const cornerRadius = 4;
         const strokeWidth = 3;
-
-        // Hintergrund Rechteck
         const rectX = coinX + coinSize - 12;
         const rectY = coinY - rectHeight / 2;
         const graphics = this.add.graphics();
@@ -126,8 +117,6 @@ export default class ShopScene extends Phaser.Scene {
         graphics.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
         graphics.lineStyle(strokeWidth, 0x000000, 1);
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
-
-        // Text
         const coins = await fetch(`${API_BASE2}/coins?playerId=${this.playerId}`).then(r => r.json());
 
         const textX = rectX + rectWidth / 2;
@@ -139,12 +128,6 @@ export default class ShopScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
-        // Coin Icon
-        const coinImage = this.add.image(coinX, coinY, 'icon_coin')
-            .setOrigin(0, 0.5)
-            .setDisplaySize(coinSize, coinSize);
-
-
     }
 
     openSettingsWindow() {
@@ -201,21 +184,13 @@ export default class ShopScene extends Phaser.Scene {
         const startY = 200;
         const listWidth  = width - startX - 50;
         const listHeight = height - startY - 50;
-
-        // Container positionieren
         this.shopContainer.setPosition(startX, startY);
-
-        // Maske absolut positioniert
         const maskShape = this.make.graphics();
         maskShape.fillRect(startX, startY, listWidth, listHeight);
         const mask = maskShape.createGeometryMask();
         this.shopContainer.setMask(mask);
-
-        // Scroll-Bounds
         let offsetY = 0;
         const rowHeight = 120;
-
-        // Items rendern
         Object.entries(itemsByType).forEach(([type, items]) => {
             const title = this.add.text(0, offsetY, type, { fontSize: '40px', color: '#0ffff0' })
                 .setOrigin(0, 0);
@@ -223,7 +198,6 @@ export default class ShopScene extends Phaser.Scene {
             offsetY += 40;
 
             items.forEach(item => {
-            // ─── Bild des Items ───
                 const imageKey = (type === 'BRAWLER')
                     ? { sniper:'avatar2', mage:'avatar3', healer:'avatar4', tank:'avatar5' }[item.id] || 'avatar2'
                     : (type === 'GADGET')
@@ -235,8 +209,6 @@ export default class ShopScene extends Phaser.Scene {
                             .setDisplaySize(80, 80);
                         this.shopContainer.add(img);
                     }
-
-                // ─── Name und Preis ───
                 const nameText = this.add.text(0, offsetY, `${item.name} (${type})`, {
                 fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
                 });
@@ -244,8 +216,6 @@ export default class ShopScene extends Phaser.Scene {
                     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00'
                 });
                 this.shopContainer.add([nameText, priceText]);
-
-                // ─── Kaufen-Button ───
                 const buyButton = this.add.text(400, offsetY + 15, 'BUY', {
                     fontFamily: 'Arial', fontSize: '24px', color: '#ffffff',
                     backgroundColor: '#333', padding: { x: 10, y: 5 }
@@ -253,18 +223,11 @@ export default class ShopScene extends Phaser.Scene {
                     .setInteractive({ useHandCursor: true })
                     .on('pointerdown', async () => this.showPurchaseConfirmation(item, type));
                 this.shopContainer.add(buyButton);
-
-                // Höhe für nächstes Item reservieren
                 offsetY += rowHeight;
             });
         });
-
-        // Gesamt-Höhe für Scroll-Reichweite
         this.shopContainer._totalHeight = offsetY;
-
-        // Wheel-Event nur im sichtbaren Bereich
         this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
-            // Prüfen, ob der Mauszeiger im Bereich ist
             if (pointer.x < startX || pointer.x > startX + listWidth || pointer.y < startY || pointer.y > startY + listHeight) {
                 return;
             }
@@ -322,7 +285,7 @@ export default class ShopScene extends Phaser.Scene {
                 await this._refreshShopItems();
             } else {
                 const error = await res.text();
-                alert(`Not enough Coins`);
+                alert(`Not enough Coins`, error);
             }
         } catch (err) {
             console.error('Purchasing Error:', err);
