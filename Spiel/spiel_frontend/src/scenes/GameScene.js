@@ -389,12 +389,6 @@ export default class GameScene extends Phaser.Scene {
                 this.gadgetMaxUses      = myGadget.remainingUses;
                 this.cooldownExpireTime = this.time.now + myGadget.timeRemaining;
             }
-
-            // 🌿 Sichtbarkeits-Testausgabe
-            console.log("📦 Spieler-Sichtbarkeit:");
-            state.players.forEach(p => {
-                console.log(`👤 ${p.playerId} – visible: ${p.visible}`);
-            });
         });
         this.socket.emit('changeWeapon', {
             roomId: this.roomId,
@@ -402,10 +396,6 @@ export default class GameScene extends Phaser.Scene {
             projectileType: this.selectedWeapon
         });
 
-
-        //Gadget:
-        //    In Lobby hast du offenbar mit Werten wie 'DAMAGE_BOOST' o. Ä. gearbeitet.
-        //    Wir definieren nun eine Hilfsfunktion, die daraus den passenden Texture-Key macht:
 
         const getGadgetKey = (gadgetTypeString) => {
             switch (gadgetTypeString) {
@@ -416,23 +406,18 @@ export default class GameScene extends Phaser.Scene {
             }
         };
 
-        // 2) Wähle den korrekten Texture-Key
         const currentGadgetKey = getGadgetKey(this.gadgetType);
 
-        // 3) Gadget-Icon an gewünschter HUD-Position platzieren (z. B. links oben neben den Coins)
-        //    Wir legen es z. B. knapp unterhalb des Coin-Icons ab (y=90). Passe bei Bedarf an!
         this.gadgetIcon = this.add.image(
-            vw / 2 + 800,   // 100px links neben Münz-HUD (oder wo du es haben willst)
-            vh + 10,    // zentriert zur HUD-Leiste
+            vw / 2 + 800,
+            vh + 10,
             currentGadgetKey
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setDisplaySize(160, 80)  // skaliere so, dass es zum HUD passt
+            .setDisplaySize(160, 80)
             .setDepth(1000);
 
-        // ─── (optional) Wenn du dennoch einen Gadget-Text (z.B. für Cooldown) brauchst,
-        //       kannst du ihn hier anlegen und später in update() aktualisieren:
         this.gadgetText = this.add.text(
             this.gadgetIcon.x + 0,   // z. B. direkt unter dem Icon
             this.gadgetIcon.y + 55,
@@ -449,13 +434,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // Gadget-Anzeige initialisieren
-        // this.gadgetType = this.registry.get('gadget');   // Typ aus JoinRequest
-        // this.cooldownExpireTime = 0; // Timestamp in ms, wann Cooldown endet
-        // this.gadgetText = this.add.text(16, 80, '', {
-        //     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
-        // }).setScrollFactor(0);
 
     }
 
@@ -564,7 +542,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
-        // ─── handle mines/explosions ────────────────────────
         const currIds = new Set(this.latestState.projectiles
             .filter(p => p.projectileType === 'MINE')
             .map(p => p.id));
@@ -585,12 +562,10 @@ export default class GameScene extends Phaser.Scene {
         });
         this.prevProjectileIds = currIds;
 
-        // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
         if (me && this.healthValueText) {
             this.healthValueText.setText(`${me.currentHealth} / ${me.maxHealth}`);
 
-            // Boost-Ablauf prüfen
             if (this.boostActive && this.time.now > this.boostEndTime) {
                 this.boostActive = false;
             }
@@ -632,13 +607,11 @@ export default class GameScene extends Phaser.Scene {
             const remCd = Math.max(0, this.cooldownExpireTime - now);
             const ratio = remCd > 0 ? (remCd / 10_000) : 1;
 
-            // Hintergrund
             this.cooldownBarBg
                 .clear()
                 .fillStyle(0x000000, 0.5)
                 .fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
 
-            // Füllung
             this.cooldownBarFill
                 .clear()
                 .fillStyle(0xffffff, 1)
@@ -650,27 +623,22 @@ export default class GameScene extends Phaser.Scene {
                 );
         }
 
-        // ── render NPCs ─────────────────────────────────────────
         const aliveNpcIds = new Set();
 
         this.npcs.forEach(npc => {
             aliveNpcIds.add(npc.id);
 
-            // 1) Ensure we have three GameObjects for this NPC:
             let spr = this.npcSprites[npc.id];
             let bar = this.npcBars[npc.id];
             let label = this.npcLabels[npc.id];
 
             if (!spr && npc.currentHealth > 0 && (npc.visible || me)) {
-                // a) main sprite
                 spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
                     .setOrigin(0.5);
                 this.physics.add.collider(spr, this.obstacleLayer);
 
-                // b) health-bar graphic
                 bar = this.add.graphics().setDepth(11);
 
-                // c) name label
                 label = this.add.text(0, 0, 'NPC', {
                     fontSize: '16px', fontFamily: 'Arial',
                     color: '#ffffff', stroke: '#000000',
@@ -970,39 +938,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
         const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
-
-
-        // 2) Wenn man selbst gerade gestorben ist
-        // if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-        //     // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
-        //     // Platz des Verstorbenen = alivePlayers + 1
-        //     const place = alivePlayers + 1;
-        //
-        //     const baseCoins = me.coinCount ?? 0;
-        //
-        //     // Bonus-/Malus-Berechnung nach Platz
-        //     let bonus = 0;
-        //     switch (place) {
-        //         case 1:
-        //             bonus = 10;
-        //             break;
-        //         case 2:
-        //             bonus = 5;
-        //             break;
-        //         case 3:
-        //             bonus = 0;
-        //             break;
-        //         case 4:
-        //             bonus = -10;
-        //             break;
-        //         default:
-        //             bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
-        //     }
-        //     const totalCoins = baseCoins + bonus;
-        //
-        //     this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
-        //     this.defeatShown = true;
-        // }
 
         console.log("KEYS:", {
             W: this.keys.up.isDown,

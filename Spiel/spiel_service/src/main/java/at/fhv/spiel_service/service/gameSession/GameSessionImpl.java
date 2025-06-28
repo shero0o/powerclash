@@ -12,15 +12,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * GameRoom implementation that handles:
- * - Player join/leave with optional Brawler selection
- * - Ready-state tracking
- * - Input buffering for movement & rotation
- * - Projectile & game logic updates
- * - State broadcasting via EventPublisher
- */
-
 public class GameSessionImpl implements IGameSession {
     private final String id        = UUID.randomUUID().toString();
     private final String levelId;
@@ -104,13 +95,6 @@ public class GameSessionImpl implements IGameSession {
         loop.submitMovement(playerId, dirX, dirY, angle);
     }
 
-    /** Direktschuss ohne Umweg über Tick */
-    //@Override
-    public void setPlayerInput(String playerId, String ignore1, String ignore2, float ignore3) {
-        // nicht belegt
-    }
-
-    /** Alias für Projektil abfeuern */
     public void handleFire(String playerId, Position pos, Position dir, ProjectileType t) {
         logic.spawnProjectile(playerId, pos, dir, t);
     }
