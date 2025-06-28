@@ -855,7 +855,7 @@ export default class GameScene extends Phaser.Scene {
             const gain = newCount - this.lastCoinCount;
             try {
                 const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                    `/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                     {method: 'POST'}
                 );
                 if (!res.ok) {
@@ -902,7 +902,7 @@ export default class GameScene extends Phaser.Scene {
 
                 try {
                     const res = await fetch(
-                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                        `/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                         { method: 'POST' }
                     );
                     if (!res.ok) {

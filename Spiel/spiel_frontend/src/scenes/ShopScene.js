@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
-const API_BASE = 'http://localhost:8091/api/shop_catalogue';
-const API_BASE2 = 'http://localhost:8092/api/wallet';
+const API_BASE = '/api/shop_catalogue';
+const API_BASE2 = '/api/wallet';
 
 
 export default class ShopScene extends Phaser.Scene {
