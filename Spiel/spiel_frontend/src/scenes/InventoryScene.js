@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-const API_BASE = '/api/wallet';
+const API_BASE = 'http://localhost:8092/api/wallet';
 
 const weaponAssetMap = {
     Rifle: 'weapon_rifle',

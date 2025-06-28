@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 
-const API_BASE = '/api/account';
+const API_BASE = 'http://localhost:8093/api/account';
 
 export default class AccountScene extends Phaser.Scene {
     constructor() {

@@ -18,8 +18,8 @@ export default function PhaserGame() {
         const playerId = localStorage.getItem('playerId');
         const roomId   = localStorage.getItem('roomId');
 
-        const socket = io('http://10.0.40.183:8081', {
-            path: "/socket.io",
+        const socket = io('http://localhost:8081', {
+
             autoConnect: false,
             query: { playerId, roomId }
         });

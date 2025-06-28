@@ -46,8 +46,9 @@ export default class GameScene extends Phaser.Scene {
                 default: return 'HEALTH_BOOST';
             }
         })() || 'HEALTH_BOOST';
-        this.selectedBrawler   = this.registry.get('brawler') || 'sniper';
-        this.playerName        = this.registry.get('playerName') || 'Player';
+        this.selectedBrawler = this.registry.get('brawler') || 'sniper';
+        console.log("brawlerrrrrr", this.registry.get('brawler'))
+        this.playerName = this.registry.get('playerName') || 'Player';
 
         this.latestState       = null;
         this.playerSprites     = {};
@@ -419,11 +420,12 @@ export default class GameScene extends Phaser.Scene {
         this.isFiring = false;
     }
 
-    getBrawlerSpriteName(brawlerId) {
-        switch (brawlerId) {
-            case 'robot':   return 'robot1';
-            case 'soldier':   return 'soldier1';
-            case 'woman': return 'womanGreen';
+    getBrawlerSpriteName(brawler) {
+        console.log(brawler)
+        switch ("Brawler name", brawler) {
+            case 4:   return 'robot1';
+            case 2:   return 'soldier1';
+            case 3: return 'womanGreen';
             default:       return 'hitman1';
         }
     }
@@ -855,7 +857,7 @@ export default class GameScene extends Phaser.Scene {
             const gain = newCount - this.lastCoinCount;
             try {
                 const res = await fetch(
-                    `/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                     {method: 'POST'}
                 );
                 if (!res.ok) {
@@ -902,7 +904,7 @@ export default class GameScene extends Phaser.Scene {
 
                 try {
                     const res = await fetch(
-                        `/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
                         { method: 'POST' }
                     );
                     if (!res.ok) {
