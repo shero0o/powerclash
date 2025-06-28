@@ -23,8 +23,6 @@ public class ProjectileManagerImpl implements ProjectileManager, ProjectileConte
         this.players = players;
     }
 
-    // ─── ProjectileManager ────────────────────────────────
-
     @Override
     public void spawnProjectile(String pid, Position pos, Position dir, ProjectileType type) {
         if (!ammo.consume(pid,type)) return;
@@ -35,7 +33,6 @@ public class ProjectileManagerImpl implements ProjectileManager, ProjectileConte
     public void updateProjectiles(float deltaSec) {
         this.lastDelta = deltaSec;
         ammo.refillAll(deltaSec);
-        // Update & Collision
         new ArrayList<>(projectiles.values()).forEach(p-> {
             behaviors.get(p.getProjectileType()).update(p,this);
         });
@@ -71,8 +68,6 @@ public class ProjectileManagerImpl implements ProjectileManager, ProjectileConte
     public float deltaSec() {
         return lastDelta;
     }
-
-    // ─── ProjectileContext ────────────────────────────────
 
     @Override public GameMap getGameMap()     { return gameMap; }
     @Override public Map<String,Player> getPlayers(){ return players; }

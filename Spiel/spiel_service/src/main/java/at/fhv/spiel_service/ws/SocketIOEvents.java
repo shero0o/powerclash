@@ -47,8 +47,6 @@ public class SocketIOEvents {
             }
         });
     }
-
-    // Beispiel für einen Handler:
     private void onJoinRoom(SocketIOClient client, JoinRequestDTO data, AckRequest ack) {
         String roomId = roomManager.assignPlayerToRoom(data.getPlayerId(), data.getBrawlerId(), data.getLevelId(), data.getPlayerName());
         client.joinRoom(roomId);

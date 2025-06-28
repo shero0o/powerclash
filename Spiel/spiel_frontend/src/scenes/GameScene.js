@@ -15,7 +15,6 @@ export default class GameScene extends Phaser.Scene {
         this.exitButtonGame   = null;
         this.defeatShown      = false;
 
-        // zone overlay
         this.zone        = null;
         this.graphicsZone      = null;
         this.textZoneTimer     = null;
@@ -63,14 +62,12 @@ export default class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        // Player & projectiles
         this.load.image('player',         '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('rifle_bullet',   '/assets/PNG/projectile/rifle.png');
         this.load.image('sniper',         '/assets/PNG/projectile/sniper.png');
         this.load.image('shotgun_pellet', '/assets/PNG/projectile/shotgun.png');
         this.load.image('mine',           '/assets/PNG/explosion/bomb.png');
 
-        // brawlers
         this.load.image('hitman1', '/assets/PNG/Hitman_1/hitman1_gun.png');
         this.load.image('robot1',   '/assets/PNG/Robot_1/robot1_machine.png');
         this.load.image('soldier1',   '/assets/PNG/Soldier_1/soldier1_silencer.png');
@@ -92,11 +89,10 @@ export default class GameScene extends Phaser.Scene {
         this.load.svg("speedGadget", "assets/svg/speedGadget.svg", { width: 400, height: 200 });
 
         for (let i = 1; i <= 25; i++) {
-            const frame = i.toString().padStart(4, '0');  // "0001", "0002", …, "0010", …, "0025"
+            const frame = i.toString().padStart(4, '0');
             this.load.image(frame, `/assets/PNG/explosion/${frame}.png`);
         }
 
-        // Map tileset & tilemap
         this.load.image('tileset', '/assets/Tilesheet/spritesheet_tiles.png');
         let mapFile;
         console.log("MAP KEY", this.mapKey);
@@ -111,23 +107,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     create() {
-        const vw = this.scale.width;   // Breite des Viewports in Pixeln
-        const vh = this.scale.height;  // Höhe des Viewports in Pixeln
-        // fest am Bildschirm haften
-
-
-        // ─── 1) matchOver-Listener einmalig registrieren ───
-        this.socket.on('matchOver', () => {
-            const me = this.latestState.players.find(p => p.playerId === this.playerId);
-            if (!me || me.currentHealth <= 0) {
-                const alive = this.latestState.players.filter(p => p.currentHealth > 0).length;
-                const place = alive + 1;
-                const base  = me?.coinCount ?? 0;
-                const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
-                this.showDefeatScreen(place, base, bonus, base + bonus);
-                this.defeatShown = true;
-            }
-        });
+        const vw = this.scale.width;
+        const vh = this.scale.height;
 
         this.exitButtonSvg = this.add.image(
             this.cameras.main.width / 2,
@@ -137,42 +118,35 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setInteractive({ useHandCursor: true })
-            .setVisible(false)   // zunächst wegstecken
+            .setVisible(false)
             .on('pointerdown', () => {
                 this.socket.emit('leaveRoom', { playerId: this.playerId });
                 this.socket.disconnect();
                 this.scene.start('LobbyScene');
             });
 
-        // Hintergrundfarbe
         this.cameras.main.setBackgroundColor('#222222');
 
         this.tileSize = 64;
 
-        // Karte & Layer
         const map = this.make.tilemap({ key: 'map' });
         this.map = this.make.tilemap({ key: 'map' });
         const tileset = map.addTilesetImage('spritesheet_tiles','tileset',64,64);
-        // 1) Boden immer zuerst
             map.createLayer('Boden', tileset, 0, 0);
-
-            // 2) Zusätzliche Overlays nur für Level 2 & 3
             if (this.mapKey === 'level2' || this.mapKey === 'level3') {
                 map.createLayer('Gebüsch, Giftzone, Energiezone', tileset, 0, 0);
                 this.crateLayer = map.createLayer('Kisten', tileset, 0, 0);
             }
-
-            // 3) Mauern ganz zum Schluss
-                this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
+            this.obstacleLayer = map.createLayer('Wand', tileset, 0, 0);
 
         const controllerIcon = this.add.image(
-            vw / 130,    // horizontal zentriert
-            vh + 10,  // 50px oberhalb der unteren Bildschirmkante
+            vw / 130,
+            vh + 10,
             'controller'
         )
             .setOrigin(0.5)
             .setScale(0.8)
-            .setScrollFactor(0).setAlpha(0.5)       // 0.0 = komplett durchsichtig, 1.0 = voll sichtbar
+            .setScrollFactor(0).setAlpha(0.5)
             .setDepth(1000);
 
         const offset = 80;
@@ -191,8 +165,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "S" unterhalb
         this.add.text(
             controllerIcon.x,
             controllerIcon.y + offset,
@@ -208,8 +180,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "A" links
         this.add.text(
             controllerIcon.x - offset,
             controllerIcon.y,
@@ -225,8 +195,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // "D" rechts
         this.add.text(
             controllerIcon.x + offset,
             controllerIcon.y,
@@ -256,12 +224,12 @@ export default class GameScene extends Phaser.Scene {
         this.healthValueText = this.add.text(
             vw / 2 + 44,
             this.healthIcon.y + 25,
-            '0', // Startwert; wird in update() überschrieben
+            '0',
             {
                 fontSize: '28px',
                 fontFamily: 'Arial Black',
-                color: '#ffffff',       // weiße Schrift
-                stroke: '#000000',      // schwarzer Rand
+                color: '#ffffff',
+                stroke: '#000000',
                 strokeThickness: 4,
                 align: 'center'
             }
@@ -269,17 +237,10 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-
-
-
-        // Physik-Welt & Kamera
         const width  = map.widthInPixels;
         const height = map.heightInPixels;
         this.physics.world.setBounds(0, 0, width, height);
         this.cameras.main.setBounds(0, 0, width, height);
-
-        // zoom to fit
         const fitZoom = Math.min(
             this.cameras.main.width  / width,
             this.cameras.main.height / height
@@ -287,9 +248,6 @@ export default class GameScene extends Phaser.Scene {
         this.cameras.main.setZoom(fitZoom)
             .centerOn(width/2, height/2);
         this.input.topOnly = true;
-
-        // ─── zone overlay setup ──────────────────────────────
-        // AFTER: no scrollFactor → it's in world‐space
         this.graphicsZone = this.add.graphics();
 
         this.textZoneTimer   = this.add.text(15, 120, '', {
@@ -297,17 +255,10 @@ export default class GameScene extends Phaser.Scene {
             color: '#ffffff', stroke: '#000000',
             strokeThickness: 3
         }).setScrollFactor(0);
-
-        // ammo UI
         this.ammoBarBg   = this.add.graphics().setScrollFactor(0);
         this.ammoBarFill = this.add.graphics().setScrollFactor(0);
-
-        // UI: Gadget-Cooldown
         this.cooldownBarBg   = this.add.graphics().setScrollFactor(0);
         this.cooldownBarFill = this.add.graphics().setScrollFactor(0);
-
-
-        // UI: Spielerzahl
         this.playerCountText = this.add.text(16, 16, '0/0 players', {
             fontFamily: 'Arial', fontSize: '24px',
             fontStyle: 'bold', color: '#ffffff',
@@ -320,37 +271,32 @@ export default class GameScene extends Phaser.Scene {
 
         const coinX = vw - 200;
         const coinY = 16;
-
-        // 1) Erstelle das Coin‐Icon
         this.coinIcon = this.add.image(coinX, coinY, 'icon_coin')
-            .setOrigin(0, 0)      // links‐oben am Icon
-            .setScrollFactor(0)   // bleibt fest am HUD
-            .setDisplaySize(60, 60) // skaliere auf 32×32px (oder so, wie es optisch passt)
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setDisplaySize(60, 60)
             .setDepth(1000);
 
 
         this.coinText = this.add.text(
-            coinX + 90,  // 36px nach rechts, damit Text hinter dem 32px‐Icon beginnt + 4px Abstand
-            coinY + 25,   // 8px nach unten, sodass Text mittig zum Icon sitzt
-            '0',         // Startwert; wird in update() überschrieben
+            coinX + 90,
+            coinY + 25,
+            '0',
             {
                 fontSize: '28px',
                 fontFamily: 'Arial Black',
-                color: '#ffff00',       // Gelb
-                stroke: '#000000',      // Schwarzer Rand
+                color: '#ffff00',
+                stroke: '#000000',
                 strokeThickness: 3,
                 align: 'left'
             }
         )
-            .setOrigin(0.5)   // linke Mitte des Texts
+            .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // Explosion-Animation
         this.anims.create({
             key: 'explode',
             frames: Array.from({ length: 25 }, (_, idx) => {
-                // idx läuft von 0–24, also +1 und auf 4 Stellen auffüllen
                 const frame = (idx + 1).toString().padStart(4, '0');
                 return { key: frame };
             }),
@@ -361,10 +307,6 @@ export default class GameScene extends Phaser.Scene {
         this.explosionGroup = this.add.group();
         this.prevProjectileIds     = new Set();
         this.previousMinePositions = {};
-
-
-
-        // Eingabe: WASD
         this.keys = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.W,
             down: Phaser.Input.Keyboard.KeyCodes.S,
@@ -373,14 +315,9 @@ export default class GameScene extends Phaser.Scene {
         });
 
         console.log("KEY OBJECTS", this.keys);
-
-
-        // Eingabe: Schuss
         this.input.on('pointerdown', pointer => this.startFiring(pointer));
         this.input.on('pointerup',   ()      => this.stopFiring());
         this.input.on('pointerout',  ()      => this.stopFiring());
-
-// Eingabe: Q -> Gadget
         const gadgetKey = this.registry.get('gadgetKey') || localStorage.getItem('gadgetKey') || 'Q';
         this.gadgetKey = gadgetKey;
 
@@ -389,8 +326,6 @@ export default class GameScene extends Phaser.Scene {
             if (this.gadgetMaxUses <= 0 || now < this.cooldownExpireTime) return;
             this.useGadget();
         });
-
-        // Socket-Update
         this.socket.on('stateUpdate', state => {
             this.npcs = state.npcs || [];
             this.latestState = state;
@@ -400,12 +335,6 @@ export default class GameScene extends Phaser.Scene {
                 this.gadgetMaxUses      = myGadget.remainingUses;
                 this.cooldownExpireTime = this.time.now + myGadget.timeRemaining;
             }
-
-            // 🌿 Sichtbarkeits-Testausgabe
-            console.log("📦 Spieler-Sichtbarkeit:");
-            state.players.forEach(p => {
-                console.log(`👤 ${p.playerId} – visible: ${p.visible}`);
-            });
         });
         this.socket.emit('changeWeapon', {
             roomId: this.roomId,
@@ -413,10 +342,6 @@ export default class GameScene extends Phaser.Scene {
             projectileType: this.selectedWeapon
         });
 
-
-        //Gadget:
-        //    In Lobby hast du offenbar mit Werten wie 'DAMAGE_BOOST' o. Ä. gearbeitet.
-        //    Wir definieren nun eine Hilfsfunktion, die daraus den passenden Texture-Key macht:
 
         const getGadgetKey = (gadgetTypeString) => {
             switch (gadgetTypeString) {
@@ -427,25 +352,20 @@ export default class GameScene extends Phaser.Scene {
             }
         };
 
-        // 2) Wähle den korrekten Texture-Key
         const currentGadgetKey = getGadgetKey(this.gadgetType);
 
-        // 3) Gadget-Icon an gewünschter HUD-Position platzieren (z. B. links oben neben den Coins)
-        //    Wir legen es z. B. knapp unterhalb des Coin-Icons ab (y=90). Passe bei Bedarf an!
         this.gadgetIcon = this.add.image(
-            vw / 2 + 800,   // 100px links neben Münz-HUD (oder wo du es haben willst)
-            vh + 10,    // zentriert zur HUD-Leiste
+            vw / 2 + 800,
+            vh + 10,
             currentGadgetKey
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setDisplaySize(160, 80)  // skaliere so, dass es zum HUD passt
+            .setDisplaySize(160, 80)
             .setDepth(1000);
 
-        // ─── (optional) Wenn du dennoch einen Gadget-Text (z.B. für Cooldown) brauchst,
-        //       kannst du ihn hier anlegen und später in update() aktualisieren:
         this.gadgetText = this.add.text(
-            this.gadgetIcon.x + 0,   // z. B. direkt unter dem Icon
+            this.gadgetIcon.x + 0,
             this.gadgetIcon.y + 55,
             '',
             {
@@ -460,13 +380,6 @@ export default class GameScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1000);
-
-        // Gadget-Anzeige initialisieren
-        // this.gadgetType = this.registry.get('gadget');   // Typ aus JoinRequest
-        // this.cooldownExpireTime = 0; // Timestamp in ms, wann Cooldown endet
-        // this.gadgetText = this.add.text(16, 80, '', {
-        //     fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', stroke: '#000', strokeThickness: 3
-        // }).setScrollFactor(0);
 
     }
 
@@ -541,7 +454,6 @@ export default class GameScene extends Phaser.Scene {
             playerId: this.playerId
         }, (response) => {
             if (response === 'ok') {
-                // Cooldown lokal starten (10 000 ms ab jetzt)
                 this.cooldownExpireTime = this.time.now + 10_000;
                 this.boostActive = true;
                 this.boostEndTime = this.time.now + 2_000;
@@ -552,20 +464,16 @@ export default class GameScene extends Phaser.Scene {
         });
     }
 
-    update() {
+    async update() {
         if (!this.latestState) return;
 
         this.graphicsZone.clear();
 
         if (this.zone) {
             const {center, radius, timeMsRemaining} = this.zone;
-
-            // Draw a green circle outline at the true world coords
             this.graphicsZone
-                .lineStyle(4, 0x00aa00)          // 4px thick, green
+                .lineStyle(4, 0x00aa00)
                 .strokeCircle(center.x, center.y, radius);
-
-            // Update the timer text (screen‐locked)
             const secs = Math.ceil(timeMsRemaining / 1000);
             const mm = String(Math.floor(secs / 60)).padStart(2, '0');
             const ss = String(secs % 60).padStart(2, '0');
@@ -575,8 +483,6 @@ export default class GameScene extends Phaser.Scene {
         }
 
 
-
-        // ─── handle mines/explosions ────────────────────────
         const currIds = new Set(this.latestState.projectiles
             .filter(p => p.projectileType === 'MINE')
             .map(p => p.id));
@@ -597,64 +503,53 @@ export default class GameScene extends Phaser.Scene {
         });
         this.prevProjectileIds = currIds;
 
-        // Bewegung senden
         const me = this.latestState.players.find(p => p.playerId === this.playerId);
         if (me && this.healthValueText) {
             this.healthValueText.setText(`${me.currentHealth} / ${me.maxHealth}`);
 
-            // Boost-Ablauf prüfen
             if (this.boostActive && this.time.now > this.boostEndTime) {
                 this.boostActive = false;
             }
             const baseX = (this.keys.left.isDown ? -1 : 0) + (this.keys.right.isDown ? 1 : 0);
-            const baseY = (this.keys.up.isDown   ? -1 : 0) + (this.keys.down.isDown  ? 1 : 0);
+            const baseY = (this.keys.up.isDown ? -1 : 0) + (this.keys.down.isDown ? 1 : 0);
             const speedFactor = this.boostActive ? this.boostMultiplier : 1;
             const dirX = baseX * speedFactor;
             const dirY = baseY * speedFactor;
             const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
             const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-            this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
+            this.socket.emit('move', {roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle});
 
             const remMs = Math.max(0, this.cooldownExpireTime - this.time.now);
 
 
-
-
             if (remMs > 0) {
-                // Noch im Cooldown
                 const cdSec = `${Math.ceil(remMs / 1000)}s`;
                 this.gadgetText
                     .setText(`Cooldown: ${cdSec}`)
-                    .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
+                    .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
             } else {
-                if (this.gadgetMaxUses <= 0){
-                    // nicht Bereit
+                if (this.gadgetMaxUses <= 0) {
                     this.gadgetText
                         .setText(`0 Uses: ${this.gadgetType}`)
-                        .setStyle({ fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3 });
-                }
-                else{
-                    // Bereit
+                        .setStyle({fill: '#ff0000', fontSize: '20px', stroke: '#000', strokeThickness: 3});
+                } else {
                     this.gadgetText
                         .setText(this.gadgetKey)
-                        .setStyle({ fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3 });
+                        .setStyle({fill: '#00ff00', fontSize: '26px', stroke: '#000', strokeThickness: 3});
                 }
             }
 
 
-
             const cdBarX = 10, cdBarY = 65, cdBarW = 100, cdBarH = 10;
-            const now    = this.time.now;
-            const remCd  = Math.max(0, this.cooldownExpireTime - now);
-            const ratio  = remCd > 0 ? (remCd / 10_000) : 1;
+            const now = this.time.now;
+            const remCd = Math.max(0, this.cooldownExpireTime - now);
+            const ratio = remCd > 0 ? (remCd / 10_000) : 1;
 
-            // Hintergrund
             this.cooldownBarBg
                 .clear()
                 .fillStyle(0x000000, 0.5)
                 .fillRect(cdBarX, cdBarY, cdBarW, cdBarH);
 
-            // Füllung
             this.cooldownBarFill
                 .clear()
                 .fillStyle(0xffffff, 1)
@@ -666,27 +561,22 @@ export default class GameScene extends Phaser.Scene {
                 );
         }
 
-        // ── render NPCs ─────────────────────────────────────────
         const aliveNpcIds = new Set();
 
         this.npcs.forEach(npc => {
             aliveNpcIds.add(npc.id);
 
-            // 1) Ensure we have three GameObjects for this NPC:
             let spr = this.npcSprites[npc.id];
             let bar = this.npcBars[npc.id];
             let label = this.npcLabels[npc.id];
 
             if (!spr && npc.currentHealth > 0 && (npc.visible || me)) {
-                // a) main sprite
                 spr = this.physics.add.sprite(npc.position.x, npc.position.y, 'npc')
                     .setOrigin(0.5);
                 this.physics.add.collider(spr, this.obstacleLayer);
 
-                // b) health-bar graphic
                 bar = this.add.graphics().setDepth(11);
 
-                // c) name label
                 label = this.add.text(0, 0, 'NPC', {
                     fontSize: '16px', fontFamily: 'Arial',
                     color: '#ffffff', stroke: '#000000',
@@ -697,15 +587,11 @@ export default class GameScene extends Phaser.Scene {
                 this.npcBars[npc.id] = bar;
                 this.npcLabels[npc.id] = label;
             }
-
-            // 2) Update position & rotation
             if (spr) {
                 spr.setPosition(npc.position.x, npc.position.y)
                     .setRotation(npc.position.angle);
             }
-
-            // 3) Redraw health bar above the sprite
-            const maxHp = 50; // or pull from npc.maxHealth if you have it
+            const maxHp = 50;
             const pct = Phaser.Math.Clamp(npc.currentHealth / maxHp, 0, 1);
             const bw = 40, bh = 6;
             bar.clear()
@@ -721,23 +607,17 @@ export default class GameScene extends Phaser.Scene {
                     npc.position.y - spr.displayHeight / 2 - bh - 7,
                     bw * pct, bh
                 );
-
-            // 4) Position the “NPC” label just above the bar
             if (label) {
                 label.setPosition(
                     npc.position.x,
-                    npc.position.y - spr.displayHeight/2 - bh - 16
+                    npc.position.y - spr.displayHeight / 2 - bh - 16
                 );
             }
-
-            // 5) Hide if dead
             const visible = npc.currentHealth > 0;
-            if (spr)   spr.setVisible(visible);
-            if (bar)   bar.setVisible(visible);
+            if (spr) spr.setVisible(visible);
+            if (bar) bar.setVisible(visible);
             if (label) label.setVisible(visible);
         });
-
-// 6) Cleanup any despawned NPCs
         Object.keys(this.npcSprites).forEach(id => {
             if (!aliveNpcIds.has(id)) {
                 this.npcSprites[id].destroy();
@@ -748,10 +628,6 @@ export default class GameScene extends Phaser.Scene {
                 delete this.npcLabels[id];
             }
         });
-
-
-
-        // ─── render players & health ───────────────────────
         const connected = this.latestState.players
             .filter(p => p.currentHealth > 0).length;
         const total = this.latestState.players.length;
@@ -760,14 +636,10 @@ export default class GameScene extends Phaser.Scene {
         this.latestState.players.forEach(p => {
             const isMe = p.playerId === this.playerId;
             let spr = this.playerSprites[p.playerId];
-
-            // 🟢 Spawn: nur wenn noch kein Sprite vorhanden
             if (!spr && p.currentHealth > 0 && (p.visible || isMe)) {
                 const key = this.getBrawlerSpriteName(p.brawlerId || 'sniper');
                 spr = this.physics.add.sprite(p.position.x, p.position.y, key)
                     .setOrigin(0.5);
-
-                // 🟡 OUTLINE-SPRITES ERZEUGEN
                 spr.outline = this.add.sprite(p.position.x, p.position.y, key)
                     .setOrigin(0.5).setTint(0x00ffff).setAlpha(0.4)
                     .setDepth(10).setVisible(false);
@@ -791,7 +663,6 @@ export default class GameScene extends Phaser.Scene {
 
                 this.playerSprites[p.playerId] = spr;
             }
-            // Kollision gegen Wände
             if (spr) {
                 this.physics.add.collider(spr, this.obstacleLayer);
             }
@@ -809,43 +680,30 @@ export default class GameScene extends Phaser.Scene {
                     spr.setPosition(p.position.x, p.position.y);
                     spr.setRotation(p.position.angle);
                     spr.setVisible(p.visible);
-
-
-                    // Health Bar zeichnen
-                    const barW       = 40;
-                    const barH       = 6;
-                    const pct        = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
-
-// Segment-Größe in HP und Abstand in px lassen sich hier anpassen:
-                    const segmentHP  = 20;     // jedes Segment entspricht 20 HP
-                    const gap        = 1;      // Abstand zwischen Segmenten in px
-
-// Anzahl der Segmente ergibt sich aus der Max-HP des Brawlers:
-                    const segments   = Math.ceil(p.maxHealth / segmentHP);
-                    const segW       = barW / segments;
+                    const barW = 40;
+                    const barH = 6;
+                    const pct = Phaser.Math.Clamp(p.currentHealth / p.maxHealth, 0, 1);
+                    const segmentHP = 20;
+                    const gap = 1;
+                    const segments = Math.ceil(p.maxHealth / segmentHP);
+                    const segW = barW / segments;
                     const fillPixels = barW * pct;
 
                     spr.healthBar.clear();
-
-// 1) Äußerer Rahmen (2px schwarz)
-                    const bgX = p.position.x - barW/2 - 1;
-                    const bgY = p.position.y - spr.height/2 - barH - 9;
+                    const bgX = p.position.x - barW / 2 - 1;
+                    const bgY = p.position.y - spr.height / 2 - barH - 9;
                     spr.healthBar
                         .lineStyle(2, 0x000000)
                         .strokeRect(bgX, bgY, barW + 2, barH + 2);
-
-// 2) Schwarzer Hintergrund innen
                     spr.healthBar
                         .fillStyle(0x000000)
                         .fillRect(bgX + 1, bgY + 1, barW, barH);
-
-// 3) Grüne Segmente entsprechend gefüllter HP
                     spr.healthBar.fillStyle(0x00ff00);
                     for (let i = 0; i < segments; i++) {
-                        const x      = bgX + 1 + i * segW;
+                        const x = bgX + 1 + i * segW;
                         const remain = fillPixels - i * segW;
                         if (remain <= 0) break;
-                        const w      = Math.min(segW - gap, remain);
+                        const w = Math.min(segW - gap, remain);
                         spr.healthBar.fillRect(x, bgY + 1, w, barH);
                     }
                     spr.healthBar.setVisible(p.visible);
@@ -877,10 +735,7 @@ export default class GameScene extends Phaser.Scene {
                 }
             }
         });
-        // Exit anzeigen, wenn tot
         if (me && me.currentHealth <= 0) this.exitButtonSvg.setVisible(true);
-
-        // Projektile rendern
         const alive = new Set();
         this.latestState.projectiles.forEach(p => {
             const key = p.projectileType === 'SNIPER' ? 'sniper'
@@ -899,16 +754,12 @@ export default class GameScene extends Phaser.Scene {
                 spr.setPosition(p.position.x, p.position.y);
             }
         });
-
-        // Entfernen
         Object.keys(this.projectileSprites).forEach(id => {
             if (!alive.has(id)) {
                 this.projectileSprites[id].destroy();
                 delete this.projectileSprites[id];
             }
         });
-
-        // Ammo-Bar
         if (me) {
             const weapon = me.currentWeapon;
             const ammo = me?.ammo ?? 0;
@@ -931,9 +782,6 @@ export default class GameScene extends Phaser.Scene {
             }
             this.lastCoinCount = newCount;
         }
-
-
-        // ========== KISTEN VERARBEITEN ==========
         if (this.latestState.crates) {
             const currentCrateIds = new Set();
 
@@ -948,8 +796,6 @@ export default class GameScene extends Phaser.Scene {
                 }
 
                 spr.setPosition(crate.x * this.tileSize + 32, crate.y * this.tileSize + 32);
-
-                // Healthbar anzeigen
                 spr.healthBar.clear();
                 if (crate.crateHp < 100) {
                     const pct = Phaser.Math.Clamp(crate.crateHp / 100, 0, 1);
@@ -961,16 +807,12 @@ export default class GameScene extends Phaser.Scene {
                         .fillRect(spr.x - barW / 2, spr.y - 39, barW * pct, barH);
                 }
             });
-
-            // Entferne verschwundene Crates
             Object.keys(this.crateSprites).forEach(crateId => {
                 if (!currentCrateIds.has(crateId)) {
                     const spr = this.crateSprites[crateId];
                     spr.healthBar?.destroy();
                     spr.destroy();
                     delete this.crateSprites[crateId];
-
-                    // 🟩 Ersetze das Tile an Position mit GID 401 (Gras)
                     const tileX = Math.floor(spr.x / this.tileSize);
                     const tileY = Math.floor(spr.y / this.tileSize);
                     this.crateLayer.putTileAt(401, tileX, tileY);
@@ -988,39 +830,6 @@ export default class GameScene extends Phaser.Scene {
 
         const alivePlayers = this.latestState.players.filter(p => p.currentHealth > 0).length;
 
-
-        // 2) Wenn man selbst gerade gestorben ist
-        // if (!this.hasWon && me && me.currentHealth <= 0 && !this.defeatShown) {
-        //     // Anzahl der Lebenden (nach dem Tod) = alivePlayers (denn me.currentHealth <= 0 zählt nicht mit)
-        //     // Platz des Verstorbenen = alivePlayers + 1
-        //     const place = alivePlayers + 1;
-        //
-        //     const baseCoins = me.coinCount ?? 0;
-        //
-        //     // Bonus-/Malus-Berechnung nach Platz
-        //     let bonus = 0;
-        //     switch (place) {
-        //         case 1:
-        //             bonus = 10;
-        //             break;
-        //         case 2:
-        //             bonus = 5;
-        //             break;
-        //         case 3:
-        //             bonus = 0;
-        //             break;
-        //         case 4:
-        //             bonus = -10;
-        //             break;
-        //         default:
-        //             bonus = 0; // Für Platz > 4 kein zusätzlicher Effekt
-        //     }
-        //     const totalCoins = baseCoins + bonus;
-        //
-        //     this.showDefeatScreen(place, baseCoins, bonus, totalCoins);
-        //     this.defeatShown = true;
-        // }
-
         console.log("KEYS:", {
             W: this.keys.up.isDown,
             A: this.keys.left.isDown,
@@ -1036,46 +845,81 @@ export default class GameScene extends Phaser.Scene {
                 this.cameras.main.setZoom(this.initialZoom);
             }
         }
-
-        // … dein bestehender Code bis zum Schluss …
-
-        // 1) matchOver EINMALIG senden
         if (!this.matchOverEmitted && alivePlayers === 1) {
-            this.socket.emit('matchOver', { roomId: this.roomId });
+            this.socket.emit('matchOver', {roomId: this.roomId});
             this.matchOverEmitted = true;
         }
-
-        // 2) Nur Gewinner zeigt Victory
         if (!this.hasWon && alivePlayers === 1 && me?.currentHealth > 0) {
             const base = me.coinCount ?? 0, bonus = 10;
+            const newCount = me.coinCount ?? 0;
+            const gain = newCount - this.lastCoinCount;
+            try {
+                const res = await fetch(
+                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                    {method: 'POST'}
+                );
+                if (!res.ok) {
+                    const err = res.text();
+                    console.error('Error while adding coins: ', err);
+                    return;
+                }
+            } catch (e) {
+                console.error('Wallet-API not reachable:', e);
+                return;
+            }
+
+            this.socket.emit('leaveRoom', {playerId: this.playerId});
             this.showVictoryScreen(1, base, bonus, base + bonus);
             this.hasWon = true;
         }
-
-        // 3) Nur der Gestorbene zeigt Defeat
         if (!this.defeatShown && me && me.currentHealth <= 0) {
             const place = alivePlayers + 1, base = me.coinCount ?? 0;
             const bonus = place === 2 ? 5 : place === 3 ? 0 : place === 4 ? -10 : 0;
             this.showDefeatScreen(place, base, bonus, base + bonus);
             this.defeatShown = true;
         }
-
-        // 4) Bewegungs-Emit IMMER senden (auch wenn jemand gestorben ist)
         const dirX = (this.keys.right.isDown ? 1 : 0) - (this.keys.left.isDown ? 1 : 0);
-        const dirY = (this.keys.down.isDown  ? 1 : 0) - (this.keys.up.isDown   ? 1 : 0);
+        const dirY = (this.keys.down.isDown ? 1 : 0) - (this.keys.up.isDown ? 1 : 0);
         const world = this.cameras.main.getWorldPoint(this.input.activePointer.x, this.input.activePointer.y);
         const angle = Phaser.Math.Angle.Between(me.position.x, me.position.y, world.x, world.y);
-        this.socket.emit('move', { roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle });
-
-        // Ende von update()
-
-
+        this.socket.emit('move', {roomId: this.roomId, playerId: this.playerId, dirX, dirY, angle});
 
 
     }
 
 
     showVictoryScreen(place, baseCoins, bonus, totalCoins) {
+
+        this.socket.on('matchOver', async() => {
+            const me = this.latestState.players.find(p => p.playerId === this.playerId);
+            if (!me || me.currentHealth <= 0) {
+                const alive = this.latestState.players.filter(p => p.currentHealth > 0).length;
+                const place = alive + 1;
+                const base  = me?.coinCount ?? 0;
+                const bonus = place === 1 ? 10 : place === 2 ? 5 : place === 3 ? 0 : -10;
+                const newCount = me.coinCount ?? 0;
+                const gain = newCount - this.lastCoinCount;
+
+                try {
+                    const res = await fetch(
+                        `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${base + bonus+gain}`,
+                        { method: 'POST' }
+                    );
+                    if (!res.ok) {
+                        const err = res.text();
+                        console.error('Error while adding coins: ', err);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Wallet-API not reachable:', e);
+                    return;
+                }
+
+                this.socket.emit('leaveRoom', { playerId: this.playerId });
+            }
+        });
+
+
         const {width, height} = this.scale;
 
         this.add.rectangle(width / 2, height / 2, width - 830, height - 240, 0x000000)
@@ -1109,8 +953,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
         this.add.text(
             width / 2,
@@ -1126,8 +968,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 4) Gesamt-Coins
         this.add.text(
             width / 2,
             height / 2 + 70,
@@ -1135,7 +975,7 @@ export default class GameScene extends Phaser.Scene {
             {
                 fontSize: '32px',
                 fontFamily: 'Arial',
-                color: '#ffd700', // Gold-Farbton
+                color: '#ffd700',
                 stroke: '#000000',
                 strokeThickness: 4
             }
@@ -1161,23 +1001,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', async () => {
-            try {
-                const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
-                    { method: 'POST' }
-                );
-                if (!res.ok) {
-                    const err = await res.text();
-                    console.error('Error while adding coins: ', err);
-                    return;
-                }
-            } catch (e) {
-                console.error('Wallet-API not reachable:', e);
-                return;
-            }
-
-            this.socket.emit('leaveRoom', { playerId: this.playerId });
-
             this.socket.disconnect();
             this.scene.start('LobbyScene');
         });
@@ -1193,7 +1016,7 @@ export default class GameScene extends Phaser.Scene {
             .setScrollFactor(0).setAlpha(0.8).setDepth(1000);
 
         this.victoryText = this.add.text(
-            width / 2, height / 2 - 80,  `You placed: ${place}!`, {
+            width / 2, height / 2 - 80,  `You placed: ${place === 1 ? 2 : place}!`, {
                 fontSize: '52px', fontFamily: 'Arial',
                 color: '#ff0000', stroke: '#000000',
                 strokeThickness: 6
@@ -1202,8 +1025,6 @@ export default class GameScene extends Phaser.Scene {
 
 
         this.add.image(width/2 - 50, height / 2 -200, "defeat").setOrigin(0.5).setScrollFactor(0).setDepth(1001);
-
-        // 2) Coins im Spiel
         this.add.text(
             width / 2,
             height / 2 - 30,
@@ -1218,8 +1039,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 3) Bonus/Malus
         const bonusText = (bonus >= 0) ? `Bonus: +${bonus}` : `Malus: ${bonus}`;
         this.add.text(
             width / 2,
@@ -1235,8 +1054,6 @@ export default class GameScene extends Phaser.Scene {
         )
             .setOrigin(0.5)
             .setScrollFactor(0).setDepth(1001);
-
-        // 4) Gesamt-Coins
         this.add.text(
             width / 2,
             height / 2 + 70,
@@ -1269,23 +1086,6 @@ export default class GameScene extends Phaser.Scene {
         });
 
         exitBtn.on('pointerdown', async() => {
-            try {
-                const res = await fetch(
-                    `http://localhost:8092/api/wallet/coins/add?playerId=${this.playerId}&amount=${totalCoins}`,
-                    { method: 'POST' }
-                );
-                if (!res.ok) {
-                    const err = await res.text();
-                    console.error('Error while adding coins: ', err);
-                    return;
-                }
-            } catch (e) {
-                console.error('Wallet-API not reachable:', e);
-                return;
-            }
-
-            this.socket.emit('leaveRoom', { playerId: this.playerId });
-
             this.socket.disconnect();
             this.scene.start('LobbyScene');
         });

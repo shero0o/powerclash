@@ -1,4 +1,3 @@
-// src/scenes/InventoryScene.js
 import Phaser from 'phaser';
 
 const API_BASE = 'http://localhost:8092/api/wallet';
@@ -42,26 +41,20 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     preload() {
-        // — Lobby-Assets (Hintergrund, UI) —
         this.load.svg('lobby_bg',      '/assets/svg/lobby_bg.svg');
         this.load.svg('icon_profile',  '/assets/svg/profile-icon.svg', { width:200, height:100 });
         this.load.svg('btn-settings',  '/assets/svg/btn-settings.svg',{ width:200, height:100 });
         this.load.svg('icon_shop',     '/assets/svg/btn-shop.svg',    { width:200, height:80 });
         this.load.svg('icon_coin',     '/assets/svg/coin-icon.svg',   { width:100, height:100 });
         this.load.svg('home', '/assets/svg/btn-navigation.svg',{width:130,height:115})
-        // — Waffen-Assets —
         this.load.image('weapon_rifle',   '/assets/PNG/Weapons/Mashinegun.png');
         this.load.image('weapon_sniper',  '/assets/PNG/Weapons/Sniper.png');
         this.load.image('weapon_shotgun', '/assets/PNG/Weapons/Shotgun.png');
         this.load.image('weapon_mine',    '/assets/PNG/explosion/bomb.png');
-
-        // — Brawler-Avatare —
         this.load.image('avatar2','/assets/PNG/Characters/Character2.png');
         this.load.image('avatar3','/assets/PNG/Characters/Character3.png');
         this.load.image('avatar4','/assets/PNG/Characters/Character4.png');
         this.load.image('avatar5','/assets/PNG/Characters/Character5.png');
-
-        // — Gadget-Icons —
         this.load.svg('gadget_speed',  '/assets/svg/speedGadget.svg',{ width:400, height:200 });
         this.load.svg('gadget_damage', '/assets/svg/damageGadget.svg',{ width:400, height:200 });
         this.load.svg('gadget_health', '/assets/svg/healthGadget.svg',{ width:400, height:200 });
@@ -69,8 +62,6 @@ export default class InventoryScene extends Phaser.Scene {
 
     async create() {
         const { width, height } = this.scale;
-
-        // ─── Daten via GET laden ─────────────────────────────────────────
         try {
             const [coinsRes, brawlersRes, gadgetsRes, levelsRes, weaponsRes, selectedRes] = await Promise.all([
                 fetch(`${API_BASE}/coins?playerId=${this.playerId}`),
@@ -99,8 +90,6 @@ export default class InventoryScene extends Phaser.Scene {
                 fontSize: '20px', fill: '#ff4444'
             }).setOrigin(0.5);
         }
-
-        // — Hintergrund & Header UI auf y=60 —
         this.add.image(width/2, height/2, 'lobby_bg')
             .setOrigin(0.5)
             .setDisplaySize(width, height);
@@ -126,8 +115,6 @@ export default class InventoryScene extends Phaser.Scene {
 
 
         this._createCoinDisplay();
-
-        // — Shop & Back to Lobby —
         const shopX = 90, shopY = height/2 - 100;
         const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)
@@ -151,9 +138,7 @@ export default class InventoryScene extends Phaser.Scene {
 
     switchTab(label) {
         if (this.currentTab === label) return;
-        // Clear old content
         this.children.list.filter(ch => ch.tabged).forEach(ch => ch.destroy());
-        // Update tab colors
         Object.entries(this.tabTexts).forEach(([l, txt]) => {
             txt.setColor(l === label ? '#ffff00' : '#ffffff');
         });
@@ -180,8 +165,6 @@ export default class InventoryScene extends Phaser.Scene {
                     await this.finish();
                 });
             spr.tabged = true;
-
-            // Info
             const infoTxt = `Damage: ${w.damage}\nSpeed: ${w.projectileSpeed}\nRange: ${w.range}`;
             this.add.text(x, y + 120, infoTxt, {
                 fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
@@ -208,8 +191,6 @@ export default class InventoryScene extends Phaser.Scene {
                     await this.finish();
                 });
             spr.tabged = true;
-
-            // Info
             const infoTxt = `Name: ${b.name}\nHP: ${b.healthPoints}\nCost: ${b.cost}`;
             this.add.text(x, y + 120, infoTxt, {
                 fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
@@ -237,8 +218,6 @@ export default class InventoryScene extends Phaser.Scene {
                     await this.finish();
                 });
             spr.tabged = true;
-
-            // Info
             const infoTxt = `Name: ${g.name}\nCost: ${g.cost}\nDescription:\n${this.addLineBreaks(g.description, 20)}`;
             this.add.text(x, y + 120, infoTxt, {
                 fontFamily: 'Arial', fontSize: '20px', color: '#ffff00', align: 'center'
@@ -256,7 +235,6 @@ export default class InventoryScene extends Phaser.Scene {
         let current = '';
 
         for (const w of words) {
-            // if adding this word would push us over maxLen, start a new line
             if ((current + ' ' + w).trim().length > maxLen) {
                 lines.push(current.trim());
                 current = w;
@@ -270,7 +248,6 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     async finish() {
-        // Save each selection via dedicated endpoints
         try {
             await Promise.all([
                 fetch(`${API_BASE}/selected/weapon?playerId=${this.playerId}&weaponId=${this.selectedWeapon}`, {
@@ -293,18 +270,12 @@ export default class InventoryScene extends Phaser.Scene {
         } catch (err) {
             console.error('Save selection error:', err);
         }
-
-        // Persist locally and close
         this.registry.set('weapon', this.selectedWeapon);
         this.registry.set('brawler', this.selectedBrawler);
         this.registry.set('gadget', this.selectedGadget);
         this.registry.set('level', this.selectedLevel);
-
-        // Resume LobbyScene first, then emit
         this.scene.resume('LobbyScene');
         this.scene.get('LobbyScene').events.emit('inventoryDone');
-
-        // Stop InventoryScene last
         this.scene.stop();
     }
 
@@ -316,8 +287,6 @@ export default class InventoryScene extends Phaser.Scene {
         const rectWidth = 100;
         const cornerRadius = 4;
         const strokeWidth = 3;
-
-        // Hintergrund Rechteck
         const rectX = coinX + coinSize - 12;
         const rectY = coinY - rectHeight / 2;
         const graphics = this.add.graphics();
@@ -325,8 +294,6 @@ export default class InventoryScene extends Phaser.Scene {
         graphics.fillRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
         graphics.lineStyle(strokeWidth, 0x000000, 1);
         graphics.strokeRoundedRect(rectX, rectY, rectWidth, rectHeight, cornerRadius);
-
-        // Text
         const coins = await fetch(`${API_BASE}/coins?playerId=${this.playerId}`).then(r => r.json());
 
         const textX = rectX + rectWidth / 2;
@@ -338,10 +305,7 @@ export default class InventoryScene extends Phaser.Scene {
             stroke: '#000000',
             strokeThickness: 4
         }).setOrigin(0.5);
-        // Coin Icon
-        const coinImage = this.add.image(coinX, coinY, 'icon_coin')
-            .setOrigin(0, 0.5)
-            .setDisplaySize(coinSize, coinSize);
+
 
 
     }
@@ -352,36 +316,29 @@ export default class InventoryScene extends Phaser.Scene {
 
         const vw = this.scale.width;
         const vh = this.scale.height;
-
-        // a) Schwarzes halbtransparentes Overlay, das den ganzen Viewport abdeckt
         const overlay = this.add.rectangle(
-            vw / 2,    // in der Mitte des Viewports
+            vw / 2,
             vh / 2,
-            vw,        // volle Breite des Viewports
-            vh,        // volle Höhe des Viewports
-            0x000000   // Farbe: Schwarz
+            vw,
+            vh,
+            0x000000
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setAlpha(0.8)     // 80% Opazität → leicht durchsichtig
-            .setDepth(1000);   // sehr hoher Depth, damit alles darunter verdeckt ist
-
-        // b) Schwarzes Rechteck in der Mitte für den Settings‐Dialog
-        //    Beispiel: halbe Breite, halbe Höhe, zentriert
+            .setAlpha(0.8)
+            .setDepth(1000);
         const winWidth  = vw * 0.6;
         const winHeight = vh * 0.6;
         const dialogBg = this.add.rectangle(
             vw / 2, vh / 2,
             winWidth, winHeight,
-            0x111111   // dunkles Grau/Schwarz
+            0x111111
         )
             .setOrigin(0.5)
             .setScrollFactor(0)
-            .setDepth(1001)    // eine Stufe über dem Overlay
-
-        // Optional: Rahmen um das Dialogfeld (weiß oder helle Farbe)
+            .setDepth(1001)
         const border = this.add.graphics()
-            .lineStyle(4, 0xffffff)  // 4px weißer Rahmen
+            .lineStyle(4, 0xffffff)
             .strokeRect(
                 (vw - winWidth) / 2,
                 (vh - winHeight) / 2,
@@ -389,9 +346,7 @@ export default class InventoryScene extends Phaser.Scene {
                 winHeight
             )
             .setScrollFactor(0)
-            .setDepth(1002);         // noch eine Stufe höher, damit es über dialogBg liegt
-
-        // c) Titel „Settings“ oben im Dialog
+            .setDepth(1002);
         const title = this.add.text(
             vw / 2,
             (vh - winHeight) / 2 + 30,
@@ -407,9 +362,6 @@ export default class InventoryScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScrollFactor(0)
             .setDepth(1003);
-
-        // d) Beispiel‐Checkbox oder Textfeld im Dialog
-        //    Du kannst hier beliebige Phaser‐UI‐Elemente oder Textfelder hinzufügen.
         const exampleText = this.add.text(
             vw / 2,
             vh / 2 - 20,
@@ -423,8 +375,6 @@ export default class InventoryScene extends Phaser.Scene {
             .setOrigin(0.5, 0.5)
             .setScrollFactor(0)
             .setDepth(1003);
-
-        // Gadget-Key Eingabefeld
         const gadgetKeyInput = document.createElement('input');
         gadgetKeyInput.type = 'text';
         gadgetKeyInput.maxLength = 1;
@@ -451,12 +401,9 @@ export default class InventoryScene extends Phaser.Scene {
             zIndex: 10000
         });
 
-        gadgetKeyInput.value = localStorage.getItem('gadgetKey') || 'Q'; // Standard
+        gadgetKeyInput.value = localStorage.getItem('gadgetKey') || 'Q';
 
         document.body.appendChild(gadgetKeyInput);
-
-
-        // Beispiel‐Button „Close“, um das Fenster zu schließen
         const closeBtn = this.add.image(
             vw / 2,
             (vh + winHeight) / 2 - 30, "exitButtonSvg"
@@ -469,17 +416,13 @@ export default class InventoryScene extends Phaser.Scene {
                 const newKey = gadgetKeyInput.value.toUpperCase();
 
                 if (/^[A-Z]$/.test(newKey)) {
-                    localStorage.setItem('gadgetKey', newKey);        // dauerhaft speichern
-                    this.registry.set('gadgetKey', newKey);           // session-übergreifend speichern
+                    localStorage.setItem('gadgetKey', newKey);
+                    this.registry.set('gadgetKey', newKey);
                     console.log(`Gadget-Taste gespeichert: ${newKey}`);
                 } else {
                     alert('Ungültige Taste! Bitte nur einen Buchstaben A-Z eingeben.');
                 }
-
-                // HTML-Input entfernen
                 gadgetKeyInput.remove();
-
-                // Phaser-Elemente löschen
                 overlay.destroy();
                 dialogBg.destroy();
                 border.destroy();
@@ -500,7 +443,6 @@ export default class InventoryScene extends Phaser.Scene {
     }
 
     _setupTabs() {
-        const { width } = this.scale;
         const tabs = ['Weapons', 'Brawlers', 'Gadgets'];
         this.tabTexts = {};
 

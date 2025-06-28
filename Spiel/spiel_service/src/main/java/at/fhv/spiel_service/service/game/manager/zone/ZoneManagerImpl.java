@@ -23,17 +23,13 @@ public class ZoneManagerImpl implements ZoneManager {
         this.zoneShrinkRate = shrinkRate;
         this.zoneStartTimeMs = System.currentTimeMillis();
         this.zoneDurationMs  = (long)(startRadius / shrinkRate * 1000);
-        // invert shrinkRate [units/s] → ms total
         this.zoneActive = true;
     }
 
     @Override
     public void updateZone(float deltaSec, Map<String, Player> players) {
         if (!zoneActive) return;
-        // Shrink
         zoneRadius = Math.max(0f, zoneRadius - zoneShrinkRate * deltaSec);
-
-        // Damage outside
         for (Player p : players.values()) {
             if (p.getCurrentHealth() <= 0) continue;
             float dx = p.getPosition().getX() - zoneCenter.getX();

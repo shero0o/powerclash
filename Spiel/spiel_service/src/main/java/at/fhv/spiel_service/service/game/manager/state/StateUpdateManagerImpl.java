@@ -40,7 +40,6 @@ public class StateUpdateManagerImpl implements StateUpdateManager {
 
     @Override
     public StateUpdateMessage buildStateUpdate() {
-        // --- Spieler-Status ---
         List<PlayerState> ps = playerService.getAllPlayers().stream().map(p -> {
             String pid = p.getId();
             ProjectileType wep = projectileManager.getCurrentWeapon(pid);

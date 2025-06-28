@@ -1,4 +1,3 @@
-// New DTO: LeaveRoomDTO
 package at.fhv.spiel_service.dto;
 
 import lombok.AllArgsConstructor;

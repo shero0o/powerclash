@@ -8,8 +8,6 @@ import at.fhv.spiel_service.service.game.manager.projectile.ProjectileContext;
 public interface ProjectileBehavior {
     void spawn(String playerId, Position pos, Position dir, ProjectileType type, ProjectileContext ctx);
     void update(Projectile p, ProjectileContext ctx);
-
-    // Default-Impl für alle, die nur Movement/Range brauchen
     default void doMovementAndRange(Projectile p, ProjectileContext ctx,
                                     float speed, float maxRange) {
         float delta = ctx.deltaSec();

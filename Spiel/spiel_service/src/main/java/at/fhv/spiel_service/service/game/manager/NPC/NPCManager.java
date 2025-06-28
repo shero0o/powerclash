@@ -7,12 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 public interface NPCManager {
-    /**
-     * Updated alle registrierten NPCs: Bewegung, Facing und Angriffe.
-     *
-     * @param deltaSec Zeit seit letztem Frame in Sekunden
-     * @param players  Map aller lebenden Spieler (playerId → Player)
-     *
-     */
+
     void updateNPCs(float deltaSec, Map<String, Player> players);
 }

@@ -11,7 +11,6 @@ export default class AccountScene extends Phaser.Scene {
     }
 
     preload() {
-        // — Lobby-Assets (Hintergrund, UI) —
         this.load.svg('lobby_bg',      '/assets/svg/lobby_bg.svg');
         this.load.svg('icon_profile',  '/assets/svg/profile-icon.svg', { width:200, height:100 });
         this.load.svg('btn-settings',  '/assets/svg/btn-settings.svg',{ width:200, height:100 });
@@ -30,40 +29,33 @@ export default class AccountScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor('#000000');
 
-        // — Hintergrund & Header UI auf y=60 —
         this.add.image(width/2, height/2, 'lobby_bg')
             .setOrigin(0.5)
             .setDisplaySize(width, height);
 
-        // Titel
         this.add.text(width / 2, 80, 'Account', {
             fontFamily: 'Arial', fontSize: '48px', color: '#ffffff', stroke: '#000000', strokeThickness: 6
         }).setOrigin(0.5);
 
-        // Statusanzeige
         this.statusText = this.add.text(width / 2, 160, this.playerName, {
             fontFamily: 'Arial', fontSize: '24px', color: '#ffffff'
         }).setOrigin(0.5);
 
-        // Register Button
         const registerBtn = this.add.text(width / 2, 240, 'Register', {
             fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         registerBtn.on('pointerdown', () => this.register());
 
-        // Login Button
         const loginBtn = this.add.text(width / 2, 320, 'Login', {
             fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         loginBtn.on('pointerdown', () => this.login());
 
-        // Change Name Button
         const changeBtn = this.add.text(width / 2, 400, 'Change Name', {
             fontFamily: 'Arial', fontSize: '32px', color: '#ffffff'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         changeBtn.on('pointerdown', () => this.changeName());
 
-        // — Shop & Back to Lobby —
         const shopX = 90, shopY = height/2 - 100;
         const btnShop = this.add.image(90, height / 2 - 100, 'icon_shop')
             .setOrigin(0.5)

@@ -49,7 +49,6 @@ public class AmmoManager {
 
     public void refillAll(float deltaSec) {
         long now = System.currentTimeMillis();
-        // non-rifle
         ammoMap.keySet().forEach(pid -> {
             if (ammoMap.get(pid)<getMax(getWeapon(pid))
                     && now-lastRefill.getOrDefault(pid,0L)>=REFILL_MS) {
@@ -57,7 +56,6 @@ public class AmmoManager {
                 lastRefill.put(pid,now);
             }
         });
-        // rifle
         new ArrayList<>(reloading).forEach(pid->{
             if (now-rifleRefill.getOrDefault(pid,0L)>=REFILL_MS) {
                 rifleMap.put(pid,RIFLE_MAX);
@@ -81,11 +79,8 @@ public class AmmoManager {
             default                  -> DEFAULT_MAX;
         };
     }
-
-    // Hilfs­methoden, falls man Weapon speichern möchte:
     public void setWeapon(String pid, ProjectileType w){ init(pid,w); }
     public ProjectileType getWeapon(String pid){
-        // implementiere extern
         return ProjectileType.RIFLE_BULLET;
     }
 

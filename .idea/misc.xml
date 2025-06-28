@@ -16,6 +16,8 @@
     </option>
     <option name="ignoredFiles">
       <set>
+        <option value="$PROJECT_DIR$/Spiel/gateway/pom.xml" />
+        <option value="$PROJECT_DIR$/Spiel/spiel_backend/pom.xml" />
         <option value="$PROJECT_DIR$/spiel_instanz/pom.xml" />
       </set>
     </option>

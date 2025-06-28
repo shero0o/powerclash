@@ -12,22 +12,22 @@ import java.util.Map;
 public interface IPlayerService {
     void addPlayer(String playerId, String brawlerId, String playerName);
 
-    /** Entfernt einen Spieler komplett (inkl. Projectile-Cleanup). */
+
     void removePlayer(String playerId);
 
-    /** Liefert den Player oder null. */
+
     Player getPlayer(String playerId);
 
-    /** Liefert Position des Spielers. */
+
     Position getPlayerPosition(String playerId);
 
-    /** Liefert das Gadget des Spielers oder null. */
+
     Gadget getGadget(String playerId);
 
-    /** Liefert Map aller Spieler (id → Player). */
+
     Map<String, Player> getPlayers();
 
-    /** Für State-Updates: Liste aller Player. */
+
     List<Player> getAllPlayers();
 
     List<Gadget> getAllGadgets();

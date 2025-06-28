@@ -10,6 +10,6 @@ public interface ProjectileContext {
     Map<String, Player> getPlayers();
     void addProjectile(Projectile p);
     void removeProjectileById(String id);
-    long now();               // aktuelle Zeit in ms
+    long now();
     float deltaSec();
 }
